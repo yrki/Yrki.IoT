@@ -1,0 +1,51 @@
+version: '3.8'
+services:
+    frontend:
+        build: ./src/frontend
+        ports: 
+            - "8080:80"
+    api:
+        build: ./src/Api
+        ports:
+            - "8081:80"
+        environment:
+            - ASPNETCORE_ENVIRONMENT=Development
+            - ASPNETCORE_URLS=http://+:80
+    service:
+        build: ./src/Service
+        environment:
+            - ASPNETCORE_ENVIRONMENT=Development
+    database:
+        image: postgres
+        restart: always
+        environment: 
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+        ports: 
+            - '5432:5432'
+        volumes: 
+            - db:/var/lib/postgresql/data
+    timeseries:
+        image: influxdb
+        restart: always
+        volumes:
+            - timeseries:/var/lib/influxdb2:rw
+        ports:
+            - "8086:8086"
+    messagequeue:
+        image: rabbitmq:3-management-alpine
+        restart: always
+        ports:
+            - "5672:5672"
+            - "15672:15672"
+        volumes:
+            - messagequeue:/var/lib/rabbitmq/
+            - messagequeue:/var/log/rabbitmq
+volumes: 
+    db:
+        driver: local
+    timeseries:
+        driver: local
+    messagequeue:
+        driver: local
+    
