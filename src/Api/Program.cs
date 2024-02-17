@@ -8,6 +8,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<DatabaseContext>(options => 
                                             options.UseNpgsql(builder.Configuration.GetConnectionString("DatabaseConnectionString")));
 
+// Add cors policy for localhost
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("CorsPolicy",
+               builder => builder
+                          .AllowAnyMethod()
+                          .AllowAnyHeader()
+                          .AllowAnyOrigin());
+});
+
 builder.Services.AddControllers();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -26,6 +36,8 @@ if (app.Environment.IsDevelopment())
 
 
 // app.UseHttpsRedirection();
+
+app.UseCors("CorsPolicy");
 
 app.UseAuthorization();
 

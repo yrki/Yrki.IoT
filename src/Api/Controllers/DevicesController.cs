@@ -24,9 +24,13 @@ namespace Api.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<ActionResult<Contracts.Device>> GetById([FromRoute]string id)
         {
-            throw new NotImplementedException();
+            return Ok(new Contracts.Device
+            {
+                Id = Guid.NewGuid(),
+                UniqueId = "123456"
+            });
         }
 
         [HttpPost]
