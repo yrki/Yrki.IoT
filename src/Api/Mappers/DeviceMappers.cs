@@ -1,4 +1,4 @@
-using Api.Database.Entities;
+using Core.Models;
 
 namespace Api.Mappers
 {

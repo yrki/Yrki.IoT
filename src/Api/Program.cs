@@ -1,12 +1,12 @@
-using Api.Database;
+using Core.Contexts;
 
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddDbContext<ApiDbContext>(options => 
-                        options.UseNpgsql(builder.Configuration.GetConnectionString("ApiDbConnectionString")));
+builder.Services.AddDbContext<DatabaseContext>(options => 
+                                            options.UseNpgsql(builder.Configuration.GetConnectionString("DatabaseConnectionString")));
 
 builder.Services.AddControllers();
 

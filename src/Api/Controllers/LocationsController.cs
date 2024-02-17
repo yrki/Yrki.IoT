@@ -1,4 +1,5 @@
-using Api.Database;
+
+using Core.Contexts;
 
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,11 +7,11 @@ namespace Api.Controllers
 {
     public class LocationsController : ControllerBase
     {
-        private readonly ApiDbContext _dbContext;
+        private readonly DatabaseContext _databaseContext;
 
-        public LocationsController(ApiDbContext dbContext)
+        public LocationsController(DatabaseContext databaseContext)
         {
-            _dbContext = dbContext;
+            _databaseContext = databaseContext;
         }
     }
 }
