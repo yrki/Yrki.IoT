@@ -4,6 +4,8 @@ services:
         build: ./src/frontend
         ports: 
             - "8080:80"
+        depends_on:
+            - api
     api:
         build:
             dockerfile: ./.dockerbuild/dockerfile-api
@@ -12,11 +14,16 @@ services:
         environment:
             - ASPNETCORE_ENVIRONMENT=Development
             - ASPNETCORE_URLS=http://+:80
+        depends_on:
+            - postgres
     service:
         build: 
             dockerfile: ./.dockerbuild/dockerfile-service
         environment:
             - ASPNETCORE_ENVIRONMENT=Development
+        depends_on:
+            - postgres
+            - rabbit
     postgres:
         image: postgres
         restart: always
@@ -27,7 +34,6 @@ services:
             - '5432:5432'
         volumes: 
             - ./.data/postgres:/var/lib/postgresql/data
-    
     influx:
         image: influxdb
         restart: always
