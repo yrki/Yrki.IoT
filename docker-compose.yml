@@ -5,17 +5,19 @@ services:
         ports: 
             - "8080:80"
     api:
-        build: ./src/Api
+        build:
+            dockerfile: ./.dockerbuild/dockerfile-api
         ports:
             - "8081:80"
         environment:
             - ASPNETCORE_ENVIRONMENT=Development
             - ASPNETCORE_URLS=http://+:80
     service:
-        build: ./src/Service
+        build: 
+            dockerfile: ./.dockerbuild/dockerfile-service
         environment:
             - ASPNETCORE_ENVIRONMENT=Development
-    database:
+    postgres:
         image: postgres
         restart: always
         environment: 
@@ -24,28 +26,22 @@ services:
         ports: 
             - '5432:5432'
         volumes: 
-            - db:/var/lib/postgresql/data
-    timeseries:
+            - ./.data/postgres:/var/lib/postgresql/data
+    
+    influx:
         image: influxdb
         restart: always
         volumes:
-            - timeseries:/var/lib/influxdb2:rw
+            - ./.data/.influx:/var/lib/influxdb2:rw
         ports:
             - "8086:8086"
-    messagequeue:
+    
+    rabbit:
         image: rabbitmq:3-management-alpine
         restart: always
         ports:
             - "5672:5672"
             - "15672:15672"
         volumes:
-            - messagequeue:/var/lib/rabbitmq/
-            - messagequeue:/var/log/rabbitmq
-volumes: 
-    db:
-        driver: local
-    timeseries:
-        driver: local
-    messagequeue:
-        driver: local
-    
+            - ./.data/rabbitmq:/var/lib/rabbitmq/
+            - ./.data/rabbitmq:/var/log/rabbitmq/
