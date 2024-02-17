@@ -1,0 +1,17 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS builder
+
+WORKDIR /app
+COPY ../src/Service/Service.csproj ./Service/
+COPY ../src/Contracts/Contracts.csproj ./Contracts/
+COPY ../src/Core/Core.csproj ./Core/
+RUN dotnet restore ./Service/Service.csproj --no-cache --force
+
+COPY ./src/Service/ ./Service/
+COPY ../src/Contracts/ ./Contracts/
+COPY ../src/Core/Core.csproj ./Core/
+RUN dotnet publish ./Service/Service.csproj -c Release -o out --self-contained
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS prod
+WORKDIR /app
+COPY --from=builder /app/out .
+ENTRYPOINT [ "dotnet", "service.dll"]
