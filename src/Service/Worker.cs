@@ -11,8 +11,11 @@ public class Worker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _logger.LogInformation("Starting service");
         while (!stoppingToken.IsCancellationRequested)
         {
+            Console.WriteLine("Here!");
+            _logger.LogError("test");
             _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
             await Task.Delay(1000, stoppingToken);
         }

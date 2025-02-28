@@ -1,0 +1,9 @@
+[Unit]
+Description=yrkiiot
+
+[Service]
+Type=notify
+ExecStart=/app/Service
+
+[Install]
+WantedBy=multi-user.target

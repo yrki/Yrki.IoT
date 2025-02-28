@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS builder
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS builder
 
 WORKDIR /app
 COPY ../src/Service/Service.csproj ./Service/
@@ -9,9 +9,28 @@ RUN dotnet restore ./Service/Service.csproj --no-cache --force
 COPY ./src/Service/ ./Service/
 COPY ../src/Contracts/ ./Contracts/
 COPY ../src/Core/Core.csproj ./Core/
-RUN dotnet publish ./Service/Service.csproj -c Release -o out --self-contained
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS prod
+RUN dotnet publish ./Service/Service.csproj -r linux-musl-x64 -c Release -o out --self-contained true
+
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-alpine AS prod
 WORKDIR /app
 COPY --from=builder /app/out .
-ENTRYPOINT [ "dotnet", "service.dll"]
+
+#Supervisor
+#RUN apk add --no-cache supervisor
+#COPY ../src/Service/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+#CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+
+
+RUN apk add openrc
+#COPY ../src/Service/yrkiiot.service /etc/init.d/yrkiiot.service
+#RUN chmod +X ./Service
+
+RUN rc-update add Service default
+
+CMD ["rc-service", "Service", "start"]
+#COPY ../src/Service/startservice.sh .
+#RUN chmod +x ./startservice.sh
+
+#RUN systemctl enable yrkiiot.service
+#CMD [ "./startservice.sh" ]

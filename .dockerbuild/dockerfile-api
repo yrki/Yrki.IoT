@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS builder
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS builder
 
 WORKDIR /app
 COPY ../src/Api/Api.csproj ./Api/
@@ -9,11 +9,12 @@ RUN dotnet restore ./Api/Api.csproj --no-cache --force
 COPY ../src/Api/ ./Api/
 COPY ../src/Contracts/ ./Contracts/
 COPY ../src/Core/ ./Core/
-RUN dotnet publish ./Api/Api.csproj -c Release -o out --self-contained
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS prod
+RUN dotnet publish ./Api/Api.csproj -c Release -o out --self-contained true 
+
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-alpine AS prod
 WORKDIR /app
 COPY --from=builder /app/out .
 
 EXPOSE 80
-ENTRYPOINT [ "dotnet", "Api.dll"]
+ENTRYPOINT ["./Api"]
