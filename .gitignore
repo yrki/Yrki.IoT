@@ -479,3 +479,6 @@ $RECYCLE.BIN/
 
 #Data-folders
 .data/
+/.sonarqube
+/src/Api/.sonarqube
+/src/Service/supervisord.conf
