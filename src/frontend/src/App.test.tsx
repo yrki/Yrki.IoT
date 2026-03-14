@@ -1,9 +1,12 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import App from './App';
+import { vi } from 'vitest';
 
-test('renders learn react link', () => {
+vi.mock('./api/api', () => ({
+  getDevice: vi.fn().mockResolvedValue({ id: '1' }),
+}));
+
+test('renders the top navigation', () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  expect(screen.getByRole('banner')).toBeInTheDocument();
 });
