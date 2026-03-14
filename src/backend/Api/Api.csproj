@@ -5,6 +5,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseAppHost>false</UseAppHost>
+    <EnableSdkContainerSupport>true</EnableSdkContainerSupport>
+    <ContainerRepository>yrkiiot-api</ContainerRepository>
+    <ContainerImageTag>latest</ContainerImageTag>
+    <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0-alpine</ContainerBaseImage>
+    <ContainerRuntimeIdentifier>linux-musl-x64</ContainerRuntimeIdentifier>
+    <ContainerImageFormat>Docker</ContainerImageFormat>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +26,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Contracts\Contracts.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ContainerPort Include="8080" Type="tcp" />
   </ItemGroup>
 
 </Project>

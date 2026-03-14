@@ -288,6 +288,7 @@ FakesAssemblies/
 .ntvs_analysis.dat
 node_modules/
 src/frontend/dist/
+volumes/
 
 # Visual Studio 6 build log
 *.plg

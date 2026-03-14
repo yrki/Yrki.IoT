@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { IDevice } from './models/IDevice';
 type Guid = string;
-const API_BASE_URL = 'http://localhost:8081';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
 
 export const myApi = axios.create({
@@ -15,7 +15,6 @@ export const myApi = axios.create({
 
 
 export const getDevice = async (id: Guid) : Promise<IDevice> => {
-    console.log('getDevice');
-  var response = await myApi.get(`/devices/${id}`);
+  const response = await myApi.get(`/devices/${id}`);
   return response.data;
 };
