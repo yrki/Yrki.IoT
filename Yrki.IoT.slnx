@@ -1,11 +1,11 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/api/Api.csproj" />
-    <Project Path="src/contracts/Contracts.csproj" />
-    <Project Path="src/Core/Core.csproj" />
-    <Project Path="src/service/Service.csproj" />
+  <Folder Name="/src/backend/">
+    <Project Path="src/backend/Api/Api.csproj" />
+    <Project Path="src/backend/Contracts/Contracts.csproj" />
+    <Project Path="src/backend/Core/Core.csproj" />
+    <Project Path="src/backend/Service/Service.csproj" />
   </Folder>
-  <Folder Name="/tests/">
-    <Project Path="src/Tests/Tests.csproj" />
+  <Folder Name="/src/backend/tests/">
+    <Project Path="src/backend/tests/tests.csproj" />
   </Folder>
 </Solution>
