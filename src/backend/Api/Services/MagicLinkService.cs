@@ -2,6 +2,7 @@ using Api.Configuration;
 using Api.Contracts.Auth;
 using Core.Contexts;
 using Core.Models;
+using Core.Services.Email;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -11,20 +12,20 @@ public class MagicLinkService : IMagicLinkService
 {
     private readonly DatabaseContext _databaseContext;
     private readonly ITokenHasher _tokenHasher;
-    private readonly IEmailSender _emailSender;
+    private readonly IEmailService _emailService;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly MagicLinkOptions _options;
 
     public MagicLinkService(
         DatabaseContext databaseContext,
         ITokenHasher tokenHasher,
-        IEmailSender emailSender,
+        IEmailService emailService,
         IJwtTokenService jwtTokenService,
         IOptions<MagicLinkOptions> options)
     {
         _databaseContext = databaseContext;
         _tokenHasher = tokenHasher;
-        _emailSender = emailSender;
+        _emailService = emailService;
         _jwtTokenService = jwtTokenService;
         _options = options.Value;
     }
@@ -70,7 +71,11 @@ public class MagicLinkService : IMagicLinkService
         await _databaseContext.SaveChangesAsync(cancellationToken);
 
         var url = $"{_options.FrontendBaseUrl.TrimEnd('/')}/auth/callback?token={Uri.EscapeDataString(rawToken)}";
-        await _emailSender.SendMagicLinkAsync(user.Email, url, cancellationToken);
+        await _emailService.SendAsync(
+            user.Email,
+            "Your Yrki IoT sign-in link",
+            $"Use this link to sign in to Yrki IoT: {url}",
+            cancellationToken);
     }
 
     public async Task<AuthResponse?> VerifyAsync(string token, CancellationToken cancellationToken)

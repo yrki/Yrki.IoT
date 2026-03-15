@@ -2,6 +2,7 @@ using System.Text;
 using Api.Configuration;
 using Api.Services;
 using Core.Contexts;
+using Core.Services.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -18,7 +19,7 @@ builder.Services.AddDbContext<DatabaseContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DatabaseConnectionString")));
 
 builder.Services.AddScoped<ITokenHasher, Sha256TokenHasher>();
-builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IMagicLinkService, MagicLinkService>();
 
