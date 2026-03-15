@@ -43,6 +43,10 @@ This repository should evolve as a modern, production-quality codebase across bo
 - Keep routing shallow and map routes to feature folders where practical.
 - Treat server state, forms, and client state as separate concerns. Do not combine them in one abstraction unless there is a clear benefit.
 - Avoid spreading business rules across components. Move non-trivial logic into testable functions, hooks, or feature services.
+- Use strong TypeScript types generated from the backend OpenAPI specification for request and response contracts.
+- Do not hand-maintain frontend API models when the backend contract can be generated.
+- Keep generated API types in a clearly marked location and treat the backend OpenAPI document as the source of truth.
+- Add and maintain a frontend `package.json` script that fetches the backend OpenAPI specification and regenerates TypeScript types.
 
 ## Coding Style
 
@@ -80,3 +84,4 @@ This repository should evolve as a modern, production-quality codebase across bo
 - Prefer structures such as `src/Features/<FeatureName>/...` on the frontend and equivalent feature-oriented folders on the backend.
 - Within a feature folder, allow subfolders only when they support the slice, for example `Components`, `Hooks`, `Api`, `Domain`, `Application`, and `Tests`.
 - Do not split the codebase first by type across the whole app, such as global `Controllers`, `Services`, `Hooks`, or `Components`, when the code belongs to a specific feature.
+- For the current frontend, keep an action in `src/frontend/package.json` that regenerates types from the backend Swagger endpoint, for example from `http://localhost:5180/swagger/v1/swagger.json` during local development.
