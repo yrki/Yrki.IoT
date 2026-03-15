@@ -2,41 +2,43 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Service",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build",
-            "program": "${workspaceFolder}/bin/Debug/net7.0/service.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "launchSettingsProfile": "service",
-            "stopAtEntry": false,
-            "console": "internalConsole"
-        },
-        {
-            // Use IntelliSense to find out which attributes exist for C# debugging
-            // Use hover for the description of the existing attributes
-            // For further information visit https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md
             "name": "Api",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build",
-            // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/src/api/bin/Debug/net7.0/api.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/src/api",
+            "preLaunchTask": "build-api",
+            "program": "dotnet",
+            "args": [
+                "run",
+                "--project",
+                "${workspaceFolder}/src/backend/Api/Api.csproj",
+                "--launch-profile",
+                "Api"
+            ],
+            "cwd": "${workspaceFolder}/src/backend/Api",
             "stopAtEntry": false,
-            // Enable launching a web browser when ASP.NET Core starts. For more information: https://aka.ms/VSCode-CS-LaunchJson-WebBrowser
+            "console": "internalConsole",
             "serverReadyAction": {
                 "action": "openExternally",
                 "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
-            },
-            "launchSettingsProfile": "Api",
-            "sourceFileMap": {
-                "/Views": "${workspaceFolder}/Views"
             }
         },
-
+        {
+            "name": "Service",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-service",
+            "program": "dotnet",
+            "args": [
+                "run",
+                "--project",
+                "${workspaceFolder}/src/backend/Service/Service.csproj",
+                "--launch-profile",
+                "service"
+            ],
+            "cwd": "${workspaceFolder}/src/backend/Service",
+            "stopAtEntry": false,
+            "console": "internalConsole"
+        },
         {
             "name": ".NET Core Attach",
             "type": "coreclr",

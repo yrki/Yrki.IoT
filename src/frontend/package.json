@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "openapi:types": "mkdir -p src/api/generated && openapi-typescript ${OPENAPI_URL:-http://localhost:5180/swagger/v1/swagger.json} -o src/api/generated/openapi.ts",
+    "openapi:types:check": "test -f src/api/generated/openapi.ts"
   },
   "browserslist": {
     "production": [
@@ -42,6 +44,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "jsdom": "^28.1.0",
+    "openapi-typescript": "^7.13.0",
     "typescript": "^5.9.3",
     "vite": "^8.0.0",
     "vitest": "^4.1.0"
