@@ -189,6 +189,8 @@ publish/
 # but database connection strings (with potential passwords) will be unencrypted
 *.pubxml
 *.publishproj
+appsettings.Development.json
+**/appsettings.Development.json
 
 # Microsoft Azure Web App publish settings. Comment the next line if you want to
 # checkin your Azure Web App publish settings, but sensitive information contained
@@ -484,3 +486,4 @@ $RECYCLE.BIN/
 /.sonarqube
 /src/Api/.sonarqube
 /src/Service/supervisord.conf
+/src/backend/Api/bin/**

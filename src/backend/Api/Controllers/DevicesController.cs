@@ -1,10 +1,12 @@
 using Core.Contexts;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("[controller]")]
     public class DevicesController : ControllerBase
     {
@@ -24,9 +26,9 @@ namespace Api.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Contracts.Device>> GetById([FromRoute]string id)
+        public async Task<ActionResult<global::Contracts.Device>> GetById([FromRoute]string id)
         {
-            return Ok(new Contracts.Device
+            return Ok(new global::Contracts.Device
             {
                 Id = Guid.NewGuid(),
                 UniqueId = "123456"
@@ -34,7 +36,7 @@ namespace Api.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Contracts.Device device)
+        public async Task<IActionResult> Create([FromBody] global::Contracts.Device device)
         {
 
             throw new NotImplementedException();

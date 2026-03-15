@@ -1,16 +1,25 @@
 import { useEffect, useState } from 'react';
-import { AppBar, Drawer, Box, Toolbar, Typography, Button, IconButton } from '@mui/material'
+import { AppBar, Drawer, Box, Toolbar, Typography, Button, IconButton, Chip } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu';
 import LeftDrawer from './leftdrawer';
 import { getDevice } from '../api/api';
 import { IDevice } from '../api/models/IDevice';
+import { ICurrentUser } from '../api/models/IAuthResponse';
+import LoginDialog from './LoginDialog';
 
 
 type Anchor = 'left' | 'top' | 'right' | 'bottom';
 
-function Topmenu()
+interface TopmenuProps {
+    currentUser: ICurrentUser | null;
+    onRequestMagicLink: (email: string) => Promise<void>;
+    onLogout: () => void;
+}
+
+function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps)
 {
     const [device, setDevice] = useState<IDevice | null>(null);
+    const [loginOpen, setLoginOpen] = useState(false);
     const [state, setState] = useState({
         left: false,
         top: false,
@@ -18,15 +27,23 @@ function Topmenu()
         bottom: false
       });
     
-    // Create a useEffect hook that calls getDevice and sets the device state
     useEffect(() => {
-        const fetchDevice = async () => {
-            const result = await getDevice('1');
-            setDevice(result);
+        if (!currentUser) {
+            setDevice(null);
+            return;
         }
+
+        const fetchDevice = async () => {
+            try {
+                const result = await getDevice('1');
+                setDevice(result);
+            } catch {
+                setDevice(null);
+            }
+        };
         
-        fetchDevice();
-    }, [])
+        void fetchDevice();
+    }, [currentUser])
 
     
 
@@ -64,7 +81,14 @@ function Topmenu()
                 <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
                     Yrki IoT
                 </Typography>
-                <Button color="inherit">Login</Button>
+                {currentUser ? (
+                    <>
+                        <Chip label={currentUser.email} color="default" sx={{ mr: 2 }} />
+                        <Button color="inherit" onClick={onLogout}>Logout</Button>
+                    </>
+                ) : (
+                    <Button color="inherit" onClick={() => setLoginOpen(true)}>Login</Button>
+                )}
                 </Toolbar>
             </AppBar>
             <Drawer anchor='left'
@@ -73,6 +97,11 @@ function Topmenu()
             >
                 <LeftDrawer />
             </Drawer>
+            <LoginDialog
+                open={loginOpen}
+                onClose={() => setLoginOpen(false)}
+                onSubmit={onRequestMagicLink}
+            />
         </Box>
     )
 }

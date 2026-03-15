@@ -10,4 +10,4 @@ echo "Running backend build and tests..."
 dotnet test Yrki.IoT.slnx
 
 echo "Starting backend docker compose services..."
-docker-compose up --build postgres rabbitmq api service
+MAGIC_LINK_FRONTEND_BASE_URL=http://localhost:5173 docker-compose up --build postgres rabbitmq api service
