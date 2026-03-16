@@ -3,41 +3,25 @@
     "configurations": [
         {
             "name": "Api",
-            "type": "coreclr",
+            "type": "dotnet",
             "request": "launch",
-            "preLaunchTask": "build-api",
-            "program": "dotnet",
-            "args": [
-                "run",
-                "--project",
-                "${workspaceFolder}/src/backend/Api/Api.csproj",
-                "--launch-profile",
-                "Api"
-            ],
-            "cwd": "${workspaceFolder}/src/backend/Api",
-            "stopAtEntry": false,
-            "console": "internalConsole",
+            "projectPath": "${workspaceFolder}/src/backend/Api/Api.csproj",
+            "launchConfigurationId": "TargetFramework=;Api",
             "serverReadyAction": {
+                "killOnServerStop": true,
                 "action": "openExternally",
                 "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
             }
         },
         {
             "name": "Service",
-            "type": "coreclr",
+            "type": "dotnet",
             "request": "launch",
-            "preLaunchTask": "build-service",
-            "program": "dotnet",
-            "args": [
-                "run",
-                "--project",
-                "${workspaceFolder}/src/backend/Service/Service.csproj",
-                "--launch-profile",
-                "service"
-            ],
-            "cwd": "${workspaceFolder}/src/backend/Service",
-            "stopAtEntry": false,
-            "console": "internalConsole"
+            "projectPath": "${workspaceFolder}/src/backend/Service/Service.csproj",
+            "launchConfigurationId": "TargetFramework=;service",
+            "serverReadyAction": {
+                "killOnServerStop": true
+             }
         },
         {
             "name": ".NET Core Attach",
