@@ -11,12 +11,31 @@ public class DatabaseContext : DbContext
     }
 
     public DbSet<Device> Devices { get; set; }
+    public DbSet<Location> Locations { get; set; }
     public DbSet<AppUser> Users { get; set; }
     public DbSet<MagicLinkToken> MagicLinkTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Device>().ToTable("Devices");
+        modelBuilder.Entity<Device>(entity =>
+        {
+            entity.ToTable("Devices");
+            entity.HasKey(device => device.Id);
+            entity.Property(device => device.UniqueId).IsRequired();
+            entity.Property(device => device.Description).IsRequired();
+            entity.Property(device => device.Type).HasConversion<string>();
+            entity.HasOne(device => device.Location)
+                .WithMany(location => location.Devices)
+                .HasForeignKey(device => device.LocationId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<Location>(entity =>
+        {
+            entity.ToTable("Locations");
+            entity.HasKey(location => location.Id);
+            entity.Property(location => location.Name).IsRequired();
+            entity.Property(location => location.Description).IsRequired();
+        });
         modelBuilder.Entity<AppUser>(entity =>
         {
             entity.ToTable("Users");

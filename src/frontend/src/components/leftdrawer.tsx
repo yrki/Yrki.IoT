@@ -1,42 +1,81 @@
-import * as React from "react";
-import{ Box, Drawer, List, ListItem, ListItemIcon, ListItemText, ListItemButton, Divider, Button } from '@mui/material'
-import InboxIcon from '@mui/icons-material/Inbox';
-import MailIcon from '@mui/icons-material/Mail';
+import {
+  Box,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+} from '@mui/material';
+import MemoryRoundedIcon from '@mui/icons-material/MemoryRounded';
+import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
+import FileUploadRoundedIcon from '@mui/icons-material/FileUploadRounded';
+import PeopleAltRoundedIcon from '@mui/icons-material/PeopleAltRounded';
+import type { SvgIconComponent } from '@mui/icons-material';
 
+export type NavigationSection = 'Devices' | 'Locations' | 'Export' | 'Users';
 
-function LeftDrawer() {
-   return (
-        <Box
-          sx={{ width: 250 }}
-          role="presentation"
-        >
-          <List>
-            {['Inbox', 'Starred', 'Send email', 'Drafts'].map((text, index) => (
-              <ListItem key={text} disablePadding>
-                <ListItemButton>
-                  <ListItemIcon>
-                    {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
-                  </ListItemIcon>
-                  <ListItemText primary={text} />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-          <Divider />
-          <List>
-            {['All mail', 'Trash', 'Spam'].map((text, index) => (
-              <ListItem key={text} disablePadding>
-                <ListItemButton>
-                  <ListItemIcon>
-                    {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
-                  </ListItemIcon>
-                  <ListItemText primary={text} />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
-        </Box>
-      );
+const primaryItems: Array<{ label: NavigationSection; icon: SvgIconComponent }> = [
+  { label: 'Devices', icon: MemoryRoundedIcon },
+  { label: 'Locations', icon: PlaceRoundedIcon },
+  { label: 'Export', icon: FileUploadRoundedIcon },
+  { label: 'Users', icon: PeopleAltRoundedIcon },
+];
+
+interface LeftDrawerProps {
+  selectedSection: NavigationSection;
+  onSelectSection: (section: NavigationSection) => void;
+}
+
+function LeftDrawer({ selectedSection, onSelectSection }: LeftDrawerProps) {
+  return (
+    <Box
+      sx={{
+        width: { xs: 280, md: 300 },
+        height: '100%',
+        px: 2,
+        py: 3,
+        backgroundColor: 'background.paper',
+      }}
+      role="presentation"
+    >
+      <List sx={{ display: 'grid', gap: 0.5 }}>
+        {primaryItems.map(({ label, icon: Icon }) => {
+          const active = selectedSection === label;
+
+          return (
+          <ListItemButton
+            key={label}
+            onClick={() => onSelectSection(label)}
+            selected={active}
+            sx={{
+              borderRadius: '6px',
+              px: 1.5,
+              py: 1.1,
+              color: active ? 'text.primary' : 'text.secondary',
+              backgroundColor: active ? 'rgba(92, 141, 255, 0.12)' : 'transparent',
+              '&.Mui-selected': {
+                backgroundColor: 'rgba(92, 141, 255, 0.12)',
+              },
+              '&.Mui-selected:hover, &:hover': {
+                backgroundColor: active ? 'rgba(92, 141, 255, 0.16)' : 'rgba(255,255,255,0.04)',
+              },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 38, color: 'inherit' }}>
+              <Icon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText
+              primary={label}
+              primaryTypographyProps={{
+                fontSize: '0.98rem',
+                fontWeight: active ? 800 : 600,
+              }}
+            />
+          </ListItemButton>
+          );
+        })}
+      </List>
+    </Box>
+  );
 }
 
 export default LeftDrawer;

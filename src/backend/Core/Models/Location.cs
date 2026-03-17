@@ -1,7 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-
 namespace Core.Models;
 
 public class Location
@@ -9,6 +7,7 @@ public class Location
     [Key]
     public Guid Id { get; set; }
 
-    public string Name { get; set; }
-    public string Description { get; set; }
+    public required string Name { get; set; }
+    public required string Description { get; set; }
+    public List<Device> Devices { get; set; } = [];
 }

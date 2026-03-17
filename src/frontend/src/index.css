@@ -1,13 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+  color-scheme: dark;
+  --bg-base: #171a20;
+  --bg-elevated: #20242c;
+  --bg-panel: #242a33;
+  --bg-panel-soft: #272d37;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --text-primary: #f3f5f8;
+  --text-secondary: #a0a8b8;
+  --text-muted: #768093;
+  --accent: #5c8dff;
+  --accent-soft: rgba(92, 141, 255, 0.18);
+  --success: #30d17b;
+  --warning: #f5c451;
+  --danger: #ff6b6b;
+  --info: #38c7ff;
+  --shadow-lg: 0 28px 80px rgba(0, 0, 0, 0.34);
+  font-family: 'Manrope', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg-base);
+}
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Manrope', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--bg-base);
+  color: var(--text-primary);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
+}
+
+a {
+  color: inherit;
 }

@@ -34,11 +34,24 @@ function LoginDialog({ open, onClose, onSubmit }: LoginDialogProps) {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      fullWidth
+      maxWidth="xs"
+      PaperProps={{
+        sx: {
+          backgroundColor: 'background.paper',
+          borderRadius: '6px',
+        },
+      }}
+    >
       <Box component="form" onSubmit={handleSubmit}>
-        <DialogTitle>Sign in</DialogTitle>
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h4">Sign in</Typography>
+        </DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 2, pt: 1 }}>
-          <Typography variant="body2">
+          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
             Enter your email and we will send you a one-time sign-in link.
           </Typography>
           <TextField
@@ -48,6 +61,12 @@ function LoginDialog({ open, onClose, onSubmit }: LoginDialogProps) {
             label="Email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '6px',
+                backgroundColor: 'rgba(255,255,255,0.03)',
+              },
+            }}
           />
           {status === 'sent' && (
             <Alert severity="success">
@@ -56,8 +75,10 @@ function LoginDialog({ open, onClose, onSubmit }: LoginDialogProps) {
           )}
           {error && <Alert severity="error">{error}</Alert>}
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleClose}>Close</Button>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={handleClose} color="inherit">
+            Close
+          </Button>
           <Button type="submit" variant="contained" disabled={status === 'submitting'}>
             Send magic link
           </Button>

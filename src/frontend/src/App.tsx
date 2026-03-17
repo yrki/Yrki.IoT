@@ -59,7 +59,7 @@ function App() {
   if (!authReady) {
     return (
       <ThemeProvider theme={theme}>
-        <Box sx={{ p: 4, display: 'grid', placeItems: 'center' }}>
+        <Box className="app-shell__loading">
           <CircularProgress />
         </Box>
       </ThemeProvider>
@@ -68,16 +68,18 @@ function App() {
 
   return (
     <ThemeProvider theme={theme}>
-      {!currentUser && (
-        <Alert severity="info" sx={{ borderRadius: 0 }}>
-          Sign in with your email to access the API-backed features.
-        </Alert>
-      )}
-      <Topmenu
-        currentUser={currentUser}
-        onRequestMagicLink={handleRequestMagicLink}
-        onLogout={handleLogout}
-      />
+      <Box className="app-shell">
+        {!currentUser && (
+          <Alert severity="info" className="app-shell__notice">
+            Sign in with your email to access the API-backed features.
+          </Alert>
+        )}
+        <Topmenu
+          currentUser={currentUser}
+          onRequestMagicLink={handleRequestMagicLink}
+          onLogout={handleLogout}
+        />
+      </Box>
     </ThemeProvider>
   );
 }

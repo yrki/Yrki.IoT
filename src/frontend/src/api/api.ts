@@ -44,3 +44,13 @@ export const getDevice = async (id: Guid) : Promise<IDevice> => {
   const response = await myApi.get(`/devices/${id}`);
   return response.data;
 };
+
+export const getDevices = async (): Promise<IDevice[]> => {
+  const response = await myApi.get('/devices');
+  return response.data;
+};
+
+export const createDevice = async (device: IDevice): Promise<IDevice> => {
+  const response = await myApi.post('/devices', device);
+  return response.data;
+};
