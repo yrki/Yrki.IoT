@@ -73,6 +73,7 @@ public class DatabaseContext : DbContext
             entity.Property(r => r.Timestamp).HasColumnName("timestamp");
             entity.Property(r => r.SensorId).HasColumnName("sensor_id").IsRequired();
             entity.Property(r => r.SensorType).HasColumnName("sensor_type").IsRequired();
+            entity.Property(r => r.Manufacturer).HasColumnName("manufacturer");
             entity.Property(r => r.Value).HasColumnName("value");
         });
     }

@@ -59,6 +59,7 @@ public class MultiDeviceSimulatorWorker(IBus bus, ILogger<MultiDeviceSimulatorWo
                     var reading = new SensorReadingReceived(
                         device.SensorId,
                         sensor.SensorType,
+                        device.Manufacturer,
                         (decimal)Math.Round(value, 2),
                         DateTimeOffset.UtcNow);
 

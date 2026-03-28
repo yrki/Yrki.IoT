@@ -67,7 +67,7 @@ public class DeviceDiscoveryWorker(
                 Name = null,
                 Description = string.Empty,
                 Type = DeviceType.CO2,
-                Manufacturer = null,
+                Manufacturer = latestReading.Manufacturer,
                 IsNew = true,
                 LocationId = null,
                 LastContact = latestReading.Timestamp,

@@ -20,6 +20,7 @@ public class SensorReadingReceivedConsumer(
         {
             SensorId = msg.SensorId,
             SensorType = msg.SensorType,
+            Manufacturer = msg.Manufacturer,
             Value = msg.Value,
             Timestamp = msg.Timestamp,
         };

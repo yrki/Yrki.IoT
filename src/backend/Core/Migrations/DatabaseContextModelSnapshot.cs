@@ -192,6 +192,10 @@ namespace Core.Migrations
                         .HasColumnType("text")
                         .HasColumnName("sensor_type");
 
+                    b.Property<string>("Manufacturer")
+                        .HasColumnType("text")
+                        .HasColumnName("manufacturer");
+
                     b.Property<decimal>("Value")
                         .HasColumnType("numeric")
                         .HasColumnName("value");

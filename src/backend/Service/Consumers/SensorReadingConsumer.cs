@@ -91,6 +91,7 @@ public class SensorReadingConsumer(
             await bus.Publish(new SensorReadingReceived(
                 reading.SensorId,
                 reading.SensorType,
+                reading.Manufacturer,
                 reading.Value,
                 reading.Timestamp), cancellationToken);
         }

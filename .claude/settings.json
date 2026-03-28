@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(docker-compose --profile simulator down simulator)",
-      "Bash(docker-compose --profile simulator up -d --build simulator)",
-      "Bash(docker-compose --profile simulator logs --tail=15 simulator)"
-    ]
-  }
-}

@@ -1,13 +1,13 @@
 using Core.Contexts;
-using MassTransit;
-using Microsoft.EntityFrameworkCore;
-using Serilog;
-using Serilog.Events;
 using service.Configuration;
 using service.Consumers;
 using Core.Services.Encryption;
 using service.Hardware;
 using service.Workers;
+using Serilog;
+using Serilog.Events;
+using Microsoft.EntityFrameworkCore;
+using MassTransit;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
