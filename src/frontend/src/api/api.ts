@@ -38,3 +38,22 @@ export async function getCurrentUser(): Promise<ICurrentUser> {
   const response = await api.get<ICurrentUser>('/auth/me');
   return response.data;
 }
+
+export interface SensorReadingDto {
+  sensorId: string;
+  sensorType: string;
+  value: number;
+  timestamp: string;
+}
+
+export async function getRecentReadings(hours = 3): Promise<SensorReadingDto[]> {
+  const response = await api.get<SensorReadingDto[]>('/sensorreadings/recent', {
+    params: { hours },
+  });
+  return response.data;
+}
+
+export async function getLatestReadings(): Promise<SensorReadingDto[]> {
+  const response = await api.get<SensorReadingDto[]>('/sensorreadings/latest');
+  return response.data;
+}

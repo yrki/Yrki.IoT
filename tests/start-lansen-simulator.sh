@@ -116,7 +116,7 @@ API_PID=$!
 
 # ── Start Frontend (Vite dev server) ──────────────────────────────────────────
 echo "Starter Frontend..."
-(cd "$FRONTEND_DIR" && npm run dev) &
+(cd "$FRONTEND_DIR" && VITE_API_TARGET=http://localhost:5180 npm run dev) &
 FRONTEND_PID=$!
 
 # ── Start CO2-simulator ───────────────────────────────────────────────────────

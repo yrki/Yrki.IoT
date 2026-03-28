@@ -5,8 +5,8 @@ namespace Simulator;
 
 public class LansenCO2SimulatorWorker(IBus bus, ILogger<LansenCO2SimulatorWorker> logger) : BackgroundService
 {
-    private const int CycleSteps = 30;
-    private const int IntervalSeconds = 20;
+    private const int CycleSteps = 600;
+    private const int IntervalSeconds = 1;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
