@@ -59,7 +59,7 @@ public class DatabaseContext : DbContext
         modelBuilder.Entity<SensorReading>(entity =>
         {
             entity.ToTable("sensor_readings");
-            entity.HasKey(r => new { r.Timestamp, r.SensorId });
+            entity.HasKey(r => new { r.Timestamp, r.SensorId, r.SensorType });
             entity.Property(r => r.Timestamp).HasColumnName("timestamp");
             entity.Property(r => r.SensorId).HasColumnName("sensor_id").IsRequired();
             entity.Property(r => r.SensorType).HasColumnName("sensor_type").IsRequired();

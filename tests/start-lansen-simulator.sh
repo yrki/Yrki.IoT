@@ -102,6 +102,13 @@ echo ""
 echo "Trykk Ctrl+C for å avslutte simulator og service."
 echo "──────────────────────────────────────────────────────────────────────────"
 
+echo "Bygger Service..."
+dotnet build "$REPO_ROOT/src/backend/Service/Service.csproj" --nologo -v q 2>&1
+
+echo ""
+echo "Starter Service (forgrunn) — all logging vises under:"
+echo "──────────────────────────────────────────────────────────────────────────"
+
 ConnectionStrings__DatabaseConnectionString="Host=localhost;Port=5432;Database=YrkiIoT;Username=postgres;Password=postgres" \
 RabbitMq__Host=localhost \
 RabbitMq__Port=5672 \
@@ -109,7 +116,4 @@ RabbitMq__Username=guest \
 RabbitMq__Password=guest \
 WMBus__SerialPort="$READ_PTY" \
 WMBus__BaudRate=9600 \
-    dotnet run --project "$REPO_ROOT/src/backend/Service/Service.csproj" &
-SERVICE_PID=$!
-
-wait "$SERVICE_PID"
+    dotnet run --project "$REPO_ROOT/src/backend/Service/Service.csproj" --no-build --no-launch-profile
