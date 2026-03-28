@@ -14,6 +14,7 @@ public class DatabaseContext : DbContext
     public DbSet<Location> Locations { get; set; }
     public DbSet<AppUser> Users { get; set; }
     public DbSet<MagicLinkToken> MagicLinkTokens { get; set; }
+    public DbSet<SensorReading> SensorReadings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -54,6 +55,15 @@ public class DatabaseContext : DbContext
                 .WithMany(user => user.MagicLinkTokens)
                 .HasForeignKey(token => token.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<SensorReading>(entity =>
+        {
+            entity.ToTable("sensor_readings");
+            entity.HasKey(r => new { r.Timestamp, r.SensorId });
+            entity.Property(r => r.Timestamp).HasColumnName("timestamp");
+            entity.Property(r => r.SensorId).HasColumnName("sensor_id").IsRequired();
+            entity.Property(r => r.SensorType).HasColumnName("sensor_type").IsRequired();
+            entity.Property(r => r.Value).HasColumnName("value");
         });
     }
 }
