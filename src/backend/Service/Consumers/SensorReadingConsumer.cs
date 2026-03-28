@@ -1,5 +1,6 @@
 using Contracts.Readings;
 using Core.Contexts;
+using Core.Models;
 using MassTransit;
 using Microsoft.Extensions.Options;
 using service.Configuration;
@@ -19,33 +20,51 @@ public class SensorReadingConsumer(
         var msg = context.Message;
         var header = _parser.ParseHeader(msg.RawMessage);
 
-        var encryptionKey = header.EncryptionMethod == EncryptionMethod.None
-            ? string.Empty
-            : wmBusOptions.Value.DeviceKeys.GetValueOrDefault(header.AField, string.Empty);
+        if (!TryParsePayload(msg.RawMessage, header, out var payload))
+            return;
 
-        IParsedPayload payload;
+        var readings = MapReadings(header, payload!, msg.Timestamp);
+        if (readings.Count == 0)
+            return;
+
+        await PersistReadingsAsync(readings, header, context.CancellationToken);
+    }
+
+    private bool TryParsePayload(byte[] rawMessage, WMBusMessage header, out IParsedPayload? payload)
+    {
+        var encryptionKey = ResolveEncryptionKey(header);
         try
         {
-            payload = _parser.ParsePayload(msg.RawMessage, encryptionKey);
+            payload = _parser.ParsePayload(rawMessage, encryptionKey);
+            return true;
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to parse payload for sensor {SensorId} ({Manufacturer})", header.AField, header.MField);
-            return;
+            payload = null;
+            return false;
         }
+    }
 
-        var readings = SensorReadingMapper.Map(header, payload, msg.Timestamp);
+    private string ResolveEncryptionKey(WMBusMessage header) =>
+        header.EncryptionMethod == EncryptionMethod.None
+            ? string.Empty
+            : wmBusOptions.Value.DeviceKeys.GetValueOrDefault(header.AField, string.Empty);
+
+    private List<SensorReading> MapReadings(WMBusMessage header, IParsedPayload payload, DateTimeOffset timestamp)
+    {
+        var readings = SensorReadingMapper.Map(header, payload, timestamp);
         if (readings.Count == 0)
-        {
             logger.LogWarning("No mappable readings for sensor {SensorId} payload type {Type}", header.AField, payload.GetType().Name);
-            return;
-        }
+        return readings;
+    }
 
+    private async Task PersistReadingsAsync(List<SensorReading> readings, WMBusMessage header, CancellationToken cancellationToken)
+    {
         db.SensorReadings.AddRange(readings);
-        await db.SaveChangesAsync(context.CancellationToken);
-
-        logger.LogInformation(
-            "Stored {Count} readings for sensor {SensorId} ({DeviceType})",
-            readings.Count, header.AField, header.DeviceType);
+        await db.SaveChangesAsync(cancellationToken);
+        if (logger.IsEnabled(LogLevel.Information))
+            logger.LogInformation("Stored {Count} readings for sensor {SensorId} ({DeviceType})",
+                readings.Count, header.AField, header.DeviceType.ToString());
     }
 }
