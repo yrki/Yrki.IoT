@@ -487,3 +487,6 @@ $RECYCLE.BIN/
 /src/Api/.sonarqube
 /src/Service/supervisord.conf
 /src/backend/Api/bin/**
+
+# Core dumps
+core
