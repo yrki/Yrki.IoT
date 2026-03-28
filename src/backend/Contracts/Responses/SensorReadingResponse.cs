@@ -1,5 +1,3 @@
-using System;
-
 namespace Contracts.Responses;
 
 public record SensorReadingResponse(

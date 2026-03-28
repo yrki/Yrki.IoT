@@ -17,7 +17,7 @@ public class SensorReadingReceivedConsumer(
         {
             msg.SensorId,
             msg.SensorType,
-            Value = msg.Value,
+            msg.Value,
             Timestamp = msg.Timestamp.ToString("O"),
         }, context.CancellationToken);
 
