@@ -1,15 +1,23 @@
 using System.Text;
 using System.Text.Json.Serialization;
+
+
 using Api.Configuration;
 using Api.Consumers;
 using Api.Hubs;
 using Api.Services;
+
+
 using Core.Contexts;
+using Core.Features.SensorData.Query;
 using Core.Services.Email;
+
+
 using MassTransit;
+
+
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,6 +30,7 @@ builder.Services.Configure<MagicLinkOptions>(builder.Configuration.GetSection("M
 builder.Services.AddDbContext<DatabaseContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DatabaseConnectionString")));
 
+builder.Services.AddScoped<SensorReadingsQueryHandler>();
 builder.Services.AddScoped<ITokenHasher, Sha256TokenHasher>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
