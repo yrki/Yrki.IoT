@@ -12,7 +12,7 @@ var host = Host.CreateDefaultBuilder(args)
                     h.Password(config["RabbitMq:Password"] ?? "guest");
                 })));
 
-        services.AddHostedService<LansenCO2SimulatorWorker>();
+        services.AddHostedService<MultiDeviceSimulatorWorker>();
     })
     .Build();
 

@@ -1,3 +1,3 @@
 namespace Core.Features.SensorData.Query;
 
-public record SensorReadingQuery(int Hours = 3);
+public record SensorReadingQuery(string SensorId, int Hours = 3);

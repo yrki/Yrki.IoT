@@ -5,7 +5,9 @@ using Serilog;
 using Serilog.Events;
 using service.Configuration;
 using service.Consumers;
+using Core.Services.Encryption;
 using service.Hardware;
+using service.Workers;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
@@ -26,6 +28,10 @@ try
 
             services.Configure<WMBusOptions>(config.GetSection("WMBus"));
 
+            var encryptionMasterKey = config["Encryption:MasterKey"]
+                ?? throw new InvalidOperationException("Encryption:MasterKey must be configured.");
+            services.AddSingleton<IKeyEncryptionService>(new AesKeyEncryptionService(encryptionMasterKey));
+
             services.AddDbContext<DatabaseContext>(options =>
                 options.UseNpgsql(config.GetConnectionString("DatabaseConnectionString")));
 
@@ -44,6 +50,7 @@ try
             });
 
             services.AddHostedService<WMBusSerialWorker>();
+            services.AddHostedService<DeviceDiscoveryWorker>();
         })
         .Build();
 

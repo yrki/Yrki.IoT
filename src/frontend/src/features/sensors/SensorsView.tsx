@@ -1,11 +1,26 @@
-import { useState } from 'react';
-import { Box, Button, ButtonGroup, Chip, Paper, Stack, Typography } from '@mui/material';
+import { useEffect, useState } from 'react';
+import {
+  Box,
+  Button,
+  ButtonGroup,
+  Chip,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  Typography,
+} from '@mui/material';
 import ThermostatRoundedIcon from '@mui/icons-material/ThermostatRounded';
 import WaterDropRoundedIcon from '@mui/icons-material/WaterDropRounded';
 import Co2RoundedIcon from '@mui/icons-material/Co2Rounded';
 import VolumeUpRoundedIcon from '@mui/icons-material/VolumeUpRounded';
+import WaterRoundedIcon from '@mui/icons-material/WaterRounded';
+import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { useSensorHub, SensorReading, SensorDataPoint } from './useSensorHub';
+import { getSensorIds } from '../../api/api';
 
 interface SensorCardProps {
   label: string;
@@ -148,12 +163,16 @@ function SensorCard({ label, unit, icon, reading, history, color, hours }: Senso
   );
 }
 
-const sensorCards = [
-  { sensorType: 'CO2', label: 'CO2', unit: 'ppm', icon: <Co2RoundedIcon />, color: '#5c8dff' },
-  { sensorType: 'Temperature', label: 'Temperature', unit: '\u00B0C', icon: <ThermostatRoundedIcon />, color: '#ff6b6b' },
-  { sensorType: 'Humidity', label: 'Humidity', unit: '%', icon: <WaterDropRoundedIcon />, color: '#38c7ff' },
-  { sensorType: 'Sound', label: 'Sound level', unit: 'dB', icon: <VolumeUpRoundedIcon />, color: '#f5c451' },
-] as const;
+const sensorTypeConfig: Record<string, { label: string; unit: string; icon: React.ReactNode; color: string }> = {
+  CO2: { label: 'CO2', unit: 'ppm', icon: <Co2RoundedIcon />, color: '#5c8dff' },
+  Temperature: { label: 'Temperature', unit: '\u00B0C', icon: <ThermostatRoundedIcon />, color: '#ff6b6b' },
+  Humidity: { label: 'Humidity', unit: '%', icon: <WaterDropRoundedIcon />, color: '#38c7ff' },
+  Sound: { label: 'Sound level', unit: 'dB', icon: <VolumeUpRoundedIcon />, color: '#f5c451' },
+  Flow: { label: 'Flow', unit: 'l/h', icon: <SpeedRoundedIcon />, color: '#a78bfa' },
+  Volume: { label: 'Volume', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#34d399' },
+};
+
+const defaultConfig = { label: 'Unknown', unit: '', icon: <SpeedRoundedIcon />, color: '#999' };
 
 const timeRanges = [
   { label: '3h', hours: 3 },
@@ -162,9 +181,26 @@ const timeRanges = [
   { label: '1m', hours: 24 * 30 },
 ] as const;
 
+const DEFAULT_SENSOR_ID = 'LSN-67000205';
+
 function SensorsView() {
+  const [sensorIds, setSensorIds] = useState<string[]>([]);
+  const [selectedSensorId, setSelectedSensorId] = useState(DEFAULT_SENSOR_ID);
   const [hours, setHours] = useState(3);
-  const { readings, history, connected } = useSensorHub(hours);
+  const { readings, history, connected } = useSensorHub(selectedSensorId, hours);
+
+  useEffect(() => {
+    getSensorIds()
+      .then((ids) => {
+        setSensorIds(ids);
+        if (ids.length > 0 && !ids.includes(selectedSensorId)) {
+          setSelectedSensorId(ids[0]);
+        }
+      })
+      .catch((err) => console.error('Failed to fetch sensor IDs:', err));
+  }, []);
+
+  const activeSensorTypes = Object.keys(readings);
 
   return (
     <Paper
@@ -186,6 +222,20 @@ function SensorsView() {
           </Typography>
         </Box>
         <Box sx={{ flexGrow: 1 }} />
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Device</InputLabel>
+          <Select
+            value={selectedSensorId}
+            label="Device"
+            onChange={(e) => setSelectedSensorId(e.target.value)}
+          >
+            {sensorIds.map((id) => (
+              <MenuItem key={id} value={id}>
+                {id}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <ButtonGroup size="small" variant="outlined">
           {timeRanges.map((range) => (
             <Button
@@ -206,18 +256,21 @@ function SensorsView() {
       </Stack>
 
       <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
-        {sensorCards.map((card) => (
-          <SensorCard
-            key={card.sensorType}
-            label={card.label}
-            unit={card.unit}
-            icon={card.icon}
-            reading={readings[card.sensorType]}
-            history={history[card.sensorType] ?? []}
-            color={card.color}
-            hours={hours}
-          />
-        ))}
+        {activeSensorTypes.map((sensorType) => {
+          const config = sensorTypeConfig[sensorType] ?? { ...defaultConfig, label: sensorType };
+          return (
+            <SensorCard
+              key={sensorType}
+              label={config.label}
+              unit={config.unit}
+              icon={config.icon}
+              reading={readings[sensorType]}
+              history={history[sensorType] ?? []}
+              color={config.color}
+              hours={hours}
+            />
+          );
+        })}
       </Stack>
     </Paper>
   );

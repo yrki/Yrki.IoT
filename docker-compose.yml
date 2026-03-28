@@ -57,6 +57,7 @@ services:
       RabbitMq__Port: 5672
       RabbitMq__Username: guest
       RabbitMq__Password: guest
+      Encryption__MasterKey: ${ENCRYPTION_MASTER_KEY:-Ae+/cx56gf9Zg5ECKYl67cOnP4QpiGdQczqrSU7MYbg=}
     ports:
       - "8081:8080"
     depends_on:
@@ -87,6 +88,7 @@ services:
       RabbitMq__Username: guest
       RabbitMq__Password: guest
       WMBus__Enabled: "false"
+      Encryption__MasterKey: ${ENCRYPTION_MASTER_KEY:-Ae+/cx56gf9Zg5ECKYl67cOnP4QpiGdQczqrSU7MYbg=}
     depends_on:
       postgres:
         condition: service_healthy

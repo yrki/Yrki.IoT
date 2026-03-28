@@ -14,7 +14,7 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
 
         return await db.SensorReadings
             .AsNoTracking()
-            .Where(r => r.Timestamp >= since)
+            .Where(r => r.SensorId == query.SensorId && r.Timestamp >= since)
             .OrderBy(r => r.Timestamp)
             .Select(r => new SensorReadingResponse(
                 r.SensorId,
@@ -25,10 +25,12 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
     }
 
     public async Task<IReadOnlyList<SensorReadingResponse>> HandleLatestAsync(
+        string sensorId,
         CancellationToken cancellationToken = default)
     {
         var sensorTypes = await db.SensorReadings
             .AsNoTracking()
+            .Where(r => r.SensorId == sensorId)
             .Select(r => r.SensorType)
             .Distinct()
             .ToListAsync(cancellationToken);
@@ -38,7 +40,7 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
         {
             var reading = await db.SensorReadings
                 .AsNoTracking()
-                .Where(r => r.SensorType == type)
+                .Where(r => r.SensorId == sensorId && r.SensorType == type)
                 .OrderByDescending(r => r.Timestamp)
                 .Select(r => new SensorReadingResponse(
                     r.SensorId,
@@ -52,5 +54,16 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
         }
 
         return results;
+    }
+
+    public async Task<IReadOnlyList<string>> GetDistinctSensorIdsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return await db.SensorReadings
+            .AsNoTracking()
+            .Select(r => r.SensorId)
+            .Distinct()
+            .OrderBy(id => id)
+            .ToListAsync(cancellationToken);
     }
 }

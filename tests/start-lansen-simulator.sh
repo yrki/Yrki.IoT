@@ -111,6 +111,7 @@ ConnectionStrings__DatabaseConnectionString="Host=localhost;Port=5432;Database=Y
 RabbitMq__Host=localhost \
 RabbitMq__Username=guest \
 RabbitMq__Password=guest \
+Encryption__MasterKey="Ae+/cx56gf9Zg5ECKYl67cOnP4QpiGdQczqrSU7MYbg=" \
     dotnet run --project "$REPO_ROOT/src/backend/Api/Api.csproj" --no-build --no-launch-profile --urls "http://localhost:5180" &
 API_PID=$!
 
@@ -142,6 +143,7 @@ ConnectionStrings__DatabaseConnectionString="Host=localhost;Port=5432;Database=Y
 RabbitMq__Host=localhost \
 RabbitMq__Username=guest \
 RabbitMq__Password=guest \
+Encryption__MasterKey="Ae+/cx56gf9Zg5ECKYl67cOnP4QpiGdQczqrSU7MYbg=" \
 WMBus__SerialPort="$READ_PTY" \
 WMBus__BaudRate=9600 \
     dotnet run --project "$REPO_ROOT/src/backend/Service/Service.csproj" --no-build --no-launch-profile

@@ -9,8 +9,11 @@ using Api.Services;
 
 
 using Core.Contexts;
+using Core.Features.Devices.Command;
+using Core.Features.Devices.Query;
 using Core.Features.SensorData.Query;
 using Core.Services.Email;
+using Core.Services.Encryption;
 
 
 using MassTransit;
@@ -31,6 +34,12 @@ builder.Services.AddDbContext<DatabaseContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DatabaseConnectionString")));
 
 builder.Services.AddScoped<SensorReadingsQueryHandler>();
+builder.Services.AddScoped<NewDevicesQueryHandler>();
+builder.Services.AddScoped<UpdateDeviceCommandHandler>();
+
+var encryptionMasterKey = builder.Configuration["Encryption:MasterKey"]
+    ?? throw new InvalidOperationException("Encryption:MasterKey must be configured.");
+builder.Services.AddSingleton<IKeyEncryptionService>(new AesKeyEncryptionService(encryptionMasterKey));
 builder.Services.AddScoped<ITokenHasher, Sha256TokenHasher>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();

@@ -16,7 +16,7 @@ public class Device
     public string? Manufacturer { get; set; }
     public bool IsNew { get; set; }
 
-    public Guid LocationId { get; set; }
+    public Guid? LocationId { get; set; }
     public Location? Location { get; set; }
     public DateTimeOffset LastContact { get; set; }
     public DateTimeOffset InstallationDate { get; set; }

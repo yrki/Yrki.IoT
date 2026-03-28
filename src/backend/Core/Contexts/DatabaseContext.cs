@@ -15,6 +15,7 @@ public class DatabaseContext : DbContext
     public DbSet<AppUser> Users { get; set; }
     public DbSet<MagicLinkToken> MagicLinkTokens { get; set; }
     public DbSet<SensorReading> SensorReadings { get; set; }
+    public DbSet<EncryptionKey> EncryptionKeys { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,6 +29,7 @@ public class DatabaseContext : DbContext
             entity.HasOne(device => device.Location)
                 .WithMany(location => location.Devices)
                 .HasForeignKey(device => device.LocationId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
         });
         modelBuilder.Entity<Location>(entity =>
@@ -55,6 +57,14 @@ public class DatabaseContext : DbContext
                 .WithMany(user => user.MagicLinkTokens)
                 .HasForeignKey(token => token.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<EncryptionKey>(entity =>
+        {
+            entity.ToTable("EncryptionKeys");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EncryptedKeyValue).IsRequired();
+            entity.HasIndex(e => e.DeviceUniqueId);
+            entity.HasIndex(e => e.GroupName);
         });
         modelBuilder.Entity<SensorReading>(entity =>
         {

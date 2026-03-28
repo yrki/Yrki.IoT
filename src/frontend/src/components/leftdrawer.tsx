@@ -5,15 +5,17 @@ import {
   ListItemIcon,
   ListItemText,
 } from '@mui/material';
+import FiberNewRoundedIcon from '@mui/icons-material/FiberNewRounded';
 import MemoryRoundedIcon from '@mui/icons-material/MemoryRounded';
 import SensorsRoundedIcon from '@mui/icons-material/SensorsRounded';
 import type { SvgIconComponent } from '@mui/icons-material';
 
-export type NavigationSection = 'Devices' | 'Sensors';
+export type NavigationSection = 'Devices' | 'Sensors' | 'New Sensors';
 
 const primaryItems: Array<{ label: NavigationSection; icon: SvgIconComponent }> = [
-  { label: 'Devices', icon: MemoryRoundedIcon },
   { label: 'Sensors', icon: SensorsRoundedIcon },
+  { label: 'New Sensors', icon: FiberNewRoundedIcon },
+  { label: 'Devices', icon: MemoryRoundedIcon },
 ];
 
 interface LeftDrawerProps {

@@ -7,19 +7,29 @@ namespace Api.Controllers;
 [Route("[controller]")]
 public class SensorReadingsController(SensorReadingsQueryHandler queryHandler) : ControllerBase
 {
-    [HttpGet("recent")]
+    [HttpGet("sensors")]
+    public async Task<IActionResult> GetSensorIds(CancellationToken cancellationToken)
+    {
+        var ids = await queryHandler.GetDistinctSensorIdsAsync(cancellationToken);
+        return Ok(ids);
+    }
+
+    [HttpGet("{sensorId}/recent")]
     public async Task<IActionResult> GetRecent(
+        string sensorId,
         [FromQuery] int hours = 3,
         CancellationToken cancellationToken = default)
     {
-        var readings = await queryHandler.HandleAsync(new SensorReadingQuery(hours), cancellationToken);
+        var readings = await queryHandler.HandleAsync(new SensorReadingQuery(sensorId, hours), cancellationToken);
         return Ok(readings);
     }
 
-    [HttpGet("latest")]
-    public async Task<IActionResult> GetLatest(CancellationToken cancellationToken)
+    [HttpGet("{sensorId}/latest")]
+    public async Task<IActionResult> GetLatest(
+        string sensorId,
+        CancellationToken cancellationToken = default)
     {
-        var readings = await queryHandler.HandleLatestAsync(cancellationToken);
+        var readings = await queryHandler.HandleLatestAsync(sensorId, cancellationToken);
         return Ok(readings);
     }
 }

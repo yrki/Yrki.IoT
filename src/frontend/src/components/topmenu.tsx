@@ -16,6 +16,7 @@ import LeftDrawer, { NavigationSection } from './leftdrawer';
 import { ICurrentUser } from '../api/models/IAuthResponse';
 import LoginDialog from './LoginDialog';
 import DevicesView from '../features/devices/DevicesView';
+import NewSensorsView from '../features/new-sensors/NewSensorsView';
 import SensorsView from '../features/sensors/SensorsView';
 
 const drawerWidth = 300;
@@ -44,11 +45,14 @@ function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
   );
 
   const renderMainContent = () => {
-    if (selectedSection === 'Devices') {
-      return <DevicesView />;
+    switch (selectedSection) {
+      case 'Devices':
+        return <DevicesView />;
+      case 'New Sensors':
+        return <NewSensorsView />;
+      default:
+        return <SensorsView />;
     }
-
-    return <SensorsView />;
   };
 
   return (

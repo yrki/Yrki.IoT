@@ -69,11 +69,11 @@ namespace Core.Migrations
                     b.Property<DateTimeOffset>("LastContact")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("LocationId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Manufacturer")
                         .HasColumnType("text");
-
-                    b.Property<Guid>("LocationId")
-                        .HasColumnType("uuid");
 
                     b.Property<string>("Name")
                         .HasColumnType("text");
@@ -91,6 +91,40 @@ namespace Core.Migrations
                     b.HasIndex("LocationId");
 
                     b.ToTable("Devices", (string)null);
+                });
+
+            modelBuilder.Entity("Core.Models.EncryptionKey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeviceUniqueId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncryptedKeyValue")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("GroupName")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceUniqueId");
+
+                    b.HasIndex("GroupName");
+
+                    b.ToTable("EncryptionKeys", (string)null);
                 });
 
             modelBuilder.Entity("Core.Models.Location", b =>
@@ -151,12 +185,10 @@ namespace Core.Migrations
                         .HasColumnName("timestamp");
 
                     b.Property<string>("SensorId")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("sensor_id");
 
                     b.Property<string>("SensorType")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("sensor_type");
 
@@ -174,8 +206,7 @@ namespace Core.Migrations
                     b.HasOne("Core.Models.Location", "Location")
                         .WithMany("Devices")
                         .HasForeignKey("LocationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Location");
                 });

@@ -46,14 +46,101 @@ export interface SensorReadingDto {
   timestamp: string;
 }
 
-export async function getRecentReadings(hours = 3): Promise<SensorReadingDto[]> {
-  const response = await api.get<SensorReadingDto[]>('/sensorreadings/recent', {
+export async function getSensorIds(): Promise<string[]> {
+  const response = await api.get<string[]>('/sensorreadings/sensors');
+  return response.data;
+}
+
+export async function getRecentReadings(sensorId: string, hours = 3): Promise<SensorReadingDto[]> {
+  const response = await api.get<SensorReadingDto[]>(`/sensorreadings/${encodeURIComponent(sensorId)}/recent`, {
     params: { hours },
   });
   return response.data;
 }
 
-export async function getLatestReadings(): Promise<SensorReadingDto[]> {
-  const response = await api.get<SensorReadingDto[]>('/sensorreadings/latest');
+export async function getLatestReadings(sensorId: string): Promise<SensorReadingDto[]> {
+  const response = await api.get<SensorReadingDto[]>(`/sensorreadings/${encodeURIComponent(sensorId)}/latest`);
   return response.data;
+}
+
+export interface NewDeviceDto {
+  id: string;
+  uniqueId: string;
+  name: string | null;
+  manufacturer: string | null;
+  type: string;
+  description: string;
+  locationId: string | null;
+  lastContact: string;
+  installationDate: string;
+}
+
+export interface UpdateDeviceRequest {
+  name?: string;
+  description?: string;
+  locationId?: string;
+}
+
+export async function getNewDevices(): Promise<NewDeviceDto[]> {
+  const response = await api.get<NewDeviceDto[]>('/newdevices');
+  return response.data;
+}
+
+export async function updateDevice(id: string, request: UpdateDeviceRequest): Promise<NewDeviceDto> {
+  const response = await api.put<NewDeviceDto>(`/newdevices/${id}`, request);
+  return response.data;
+}
+
+export interface LocationDto {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export async function getLocations(): Promise<LocationDto[]> {
+  const response = await api.get<LocationDto[]>('/locations');
+  return response.data;
+}
+
+export async function createLocation(name: string, description?: string): Promise<LocationDto> {
+  const response = await api.post<LocationDto>('/locations', { name, description });
+  return response.data;
+}
+
+export interface EncryptionKeyDto {
+  id: string;
+  deviceUniqueId: string | null;
+  groupName: string | null;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+export async function getEncryptionKeys(): Promise<EncryptionKeyDto[]> {
+  const response = await api.get<EncryptionKeyDto[]>('/encryptionkeys');
+  return response.data;
+}
+
+export async function createEncryptionKey(request: {
+  deviceUniqueId?: string;
+  groupName?: string;
+  keyValue: string;
+  description?: string;
+}): Promise<EncryptionKeyDto> {
+  const response = await api.post<EncryptionKeyDto>('/encryptionkeys', request);
+  return response.data;
+}
+
+export async function updateEncryptionKey(id: string, request: {
+  deviceUniqueId?: string;
+  groupName?: string;
+  keyValue?: string;
+  description?: string;
+}): Promise<EncryptionKeyDto> {
+  const response = await api.put<EncryptionKeyDto>(`/encryptionkeys/${id}`, request);
+  return response.data;
+}
+
+export async function deleteEncryptionKey(id: string): Promise<void> {
+  await api.delete(`/encryptionkeys/${id}`);
 }
