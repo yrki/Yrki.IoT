@@ -2,6 +2,7 @@ namespace service.Configuration;
 
 public class WMBusOptions
 {
+    public bool Enabled { get; set; } = true;
     public string SerialPort { get; set; } = "/dev/ttyUSB0";
     public int BaudRate { get; set; } = 9600;
 

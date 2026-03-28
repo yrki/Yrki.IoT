@@ -40,6 +40,7 @@ services:
     volumes:
       - .:/workspace
       - nuget-cache:/root/.nuget/packages
+      - ~/.nuget/NuGet/NuGet.Config:/root/.nuget/NuGet/NuGet.Config:ro
     command:
       - /bin/sh
       - -lc
@@ -70,6 +71,7 @@ services:
     volumes:
       - .:/workspace
       - nuget-cache:/root/.nuget/packages
+      - ~/.nuget/NuGet/NuGet.Config:/root/.nuget/NuGet/NuGet.Config:ro
     command:
       - /bin/sh
       - -lc
@@ -84,11 +86,36 @@ services:
       RabbitMq__Port: 5672
       RabbitMq__Username: guest
       RabbitMq__Password: guest
+      WMBus__Enabled: "false"
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+
+  simulator:
+    image: mcr.microsoft.com/dotnet/sdk:10.0-alpine
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - nuget-cache:/root/.nuget/packages
+      - ~/.nuget/NuGet/NuGet.Config:/root/.nuget/NuGet/NuGet.Config:ro
+    command:
+      - /bin/sh
+      - -lc
+      - >
+        dotnet restore src/backend/Simulator/Simulator.csproj &&
+        dotnet run --project src/backend/Simulator/Simulator.csproj --no-restore
+    restart: unless-stopped
+    environment:
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: guest
+      RabbitMq__Password: guest
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    profiles:
+      - simulator
 
   frontend:
     build:

@@ -4,10 +4,13 @@ import { vi } from 'vitest';
 
 vi.mock('./api/api', () => ({
   getCurrentUser: vi.fn(),
-  getDevice: vi.fn().mockResolvedValue({ id: '1' }),
   requestMagicLink: vi.fn().mockResolvedValue(undefined),
   setAccessToken: vi.fn(),
   verifyMagicLink: vi.fn(),
+}));
+
+vi.mock('./features/sensors/useSensorHub', () => ({
+  useSensorHub: () => ({ readings: {}, connected: false }),
 }));
 
 test('renders the top navigation', () => {

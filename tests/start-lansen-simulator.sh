@@ -4,23 +4,27 @@
 #
 # Starter hele stacken for manuell testing av WMBus-pipelinen:
 #
-#   Docker  : postgres, rabbitmq, api, frontend
-#   Lokalt  : Service  (trenger tilgang til virtuell seriellport)
-#   Lokalt  : socat    (virtuelt PTY-par)
+#   Docker  : postgres, rabbitmq
+#   Lokalt  : API       (med SignalR-hub)
+#   Lokalt  : Service   (trenger tilgang til virtuell seriellport)
+#   Lokalt  : Frontend  (Vite dev server med proxy)
+#   Lokalt  : socat     (virtuelt PTY-par)
 #   Lokalt  : Lansen CO2-simulator (skriver til PTY-par)
 #
 # Forutsetninger:
 #   brew install socat
 #   python3  (følger med macOS)
 #   dotnet 10 SDK
+#   node / npm
 # ──────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TESTS_DIR="$REPO_ROOT/tests"
+FRONTEND_DIR="$REPO_ROOT/src/frontend"
 
 # ── Sjekk avhengigheter ───────────────────────────────────────────────────────
-for cmd in socat python3 dotnet docker; do
+for cmd in socat python3 dotnet docker npm; do
     command -v "$cmd" >/dev/null 2>&1 || {
         echo "Mangler: $cmd"
         [[ "$cmd" == "socat" ]] && echo "  → brew install socat"
@@ -33,14 +37,18 @@ SOCAT_LOG=""
 SOCAT_PID=""
 SIM_PID=""
 SERVICE_PID=""
+API_PID=""
+FRONTEND_PID=""
 
 cleanup() {
     echo ""
-    echo "Rydder opp lokale prosesser..."
-    [[ -n "$SERVICE_PID" ]] && kill "$SERVICE_PID" 2>/dev/null || true
-    [[ -n "$SIM_PID"     ]] && kill "$SIM_PID"     2>/dev/null || true
-    [[ -n "$SOCAT_PID"   ]] && kill "$SOCAT_PID"   2>/dev/null || true
-    [[ -n "$SOCAT_LOG"   ]] && rm -f "$SOCAT_LOG"
+    echo "Rydder opp..."
+    [[ -n "$FRONTEND_PID" ]] && kill "$FRONTEND_PID" 2>/dev/null || true
+    [[ -n "$SERVICE_PID"  ]] && kill "$SERVICE_PID"  2>/dev/null || true
+    [[ -n "$API_PID"      ]] && kill "$API_PID"      2>/dev/null || true
+    [[ -n "$SIM_PID"      ]] && kill "$SIM_PID"      2>/dev/null || true
+    [[ -n "$SOCAT_PID"    ]] && kill "$SOCAT_PID"    2>/dev/null || true
+    [[ -n "$SOCAT_LOG"    ]] && rm -f "$SOCAT_LOG"
     echo ""
     echo "Docker-tjenester kjører fortsatt. Stop dem manuelt ved behov:"
     echo "  docker-compose stop"
@@ -49,9 +57,17 @@ trap cleanup EXIT INT TERM
 
 cd "$REPO_ROOT"
 
-# ── Start alle Docker-tjenester unntatt service ───────────────────────────────
-echo "Starter postgres, rabbitmq, api og frontend i Docker..."
-docker-compose up -d postgres rabbitmq api frontend
+# ── Bygg backend parallelt ───────────────────────────────────────────────────
+echo "Bygger backend og installerer frontend-avhengigheter..."
+dotnet build Yrki.IoT.slnx --nologo -v q 2>&1 &
+BUILD_PID=$!
+
+(cd "$FRONTEND_DIR" && npm install --silent) &
+NPM_PID=$!
+
+# ── Start infrastruktur i Docker (kun postgres + rabbitmq) ────────────────────
+echo "Starter postgres og rabbitmq i Docker..."
+docker-compose up -d postgres rabbitmq
 
 echo "Venter på at postgres og rabbitmq er klare..."
 until docker-compose exec -T postgres pg_isready -U postgres -d YrkiIoT >/dev/null 2>&1; do
@@ -61,6 +77,11 @@ until docker-compose exec -T rabbitmq rabbitmq-diagnostics -q ping >/dev/null 2>
     sleep 1
 done
 echo "Infrastruktur klar."
+
+# Vent på at bygg er ferdig
+wait "$BUILD_PID" || { echo "Backend-bygg feilet"; exit 1; }
+wait "$NPM_PID"   || { echo "npm install feilet"; exit 1; }
+echo "Bygg ferdig."
 
 # ── Opprett virtuelt PTY-par med socat ────────────────────────────────────────
 echo ""
@@ -83,9 +104,24 @@ fi
 echo "  Simulator  → $WRITE_PTY"
 echo "  Service    ← $READ_PTY"
 
+# ── Start API lokalt ─────────────────────────────────────────────────────────
+echo ""
+echo "Starter API..."
+ConnectionStrings__DatabaseConnectionString="Host=localhost;Port=5432;Database=YrkiIoT;Username=postgres;Password=postgres" \
+RabbitMq__Host=localhost \
+RabbitMq__Username=guest \
+RabbitMq__Password=guest \
+    dotnet run --project "$REPO_ROOT/src/backend/Api/Api.csproj" --no-build --no-launch-profile --urls "http://localhost:5180" &
+API_PID=$!
+
+# ── Start Frontend (Vite dev server) ──────────────────────────────────────────
+echo "Starter Frontend..."
+(cd "$FRONTEND_DIR" && npm run dev) &
+FRONTEND_PID=$!
+
 # ── Start CO2-simulator ───────────────────────────────────────────────────────
 echo ""
-echo "Starter Lansen CO2-simulator (hvert ${INTERVAL_S:-20}s)..."
+echo "Starter Lansen CO2-simulator..."
 python3 "$TESTS_DIR/lansen-co2-simulator.py" "$WRITE_PTY" &
 SIM_PID=$!
 
@@ -93,25 +129,17 @@ sleep 1
 
 # ── Start Service lokalt ──────────────────────────────────────────────────────
 echo ""
-echo "Starter Service lokalt..."
+echo "Starter Service..."
 echo ""
-echo "  Frontend  : http://localhost:8080"
-echo "  API       : http://localhost:8081  (swagger: /swagger)"
+echo "  Frontend  : http://localhost:5173"
+echo "  API       : http://localhost:5180  (swagger: /swagger)"
 echo "  RabbitMQ  : http://localhost:15672 (guest/guest)"
 echo ""
-echo "Trykk Ctrl+C for å avslutte simulator og service."
-echo "──────────────────────────────────────────────────────────────────────────"
-
-echo "Bygger Service..."
-dotnet build "$REPO_ROOT/src/backend/Service/Service.csproj" --nologo -v q 2>&1
-
-echo ""
-echo "Starter Service (forgrunn) — all logging vises under:"
+echo "Trykk Ctrl+C for å avslutte alt."
 echo "──────────────────────────────────────────────────────────────────────────"
 
 ConnectionStrings__DatabaseConnectionString="Host=localhost;Port=5432;Database=YrkiIoT;Username=postgres;Password=postgres" \
 RabbitMq__Host=localhost \
-RabbitMq__Port=5672 \
 RabbitMq__Username=guest \
 RabbitMq__Password=guest \
 WMBus__SerialPort="$READ_PTY" \

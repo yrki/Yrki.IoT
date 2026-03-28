@@ -15,6 +15,13 @@ public class WMBusSerialWorker(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var opts = options.Value;
+
+        if (!opts.Enabled)
+        {
+            logger.LogInformation("WMBusSerialWorker disabled via config");
+            return;
+        }
+
         logger.LogInformation("WMBusSerialWorker starting — port={Port}, baudRate={BaudRate}, deviceKeys={KeyCount}",
             opts.SerialPort, opts.BaudRate, opts.DeviceKeys.Count);
 

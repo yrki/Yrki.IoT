@@ -5,9 +5,9 @@
     <Project Path="src/backend/Contracts/Contracts.csproj" />
     <Project Path="src/backend/Core/Core.csproj" />
     <Project Path="src/backend/Service/Service.csproj" />
+    <Project Path="src/backend/Simulator/Simulator.csproj" />
   </Folder>
   <Folder Name="/src/backend/tests/">
     <Project Path="src/backend/tests/tests.csproj" />
   </Folder>
-  <Project Path="../Yrki.IoT.WMBus.Parser/src/Yrki.IoT.WMBus.Parser/Yrki.IoT.WMBus.Parser.csproj" />
 </Solution>

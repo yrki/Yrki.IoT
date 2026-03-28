@@ -1,9 +1,12 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Api.Configuration;
+using Api.Consumers;
+using Api.Hubs;
 using Api.Services;
 using Core.Contexts;
 using Core.Services.Email;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -58,7 +61,8 @@ builder.Services.AddCors(options =>
 
         policy.WithOrigins(corsOptions.AllowedOrigins)
             .AllowAnyMethod()
-            .AllowAnyHeader();
+            .AllowAnyHeader()
+            .AllowCredentials();
     });
 });
 
@@ -67,6 +71,22 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+builder.Services.AddSignalR();
+
+builder.Services.AddMassTransit(x =>
+{
+    x.AddConsumer<SensorReadingReceivedConsumer>();
+    x.UsingRabbitMq((ctx, cfg) =>
+    {
+        cfg.Host(builder.Configuration["RabbitMq:Host"], "/", h =>
+        {
+            h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
+            h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
+        });
+        cfg.ConfigureEndpoints(ctx);
+    });
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -88,4 +108,5 @@ app.UseCors("CorsPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<SensorHub>("/hubs/sensors");
 app.Run();

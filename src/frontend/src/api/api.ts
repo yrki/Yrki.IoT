@@ -1,12 +1,11 @@
 import axios from 'axios';
-import { IDevice } from './models/IDevice';
 import { IAuthResponse, ICurrentUser } from './models/IAuthResponse';
-type Guid = string;
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
 let accessToken: string | null = null;
 
-export const myApi = axios.create({
+const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -14,7 +13,7 @@ export const myApi = axios.create({
   },
 });
 
-myApi.interceptors.request.use((config) => {
+api.interceptors.request.use((config) => {
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
@@ -27,30 +26,15 @@ export function setAccessToken(token: string | null): void {
 }
 
 export async function requestMagicLink(email: string): Promise<void> {
-  await myApi.post('/auth/magic-link', { email });
+  await api.post('/auth/magic-link', { email });
 }
 
 export async function verifyMagicLink(token: string): Promise<IAuthResponse> {
-  const response = await myApi.post<IAuthResponse>('/auth/verify', { token });
+  const response = await api.post<IAuthResponse>('/auth/verify', { token });
   return response.data;
 }
 
 export async function getCurrentUser(): Promise<ICurrentUser> {
-  const response = await myApi.get<ICurrentUser>('/auth/me');
+  const response = await api.get<ICurrentUser>('/auth/me');
   return response.data;
 }
-
-export const getDevice = async (id: Guid) : Promise<IDevice> => {
-  const response = await myApi.get(`/devices/${id}`);
-  return response.data;
-};
-
-export const getDevices = async (): Promise<IDevice[]> => {
-  const response = await myApi.get('/devices');
-  return response.data;
-};
-
-export const createDevice = async (device: IDevice): Promise<IDevice> => {
-  const response = await myApi.post('/devices', device);
-  return response.data;
-};

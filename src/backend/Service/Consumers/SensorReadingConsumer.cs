@@ -13,6 +13,7 @@ namespace service.Consumers;
 
 public class SensorReadingConsumer(
     DatabaseContext db,
+    IBus bus,
     IOptions<WMBusOptions> wmBusOptions,
     ILogger<SensorReadingConsumer> logger) : IConsumer<SensorPayload>
 {
@@ -34,6 +35,7 @@ public class SensorReadingConsumer(
             return;
 
         await PersistReadingsAsync(readings, header, context.CancellationToken);
+        await PublishNotificationsAsync(readings, context.CancellationToken);
     }
 
     private async Task EnsureDeviceRegisteredAsync(WMBusMessage header, DateTimeOffset timestamp, CancellationToken cancellationToken)
@@ -115,5 +117,17 @@ public class SensorReadingConsumer(
         if (logger.IsEnabled(LogLevel.Information))
             logger.LogInformation("Stored {Count} readings for sensor {SensorId} ({DeviceType})",
                 readings.Count, header.AField, header.DeviceType.ToString());
+    }
+
+    private async Task PublishNotificationsAsync(List<SensorReading> readings, CancellationToken cancellationToken)
+    {
+        foreach (var reading in readings)
+        {
+            await bus.Publish(new SensorReadingReceived(
+                reading.SensorId,
+                reading.SensorType,
+                reading.Value,
+                reading.Timestamp), cancellationToken);
+        }
     }
 }

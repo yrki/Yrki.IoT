@@ -26,6 +26,6 @@
   <ItemGroup>
     <ProjectReference Include="../Core/Core.csproj" />
     <ProjectReference Include="../Contracts/Contracts.csproj" />
-    <ProjectReference Include="../../../../Yrki.IoT.WMBus.Parser/src/Yrki.IoT.WMBus.Parser/Yrki.IoT.WMBus.Parser.csproj" />
+    <PackageReference Include="Yrki.IoT.WMBus.Parser" Version="0.1.1" />
   </ItemGroup>
 </Project>
