@@ -9,6 +9,7 @@ import FiberNewRoundedIcon from '@mui/icons-material/FiberNewRounded';
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import SensorsRoundedIcon from '@mui/icons-material/SensorsRounded';
 import type { SvgIconComponent } from '@mui/icons-material';
+import logo from '../assets/logo.png';
 
 export type NavigationSection = 'Sensors' | 'Locations' | 'New Sensors' | 'Live View';
 
@@ -35,6 +36,16 @@ function LeftDrawer({ selectedSection, onSelectSection }: LeftDrawerProps) {
       }}
       role="presentation"
     >
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+        <img
+          src={logo}
+          alt="Yrki.IoT"
+          style={{
+            height: 110,
+            filter: 'brightness(0) invert(1)',
+          }}
+        />
+      </Box>
       <List sx={{ display: 'grid', gap: 0.5 }}>
         {primaryItems.map(({ label, icon: Icon }) => {
           const active = selectedSection === label;

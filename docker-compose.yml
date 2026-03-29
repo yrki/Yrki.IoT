@@ -53,17 +53,11 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DatabaseConnectionString: Host=postgres;Port=5432;Database=YrkiIoT;Username=postgres;Password=postgres
       MagicLink__FrontendBaseUrl: ${MAGIC_LINK_FRONTEND_BASE_URL:-http://localhost:8080}
-      RabbitMq__Host: rabbitmq
-      RabbitMq__Port: 5672
-      RabbitMq__Username: guest
-      RabbitMq__Password: guest
       Encryption__MasterKey: ${ENCRYPTION_MASTER_KEY:-Ae+/cx56gf9Zg5ECKYl67cOnP4QpiGdQczqrSU7MYbg=}
     ports:
       - "8081:8080"
     depends_on:
       postgres:
-        condition: service_healthy
-      rabbitmq:
         condition: service_healthy
 
   service:
@@ -88,12 +82,15 @@ services:
       RabbitMq__Username: guest
       RabbitMq__Password: guest
       WMBus__Enabled: "false"
+      Api__BaseUrl: http://api:8080
       Encryption__MasterKey: ${ENCRYPTION_MASTER_KEY:-Ae+/cx56gf9Zg5ECKYl67cOnP4QpiGdQczqrSU7MYbg=}
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      api:
+        condition: service_started
 
   simulator:
     image: mcr.microsoft.com/dotnet/sdk:10.0-alpine

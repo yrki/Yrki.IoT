@@ -1,6 +1,7 @@
 using Core.Contexts;
 using service.Configuration;
 using service.Consumers;
+using service.Services;
 using Core.Services.Encryption;
 using service.Hardware;
 using service.Workers;
@@ -35,9 +36,13 @@ try
             services.AddDbContext<DatabaseContext>(options =>
                 options.UseNpgsql(config.GetConnectionString("DatabaseConnectionString")));
 
+            services.Configure<ApiOptions>(config.GetSection("Api"));
+            services.AddHttpClient<ISensorHubNotifier, SensorHubNotifier>();
+
             services.AddMassTransit(x =>
             {
                 x.AddConsumer<SensorReadingConsumer>();
+                x.AddConsumer<SensorReadingReceivedConsumer>();
                 x.UsingRabbitMq((ctx, cfg) =>
                 {
                     cfg.Host(config["RabbitMq:Host"], "/", h =>

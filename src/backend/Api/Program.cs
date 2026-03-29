@@ -3,7 +3,6 @@ using System.Text.Json.Serialization;
 
 
 using Api.Configuration;
-using Api.Consumers;
 using Api.Hubs;
 using Api.Services;
 
@@ -19,9 +18,6 @@ using Core.Features.SensorData.Query;
 using Core.Features.Sensors.Query;
 using Core.Services.Email;
 using Core.Services.Encryption;
-
-
-using MassTransit;
 
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -95,20 +91,6 @@ builder.Services.AddCors(options => options.AddPolicy("CorsPolicy", policy =>
 builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddSignalR();
-
-builder.Services.AddMassTransit(x =>
-{
-    x.AddConsumer<SensorReadingReceivedConsumer>();
-    x.UsingRabbitMq((ctx, cfg) =>
-    {
-        cfg.Host(builder.Configuration["RabbitMq:Host"], "/", h =>
-        {
-            h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
-            h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
-        });
-        cfg.ConfigureEndpoints(ctx);
-    });
-});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

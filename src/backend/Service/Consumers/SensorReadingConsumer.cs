@@ -6,13 +6,14 @@ using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using service.Configuration;
+using service.Services;
 using Yrki.IoT.WMBus.Parser;
 
 namespace service.Consumers;
 
 public class SensorReadingConsumer(
     DatabaseContext db,
-    IBus bus,
+    ISensorHubNotifier hubNotifier,
     IKeyEncryptionService keyEncryptionService,
     IOptions<WMBusOptions> wmBusOptions,
     ILogger<SensorReadingConsumer> logger) : IConsumer<SensorPayload>
@@ -88,12 +89,8 @@ public class SensorReadingConsumer(
     {
         foreach (var reading in readings)
         {
-            await bus.Publish(new SensorReadingReceived(
-                reading.SensorId,
-                reading.SensorType,
-                reading.Manufacturer,
-                reading.Value,
-                reading.Timestamp), cancellationToken);
+            await hubNotifier.NotifyReadingAsync(
+                reading.SensorId, reading.SensorType, reading.Value, reading.Timestamp, cancellationToken);
         }
     }
 }

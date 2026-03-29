@@ -110,9 +110,7 @@ function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
           >
             <MenuRoundedIcon />
           </IconButton>
-          <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: '0.04em', flexGrow: 1 }}>
-            Yrki.IoT
-          </Typography>
+          <Box sx={{ flexGrow: 1 }} />
           {currentUser ? (
             <Stack direction="row" spacing={1} alignItems="center">
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>

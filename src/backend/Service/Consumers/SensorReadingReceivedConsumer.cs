@@ -1,16 +1,15 @@
-using Api.Hubs;
 using Contracts.Readings;
 using Core.Contexts;
 using Core.Models;
 using MassTransit;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using service.Services;
 
-namespace Api.Consumers;
+namespace service.Consumers;
 
 public class SensorReadingReceivedConsumer(
-    IHubContext<SensorHub> hubContext,
     DatabaseContext db,
+    ISensorHubNotifier hubNotifier,
     ILogger<SensorReadingReceivedConsumer> logger) : IConsumer<SensorReadingReceived>
 {
     public async Task Consume(ConsumeContext<SensorReadingReceived> context)
@@ -37,12 +36,7 @@ public class SensorReadingReceivedConsumer(
                 msg.SensorId, msg.SensorType, msg.Timestamp);
         }
 
-        await hubContext.Clients.All.SendAsync("SensorReadingReceived", new
-        {
-            msg.SensorId,
-            msg.SensorType,
-            msg.Value,
-            Timestamp = msg.Timestamp.ToString("O"),
-        }, context.CancellationToken);
+        await hubNotifier.NotifyReadingAsync(
+            msg.SensorId, msg.SensorType, msg.Value, msg.Timestamp, context.CancellationToken);
     }
 }
