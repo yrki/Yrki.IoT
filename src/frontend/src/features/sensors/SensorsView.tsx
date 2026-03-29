@@ -20,7 +20,7 @@ import WaterRoundedIcon from '@mui/icons-material/WaterRounded';
 import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { useSensorHub, SensorReading, SensorDataPoint } from './useSensorHub';
-import { getSensorIds } from '../../api/api';
+import { getDevices, getDevicesByLocation, SensorListItemDto } from '../../api/api';
 
 interface SensorCardProps {
   label: string;
@@ -181,25 +181,37 @@ const timeRanges = [
   { label: '1m', hours: 24 * 30 },
 ] as const;
 
-const DEFAULT_SENSOR_ID = 'LSN-67000205';
+interface SensorsViewProps {
+  initialSensorId?: string;
+  locationId?: string;
+  locationName?: string;
+}
 
-function SensorsView() {
-  const [sensorIds, setSensorIds] = useState<string[]>([]);
-  const [selectedSensorId, setSelectedSensorId] = useState(DEFAULT_SENSOR_ID);
+function SensorsView({ initialSensorId, locationId, locationName }: SensorsViewProps) {
+  const [devices, setDevices] = useState<SensorListItemDto[]>([]);
+  const [selectedSensorId, setSelectedSensorId] = useState(initialSensorId ?? '');
   const [hours, setHours] = useState(3);
   const { readings, history, connected } = useSensorHub(selectedSensorId, hours);
 
   useEffect(() => {
-    getSensorIds()
-      .then((ids) => {
-        setSensorIds(ids);
-        if (ids.length > 0 && !ids.includes(selectedSensorId)) {
+    const load = locationId
+      ? getDevicesByLocation(locationId)
+      : getDevices();
+
+    load
+      .then((result) => {
+        setDevices(result);
+        const ids = result.map((d) => d.uniqueId);
+        if (initialSensorId && ids.includes(initialSensorId)) {
+          setSelectedSensorId(initialSensorId);
+        } else if (ids.length > 0 && !ids.includes(selectedSensorId)) {
           setSelectedSensorId(ids[0]);
         }
       })
-      .catch((err) => console.error('Failed to fetch sensor IDs:', err));
-  }, []);
+      .catch((err: unknown) => console.error('Failed to fetch devices:', err));
+  }, [locationId]);
 
+  const selectedDevice = devices.find((d) => d.uniqueId === selectedSensorId);
   const activeSensorTypes = Object.keys(readings);
 
   return (
@@ -215,10 +227,10 @@ function SensorsView() {
       <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3 }}>
         <Box>
           <Typography variant="h4" sx={{ mb: 0.75 }}>
-            Live Sensors
+            {selectedDevice?.name ?? (selectedSensorId || 'Live Sensors')}
           </Typography>
           <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-            Real-time sensor readings via SignalR.
+            {locationName ?? selectedDevice?.locationName ?? ''}
           </Typography>
         </Box>
         <Box sx={{ flexGrow: 1 }} />
@@ -229,9 +241,9 @@ function SensorsView() {
             label="Device"
             onChange={(e) => setSelectedSensorId(e.target.value)}
           >
-            {sensorIds.map((id) => (
-              <MenuItem key={id} value={id}>
-                {id}
+            {devices.map((d) => (
+              <MenuItem key={d.uniqueId} value={d.uniqueId}>
+                {d.name ?? d.uniqueId}
               </MenuItem>
             ))}
           </Select>

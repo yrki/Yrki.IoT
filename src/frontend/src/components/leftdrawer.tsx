@@ -6,16 +6,16 @@ import {
   ListItemText,
 } from '@mui/material';
 import FiberNewRoundedIcon from '@mui/icons-material/FiberNewRounded';
-import MemoryRoundedIcon from '@mui/icons-material/MemoryRounded';
+import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import SensorsRoundedIcon from '@mui/icons-material/SensorsRounded';
 import type { SvgIconComponent } from '@mui/icons-material';
 
-export type NavigationSection = 'Devices' | 'Sensors' | 'New Sensors';
+export type NavigationSection = 'Sensors' | 'Locations' | 'New Sensors' | 'Live View';
 
 const primaryItems: Array<{ label: NavigationSection; icon: SvgIconComponent }> = [
   { label: 'Sensors', icon: SensorsRoundedIcon },
+  { label: 'Locations', icon: PlaceRoundedIcon },
   { label: 'New Sensors', icon: FiberNewRoundedIcon },
-  { label: 'Devices', icon: MemoryRoundedIcon },
 ];
 
 interface LeftDrawerProps {

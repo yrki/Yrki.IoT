@@ -11,7 +11,12 @@ using Api.Services;
 using Core.Contexts;
 using Core.Features.Devices.Command;
 using Core.Features.Devices.Query;
+using Core.Features.EncryptionKeys.Command;
+using Core.Features.EncryptionKeys.Query;
+using Core.Features.Locations.Command;
+using Core.Features.Locations.Query;
 using Core.Features.SensorData.Query;
+using Core.Features.Sensors.Query;
 using Core.Services.Email;
 using Core.Services.Encryption;
 
@@ -36,6 +41,15 @@ builder.Services.AddDbContext<DatabaseContext>(options =>
 builder.Services.AddScoped<SensorReadingsQueryHandler>();
 builder.Services.AddScoped<NewDevicesQueryHandler>();
 builder.Services.AddScoped<UpdateDeviceCommandHandler>();
+builder.Services.AddScoped<SensorsQueryHandler>();
+builder.Services.AddScoped<LocationsQueryHandler>();
+builder.Services.AddScoped<CreateLocationCommandHandler>();
+builder.Services.AddScoped<UpdateLocationCommandHandler>();
+builder.Services.AddScoped<DeleteLocationCommandHandler>();
+builder.Services.AddScoped<EncryptionKeysQueryHandler>();
+builder.Services.AddScoped<CreateEncryptionKeyCommandHandler>();
+builder.Services.AddScoped<UpdateEncryptionKeyCommandHandler>();
+builder.Services.AddScoped<DeleteEncryptionKeyCommandHandler>();
 
 var encryptionMasterKey = builder.Configuration["Encryption:MasterKey"]
     ?? throw new InvalidOperationException("Encryption:MasterKey must be configured.");

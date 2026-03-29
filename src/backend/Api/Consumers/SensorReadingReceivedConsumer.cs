@@ -4,6 +4,7 @@ using Core.Contexts;
 using Core.Models;
 using MassTransit;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.Consumers;
 
@@ -16,17 +17,25 @@ public class SensorReadingReceivedConsumer(
     {
         var msg = context.Message;
 
-        var reading = new SensorReading
+        try
         {
-            SensorId = msg.SensorId,
-            SensorType = msg.SensorType,
-            Manufacturer = msg.Manufacturer,
-            Value = msg.Value,
-            Timestamp = msg.Timestamp,
-        };
+            var reading = new SensorReading
+            {
+                SensorId = msg.SensorId,
+                SensorType = msg.SensorType,
+                Manufacturer = msg.Manufacturer,
+                Value = msg.Value,
+                Timestamp = msg.Timestamp,
+            };
 
-        db.SensorReadings.Add(reading);
-        await db.SaveChangesAsync(context.CancellationToken);
+            db.SensorReadings.Add(reading);
+            await db.SaveChangesAsync(context.CancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "23505" })
+        {
+            logger.LogDebug("Duplicate reading ignored for {SensorId}/{SensorType} at {Timestamp}",
+                msg.SensorId, msg.SensorType, msg.Timestamp);
+        }
 
         await hubContext.Clients.All.SendAsync("SensorReadingReceived", new
         {
@@ -35,8 +44,5 @@ public class SensorReadingReceivedConsumer(
             msg.Value,
             Timestamp = msg.Timestamp.ToString("O"),
         }, context.CancellationToken);
-
-        logger.LogDebug("Stored and pushed {SensorType}={Value} for {SensorId}",
-            msg.SensorType, msg.Value, msg.SensorId);
     }
 }

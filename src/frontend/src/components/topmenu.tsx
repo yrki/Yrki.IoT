@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   AppBar,
   Box,
@@ -15,11 +15,18 @@ import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import LeftDrawer, { NavigationSection } from './leftdrawer';
 import { ICurrentUser } from '../api/models/IAuthResponse';
 import LoginDialog from './LoginDialog';
-import DevicesView from '../features/devices/DevicesView';
+import SensorListView from '../features/sensors/SensorListView';
 import NewSensorsView from '../features/new-sensors/NewSensorsView';
 import SensorsView from '../features/sensors/SensorsView';
+import LocationsView from '../features/locations/LocationsView';
 
 const drawerWidth = 300;
+
+interface LiveViewParams {
+  sensorId?: string;
+  locationId?: string;
+  locationName?: string;
+}
 
 interface TopmenuProps {
   currentUser: ICurrentUser | null;
@@ -31,27 +38,48 @@ function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
   const [loginOpen, setLoginOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState<NavigationSection>('Sensors');
+  const [liveViewParams, setLiveViewParams] = useState<LiveViewParams>({});
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+
+  const navigateToLiveView = useCallback((params: LiveViewParams) => {
+    setLiveViewParams(params);
+    setSelectedSection('Live View');
+  }, []);
+
+  const handleSelectSection = useCallback((section: NavigationSection) => {
+    setSelectedSection(section);
+    if (section !== 'Live View') {
+      setLiveViewParams({});
+    }
+    setMobileOpen(false);
+  }, []);
 
   const drawer = (
     <LeftDrawer
       selectedSection={selectedSection}
-      onSelectSection={(section) => {
-        setSelectedSection(section);
-        setMobileOpen(false);
-      }}
+      onSelectSection={handleSelectSection}
     />
   );
 
   const renderMainContent = () => {
     switch (selectedSection) {
-      case 'Devices':
-        return <DevicesView />;
+      case 'Sensors':
+        return <SensorListView onNavigateToLiveView={(sensorId) => navigateToLiveView({ sensorId })} />;
+      case 'Locations':
+        return <LocationsView onNavigateToLiveView={(locationId, locationName) => navigateToLiveView({ locationId, locationName })} />;
       case 'New Sensors':
         return <NewSensorsView />;
+      case 'Live View':
+        return (
+          <SensorsView
+            initialSensorId={liveViewParams.sensorId}
+            locationId={liveViewParams.locationId}
+            locationName={liveViewParams.locationName}
+          />
+        );
       default:
-        return <SensorsView />;
+        return <SensorListView onNavigateToLiveView={(sensorId) => navigateToLiveView({ sensorId })} />;
     }
   };
 

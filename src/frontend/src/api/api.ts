@@ -91,10 +91,32 @@ export async function updateDevice(id: string, request: UpdateDeviceRequest): Pr
   return response.data;
 }
 
+export interface SensorListItemDto {
+  id: string;
+  uniqueId: string;
+  name: string | null;
+  manufacturer: string | null;
+  type: string;
+  locationName: string | null;
+  locationId: string | null;
+  lastContact: string;
+}
+
+export async function getDevices(): Promise<SensorListItemDto[]> {
+  const response = await api.get<SensorListItemDto[]>('/devices');
+  return response.data;
+}
+
+export async function getDevicesByLocation(locationId: string): Promise<SensorListItemDto[]> {
+  const response = await api.get<SensorListItemDto[]>(`/devices/location/${locationId}`);
+  return response.data;
+}
+
 export interface LocationDto {
   id: string;
   name: string;
   description: string;
+  deviceCount: number;
 }
 
 export async function getLocations(): Promise<LocationDto[]> {
@@ -105,6 +127,15 @@ export async function getLocations(): Promise<LocationDto[]> {
 export async function createLocation(name: string, description?: string): Promise<LocationDto> {
   const response = await api.post<LocationDto>('/locations', { name, description });
   return response.data;
+}
+
+export async function updateLocation(id: string, request: { name?: string; description?: string }): Promise<LocationDto> {
+  const response = await api.put<LocationDto>(`/locations/${id}`, request);
+  return response.data;
+}
+
+export async function deleteLocation(id: string): Promise<void> {
+  await api.delete(`/locations/${id}`);
 }
 
 export interface EncryptionKeyDto {

@@ -1,22 +1,22 @@
-using Core.Contexts;
+using Contracts.Requests;
+using Core.Features.Locations.Command;
+using Core.Features.Locations.Query;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Api.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class LocationsController(DatabaseContext db) : ControllerBase
+public class LocationsController(
+    LocationsQueryHandler queryHandler,
+    CreateLocationCommandHandler createHandler,
+    UpdateLocationCommandHandler updateHandler,
+    DeleteLocationCommandHandler deleteHandler) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        var locations = await db.Locations
-            .AsNoTracking()
-            .OrderBy(l => l.Name)
-            .Select(l => new { l.Id, l.Name, l.Description })
-            .ToListAsync(cancellationToken);
-
+        var locations = await queryHandler.HandleAsync(cancellationToken);
         return Ok(locations);
     }
 
@@ -25,18 +25,30 @@ public class LocationsController(DatabaseContext db) : ControllerBase
         [FromBody] CreateLocationRequest request,
         CancellationToken cancellationToken)
     {
-        var location = new Core.Models.Location
-        {
-            Id = Guid.NewGuid(),
-            Name = request.Name,
-            Description = request.Description ?? string.Empty,
-        };
+        var location = await createHandler.HandleAsync(request, cancellationToken);
+        return Created($"/locations/{location.Id}", location);
+    }
 
-        db.Locations.Add(location);
-        await db.SaveChangesAsync(cancellationToken);
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(
+        Guid id,
+        [FromBody] UpdateLocationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await updateHandler.HandleAsync(id, request, cancellationToken);
+        if (result is null)
+            return NotFound();
 
-        return Created($"/locations/{location.Id}", new { location.Id, location.Name, location.Description });
+        return Ok(result);
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var deleted = await deleteHandler.HandleAsync(id, cancellationToken);
+        if (!deleted)
+            return NotFound();
+
+        return NoContent();
     }
 }
-
-public record CreateLocationRequest(string Name, string? Description);
