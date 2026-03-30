@@ -1,5 +1,7 @@
 # Yrki.IoT
 
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the repository's vertical-slice architecture guidelines.
+
 # Getting started
 
 ## Prerequisites

@@ -60,6 +60,7 @@ This repository should evolve as a modern, production-quality codebase across bo
 ## Testing
 
 - Add or update unit tests for every behavior change.
+- Add tests for all API calls.
 - Use descriptive test names in the format `Shall_open_a_file`.
 - Structure tests with explicit `// Arrange`, `// Act`, and `// Assert` sections.
 - Keep unit tests deterministic, isolated, and fast.
