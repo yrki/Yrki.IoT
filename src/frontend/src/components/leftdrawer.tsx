@@ -15,8 +15,8 @@ export type NavigationSection = 'Sensors' | 'Locations' | 'New Sensors' | 'Live 
 
 const primaryItems: Array<{ label: NavigationSection; icon: SvgIconComponent }> = [
   { label: 'Sensors', icon: SensorsRoundedIcon },
-  { label: 'Locations', icon: PlaceRoundedIcon },
   { label: 'New Sensors', icon: FiberNewRoundedIcon },
+  { label: 'Locations', icon: PlaceRoundedIcon },
 ];
 
 interface LeftDrawerProps {
