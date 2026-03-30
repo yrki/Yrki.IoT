@@ -37,7 +37,7 @@ try
                 options.UseNpgsql(config.GetConnectionString("DatabaseConnectionString")));
 
             services.Configure<ApiOptions>(config.GetSection("Api"));
-            services.AddHttpClient<ISensorHubNotifier, SensorHubNotifier>();
+            services.AddSingleton<ISensorHubNotifier, SensorHubNotifier>();
 
             services.AddMassTransit(x =>
             {
