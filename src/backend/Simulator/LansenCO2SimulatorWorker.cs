@@ -15,6 +15,7 @@ public class LansenCO2SimulatorWorker(IBus bus, ILogger<LansenCO2SimulatorWorker
 
         var step = 0;
         var seq = 0;
+        const string addressHex = "67000100";
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -22,8 +23,8 @@ public class LansenCO2SimulatorWorker(IBus bus, ILogger<LansenCO2SimulatorWorker
             var temp = SineValue(step, CycleSteps, 21.0, 23.0, phase: 0.5);
             var humidity = SineValue(step, CycleSteps, 45.0, 55.0, phase: 1.0);
 
-            var frame = LansenFrameBuilder.Build(seq, temp, humidity, co2);
-            var payload = new SensorPayload(frame, DateTimeOffset.UtcNow);
+            var frame = LansenFrameBuilder.Build(addressHex, seq, temp, humidity, co2, soundDb: 40);
+            var payload = new SensorPayload(Convert.ToHexString(frame), DateTimeOffset.UtcNow);
 
             await bus.Publish(payload, stoppingToken);
 

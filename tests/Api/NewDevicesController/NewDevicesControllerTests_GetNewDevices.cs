@@ -13,8 +13,8 @@ public sealed class NewDevicesControllerTests_GetNewDevices : IClassFixture<ApiD
     public async Task Shall_return_only_new_devices()
     {
         // Arrange
-        var newDevice = ApiTestData.CreateDevice("sensor-1", "New sensor", DeviceType.CO2, "Pending install", isNew: true);
-        var installedDevice = ApiTestData.CreateDevice("sensor-2", "Installed sensor", DeviceType.CO2, "Installed");
+        var newDevice = ApiTestData.CreateDevice("sensor-1", "New sensor", "CarbonDioxide", "Pending install", isNew: true);
+        var installedDevice = ApiTestData.CreateDevice("sensor-2", "Installed sensor", "CarbonDioxide", "Installed");
         _dbContext.Devices.AddRange(newDevice, installedDevice);
         await _dbContext.SaveChangesAsync();
 

@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using service.Configuration;
 using service.Services;
 using Yrki.IoT.WMBus.Parser;
+using Yrki.IoT.WMBus.Parser.Extensions;
 
 namespace service.Consumers;
 
@@ -23,17 +24,20 @@ public class SensorReadingConsumer(
     public async Task Consume(ConsumeContext<SensorPayload> context)
     {
         var msg = context.Message;
-        var header = _parser.ParseHeader(msg.RawMessage);
+        var rawMessage = msg.PayloadHex.ToByteArray();
+        var header = _parser.ParseHeader(rawMessage);
+        var metadata = WMBusMessageMetadataMapper.Map(header);
 
-        var payload = await TryParsePayloadAsync(msg.RawMessage, header, context.CancellationToken);
+        var payload = await TryParsePayloadAsync(rawMessage, header, context.CancellationToken);
         if (payload is null)
             return;
 
-        var readings = MapReadings(header, payload, msg.Timestamp);
+        var readings = MapReadings(header, metadata, payload, msg.Timestamp);
         if (readings.Count == 0)
             return;
 
-        await PersistReadingsAsync(readings, header, context.CancellationToken);
+        await UpsertDeviceAsync(readings[0], metadata, context.CancellationToken);
+        await PersistReadingsAsync(readings, metadata, context.CancellationToken);
         await PublishNotificationsAsync(readings, context.CancellationToken);
     }
 
@@ -68,21 +72,56 @@ public class SensorReadingConsumer(
         return wmBusOptions.Value.DeviceKeys.GetValueOrDefault(header.AField, string.Empty);
     }
 
-    private List<SensorReading> MapReadings(WMBusMessage header, IParsedPayload payload, DateTimeOffset timestamp)
+    private List<SensorReading> MapReadings(
+        WMBusMessage header,
+        WMBusMessageMetadata metadata,
+        IParsedPayload payload,
+        DateTimeOffset timestamp)
     {
-        var readings = SensorReadingMapper.Map(header, payload, timestamp);
+        var readings = SensorReadingMapper.Map(header, metadata, payload, timestamp);
         if (readings.Count == 0)
             logger.LogWarning("No mappable readings for sensor {SensorId} payload type {Type}", header.AField, payload.GetType().Name);
         return readings;
     }
 
-    private async Task PersistReadingsAsync(List<SensorReading> readings, WMBusMessage header, CancellationToken cancellationToken)
+    private async Task PersistReadingsAsync(
+        List<SensorReading> readings,
+        WMBusMessageMetadata metadata,
+        CancellationToken cancellationToken)
     {
         db.SensorReadings.AddRange(readings);
         await db.SaveChangesAsync(cancellationToken);
         if (logger.IsEnabled(LogLevel.Information))
-            logger.LogInformation("Stored {Count} readings for sensor {SensorId} ({DeviceType})",
-                readings.Count, header.AField, header.DeviceType.ToString());
+            logger.LogInformation("Stored {Count} readings for sensor {SensorId} ({Manufacturer}, {DeviceType})",
+                readings.Count, readings[0].SensorId, metadata.Manufacturer, metadata.DeviceType);
+    }
+
+    private async Task UpsertDeviceAsync(
+        SensorReading reading,
+        WMBusMessageMetadata metadata,
+        CancellationToken cancellationToken)
+    {
+        var device = await db.Devices.FirstOrDefaultAsync(d => d.UniqueId == reading.SensorId, cancellationToken);
+        if (device is null)
+        {
+            db.Devices.Add(new Device
+            {
+                Id = Guid.NewGuid(),
+                UniqueId = reading.SensorId,
+                Name = null,
+                Type = metadata.DeviceType,
+                Description = string.Empty,
+                Manufacturer = metadata.Manufacturer,
+                IsNew = true,
+                LastContact = reading.Timestamp,
+                InstallationDate = reading.Timestamp,
+            });
+            return;
+        }
+
+        device.Type = metadata.DeviceType;
+        device.Manufacturer = metadata.Manufacturer;
+        device.LastContact = reading.Timestamp;
     }
 
     private async Task PublishNotificationsAsync(List<SensorReading> readings, CancellationToken cancellationToken)

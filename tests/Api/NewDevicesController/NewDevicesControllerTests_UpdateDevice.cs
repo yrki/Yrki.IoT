@@ -14,7 +14,7 @@ public sealed class NewDevicesControllerTests_UpdateDevice : IClassFixture<ApiDa
     {
         // Arrange
         var location = ApiTestData.CreateLocation();
-        var device = ApiTestData.CreateDevice("sensor-1", "New sensor", DeviceType.CO2, "Pending install", isNew: true);
+        var device = ApiTestData.CreateDevice("sensor-1", "New sensor", "CarbonDioxide", "Pending install", isNew: true);
         _dbContext.Locations.Add(location);
         _dbContext.Devices.Add(device);
         await _dbContext.SaveChangesAsync();

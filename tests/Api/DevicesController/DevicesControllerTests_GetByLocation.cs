@@ -15,8 +15,8 @@ public sealed class DevicesControllerTests_GetByLocation : IClassFixture<ApiData
         // Arrange
         var matchingLocation = ApiTestData.CreateLocation("North");
         var otherLocation = ApiTestData.CreateLocation("South");
-        var matchingDevice = ApiTestData.CreateDevice("sensor-1", "North sensor", DeviceType.CO2, "North wing", locationId: matchingLocation.Id, location: matchingLocation);
-        var otherDevice = ApiTestData.CreateDevice("sensor-2", "South sensor", DeviceType.WATER, "South wing", locationId: otherLocation.Id, location: otherLocation);
+        var matchingDevice = ApiTestData.CreateDevice("sensor-1", "North sensor", "CarbonDioxide", "North wing", locationId: matchingLocation.Id, location: matchingLocation);
+        var otherDevice = ApiTestData.CreateDevice("sensor-2", "South sensor", "WaterMeter", "South wing", locationId: otherLocation.Id, location: otherLocation);
 
         _dbContext.Locations.AddRange(matchingLocation, otherLocation);
         _dbContext.Devices.AddRange(matchingDevice, otherDevice);

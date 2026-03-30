@@ -13,7 +13,7 @@ public sealed class DevicesControllerTests_Delete : IClassFixture<ApiDatabaseFix
     public async Task Shall_soft_delete_existing_device()
     {
         // Arrange
-        var device = ApiTestData.CreateDevice("sensor-1", "Alpha sensor", DeviceType.CO2, "Tracks CO2");
+        var device = ApiTestData.CreateDevice("sensor-1", "Alpha sensor", "CarbonDioxide", "Tracks CO2");
         _dbContext.Devices.Add(device);
         await _dbContext.SaveChangesAsync();
 

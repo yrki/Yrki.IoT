@@ -4,16 +4,15 @@ namespace Simulator;
 
 public static class LansenFrameBuilder
 {
-    private static readonly byte[] SensorAField = [0x67, 0x00, 0x01, 0x00];
-
-    public static byte[] Build(int seq, double tempC, double humidityPct, int co2Ppm)
+    public static byte[] Build(string addressHex, int seq, double tempC, double humidityPct, int co2Ppm, int soundDb)
     {
+        var sensorAField = ParseAddress(addressHex);
         var temp = Int16LE(tempC * 100);
         var hum = Int16LE(humidityPct * 10);
         var co2 = Int16LE(co2Ppm);
         var calib = Int16LE(900);
         var mins = Int16LE(480);
-        var sound = Int16LE(40);
+        var sound = Int16LE(soundDb);
         var days = Int16LE(1);
         var ver = Int16LE(4);
 
@@ -36,7 +35,7 @@ public static class LansenFrameBuilder
         using var ms = new MemoryStream(128);
         ms.WriteByte(0); // placeholder for L-Field
         ms.Write(header);
-        ms.Write(SensorAField);
+        ms.Write(sensorAField);
         ms.Write(meta);
         ms.Write([0x2F, 0x2F]); // encryption verification
 
@@ -62,6 +61,17 @@ public static class LansenFrameBuilder
         var frame = ms.ToArray();
         frame[0] = (byte)frame.Length; // L-Field
         return frame;
+    }
+
+    private static byte[] ParseAddress(string addressHex)
+    {
+        var bytes = Convert.FromHexString(addressHex);
+        if (bytes.Length != 4)
+        {
+            throw new ArgumentException("WMBus address must be exactly 4 bytes encoded as 8 hex characters.", nameof(addressHex));
+        }
+
+        return bytes;
     }
 
     private static byte[] Int16LE(double value)

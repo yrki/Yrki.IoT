@@ -17,7 +17,7 @@ public static class ApiTestData
     public static Device CreateDevice(
         string uniqueId,
         string name,
-        DeviceType type,
+        string type,
         string description,
         string manufacturer = "Acme",
         Guid? locationId = null,

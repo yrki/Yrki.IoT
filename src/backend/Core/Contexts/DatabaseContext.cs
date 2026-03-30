@@ -25,7 +25,7 @@ public class DatabaseContext : DbContext
             entity.HasKey(device => device.Id);
             entity.Property(device => device.UniqueId).IsRequired();
             entity.Property(device => device.Description).IsRequired();
-            entity.Property(device => device.Type).HasConversion<string>();
+            entity.Property(device => device.Type).IsRequired();
             entity.HasOne(device => device.Location)
                 .WithMany(location => location.Devices)
                 .HasForeignKey(device => device.LocationId)

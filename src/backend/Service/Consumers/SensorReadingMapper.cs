@@ -6,35 +6,52 @@ namespace service.Consumers;
 
 public static class SensorReadingMapper
 {
-    public static List<Core.Models.SensorReading> Map(WMBusMessage header, IParsedPayload payload, DateTimeOffset timestamp) =>
+    public static List<Core.Models.SensorReading> Map(
+        WMBusMessage header,
+        WMBusMessageMetadata metadata,
+        IParsedPayload payload,
+        DateTimeOffset timestamp) =>
         payload switch
         {
-            LansenE2_CO2_S co2 => MapLansenCO2(header.AField, co2, timestamp),
-            Axioma_Qalcosonic_WaterMeter water => MapAxiomaWaterMeter(header.AField, water, timestamp),
+            LansenE2_CO2_S co2 => MapLansenCO2(header.AField, metadata.Manufacturer, co2, timestamp),
+            Axioma_Qalcosonic_WaterMeter water => MapAxiomaWaterMeter(header.AField, metadata.Manufacturer, water, timestamp),
             _ => []
         };
 
-    private static List<Core.Models.SensorReading> MapLansenCO2(string sensorId, LansenE2_CO2_S payload, DateTimeOffset timestamp) =>
-        Readings(timestamp, sensorId,
+    private static List<Core.Models.SensorReading> MapLansenCO2(
+        string sensorId,
+        string manufacturer,
+        LansenE2_CO2_S payload,
+        DateTimeOffset timestamp) =>
+        Readings(timestamp, sensorId, manufacturer,
             ("Temperature", payload.TemperatureLastMeasuredValue),
             ("Humidity", payload.HumidityLastMeasuredValue),
             ("CO2", payload.CO2LastMeasuredValue),
             ("Sound", payload.SoundLevelLastMeasuredValue));
 
-    private static List<Core.Models.SensorReading> MapAxiomaWaterMeter(string sensorId, Axioma_Qalcosonic_WaterMeter payload, DateTimeOffset timestamp) =>
-        Readings(timestamp, sensorId,
+    private static List<Core.Models.SensorReading> MapAxiomaWaterMeter(
+        string sensorId,
+        string manufacturer,
+        Axioma_Qalcosonic_WaterMeter payload,
+        DateTimeOffset timestamp) =>
+        Readings(timestamp, sensorId, manufacturer,
             ("TotalVolume", payload.TotalVolume),
             ("Flow", payload.Flow.HasValue ? (double?)payload.Flow.Value : null),
             ("Temperature", payload.Temperature),
             ("RemainingBattery", payload.RemainingBatteryCapacity.HasValue ? (double?)payload.RemainingBatteryCapacity.Value : null));
 
-    private static List<Core.Models.SensorReading> Readings(DateTimeOffset timestamp, string sensorId, params (string Type, double? Value)[] measurements) =>
+    private static List<Core.Models.SensorReading> Readings(
+        DateTimeOffset timestamp,
+        string sensorId,
+        string manufacturer,
+        params (string Type, double? Value)[] measurements) =>
         measurements
             .Where(m => m.Value.HasValue)
             .Select(m => new Core.Models.SensorReading
             {
                 Timestamp = timestamp,
                 SensorId = sensorId,
+                Manufacturer = manufacturer,
                 SensorType = m.Type,
                 Value = (decimal)m.Value!.Value
             })

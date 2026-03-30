@@ -18,7 +18,7 @@ public class DeviceMappersTests
             Id = Guid.NewGuid(),
             Name = "Office sensor",
             UniqueId = "CO2-1",
-            Type = DeviceType.CO2,
+            Type = "CarbonDioxide",
             LocationId = locationId,
             Description = "Measures office air quality.",
             LastContact = lastContact,
@@ -32,7 +32,7 @@ public class DeviceMappersTests
         Assert.AreEqual(device.Id, result.Id);
         Assert.AreEqual(device.Name, result.Name);
         Assert.AreEqual(device.UniqueId, result.UniqueId);
-        Assert.AreEqual(global::Contracts.DeviceType.CO2, result.Type);
+        Assert.AreEqual("CarbonDioxide", result.Type);
         Assert.AreEqual(locationId, result.LocationId);
         Assert.AreEqual(device.Description, result.Description);
         Assert.AreEqual(lastContact, result.LastContact);

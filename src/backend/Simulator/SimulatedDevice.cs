@@ -1,13 +1,16 @@
 namespace Simulator;
 
 public record SimulatedDevice(
-    string SensorId,
-    string Manufacturer,
-    SimulatedSensor[] Sensors);
-
-public record SimulatedSensor(
-    string SensorType,
-    string Unit,
-    double Min,
-    double Max,
-    double Phase);
+    string AddressHex,
+    double TemperatureMin,
+    double TemperatureMax,
+    double HumidityMin,
+    double HumidityMax,
+    int Co2Min,
+    int Co2Max,
+    int SoundMin,
+    int SoundMax,
+    double TemperaturePhase,
+    double HumidityPhase,
+    double Co2Phase,
+    double SoundPhase);

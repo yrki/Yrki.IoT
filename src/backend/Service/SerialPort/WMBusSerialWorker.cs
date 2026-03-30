@@ -91,7 +91,7 @@ public class WMBusSerialWorker(
             try
             {
                 var rawMessage = trimmed.ToByteArray();
-                await bus.Publish(new SensorPayload(rawMessage, timestamp), stoppingToken);
+                await bus.Publish(new SensorPayload(trimmed, timestamp), stoppingToken);
                 logger.LogInformation("Published WMBus payload ({Bytes} bytes)", rawMessage.Length);
             }
             catch (Exception ex)

@@ -14,8 +14,8 @@ public sealed class LocationsControllerTests_GetAll : IClassFixture<ApiDatabaseF
     {
         // Arrange
         var location = ApiTestData.CreateLocation("Alpha site");
-        var installedDevice = ApiTestData.CreateDevice("sensor-1", "Installed sensor", DeviceType.CO2, "Installed", locationId: location.Id, location: location);
-        var newDevice = ApiTestData.CreateDevice("sensor-2", "New sensor", DeviceType.CO2, "Pending", locationId: location.Id, location: location, isNew: true);
+        var installedDevice = ApiTestData.CreateDevice("sensor-1", "Installed sensor", "CarbonDioxide", "Installed", locationId: location.Id, location: location);
+        var newDevice = ApiTestData.CreateDevice("sensor-2", "New sensor", "CarbonDioxide", "Pending", locationId: location.Id, location: location, isNew: true);
 
         _dbContext.Locations.Add(location);
         _dbContext.Devices.AddRange(installedDevice, newDevice);

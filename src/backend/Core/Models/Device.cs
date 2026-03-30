@@ -10,7 +10,7 @@ public class Device
     public required string UniqueId { get; set; }
 
     public string? Name { get; set; }
-    public DeviceType Type { get; set; }
+    public string Type { get; set; } = string.Empty;
     public required string Description { get; set; }
 
     public string? Manufacturer { get; set; }

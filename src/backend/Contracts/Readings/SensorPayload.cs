@@ -1,5 +1,5 @@
 namespace Contracts.Readings;
 
 public record SensorPayload(
-    byte[] RawMessage,
+    string PayloadHex,
     DateTimeOffset Timestamp);

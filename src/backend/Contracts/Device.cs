@@ -5,7 +5,7 @@ public class Device
     public Guid Id { get; set; }
     public string? Name { get; set; }
     public required string UniqueId { get; set; }
-    public DeviceType Type { get; set; }
+    public string Type { get; set; } = string.Empty;
     public string? Manufacturer { get; set; }
     public bool IsNew { get; set; }
 

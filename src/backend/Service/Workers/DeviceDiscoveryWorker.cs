@@ -66,7 +66,7 @@ public class DeviceDiscoveryWorker(
                 UniqueId = sensorId,
                 Name = null,
                 Description = string.Empty,
-                Type = DeviceType.CO2,
+                Type = "Unknown",
                 Manufacturer = latestReading.Manufacturer,
                 IsNew = true,
                 LocationId = null,
