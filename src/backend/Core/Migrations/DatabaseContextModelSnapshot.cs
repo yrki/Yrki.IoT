@@ -63,6 +63,9 @@ namespace Core.Migrations
                     b.Property<DateTimeOffset>("InstallationDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsNew")
                         .HasColumnType("boolean");
 

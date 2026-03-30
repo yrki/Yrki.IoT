@@ -7,6 +7,8 @@ vi.mock('./api/api', () => ({
   requestMagicLink: vi.fn().mockResolvedValue(undefined),
   setAccessToken: vi.fn(),
   verifyMagicLink: vi.fn(),
+  getDevices: vi.fn().mockResolvedValue([]),
+  deleteDevice: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('./features/sensors/useSensorHub', () => ({

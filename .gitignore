@@ -494,3 +494,6 @@ $RECYCLE.BIN/
 
 # Core dumps
 core
+!src/backend/Core/Migrations/20260330083000_AddIsDeletedToDevices.cs
+!src/backend/Core/Migrations/20260330083000_AddIsDeletedToDevices.Designer.cs
+core.*

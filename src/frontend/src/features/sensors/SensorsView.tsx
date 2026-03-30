@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import {
   Box,
   Button,
   ButtonGroup,
   Chip,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   FormControl,
+  IconButton,
   InputLabel,
   MenuItem,
   Paper,
@@ -18,11 +22,15 @@ import Co2RoundedIcon from '@mui/icons-material/Co2Rounded';
 import VolumeUpRoundedIcon from '@mui/icons-material/VolumeUpRounded';
 import WaterRoundedIcon from '@mui/icons-material/WaterRounded';
 import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
+import OpenInFullRoundedIcon from '@mui/icons-material/OpenInFullRounded';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { useSensorHub, SensorReading, SensorDataPoint } from './useSensorHub';
 import { getDevices, getDevicesByLocation, SensorListItemDto } from '../../api/api';
+import { calculateSensorStatistics } from './sensorStats';
 
 interface SensorCardProps {
+  sensorType: string;
   label: string;
   unit: string;
   icon: React.ReactNode;
@@ -30,6 +38,7 @@ interface SensorCardProps {
   history: SensorDataPoint[];
   color: string;
   hours: number;
+  onOpenFullscreen: (sensorType: string) => void;
 }
 
 function formatTime(epoch: number) {
@@ -50,10 +59,87 @@ function formatValue(value: number, unit: string) {
   return value.toFixed(1);
 }
 
-function SensorCard({ label, unit, icon, reading, history, color, hours }: SensorCardProps) {
+function SensorHistoryChart({
+  label,
+  unit,
+  history,
+  color,
+  hours,
+  height,
+}: {
+  label: string;
+  unit: string;
+  history: SensorDataPoint[];
+  color: string;
+  hours: number;
+  height: number | string;
+}) {
   const showDate = hours > 24;
   const tickFormatter = showDate ? formatDateTime : formatTime;
+  const gradientId = useId();
 
+  return (
+    <Box sx={{ width: '100%', height }}>
+      {history.length > 1 ? (
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={history} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <XAxis
+              dataKey="time"
+              type="number"
+              domain={['dataMin', 'dataMax']}
+              tickFormatter={tickFormatter}
+              tick={{ fill: '#a0a8b8', fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              minTickGap={60}
+            />
+            <YAxis
+              domain={['auto', 'auto']}
+              tick={{ fill: '#a0a8b8', fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              width={40}
+              tickFormatter={(v: number) => unit === 'ppm' || unit === 'dB' ? String(Math.round(v)) : v.toFixed(1)}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#20242c',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 6,
+                fontSize: 12,
+              }}
+              labelFormatter={(v) => new Date(v as number).toLocaleString()}
+              formatter={(v) => [`${formatValue(v as number, unit)} ${unit}`, label]}
+            />
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke={color}
+              strokeWidth={1.5}
+              fill={`url(#${gradientId})`}
+              isAnimationActive={false}
+              dot={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      ) : (
+        <Box sx={{ display: 'grid', placeItems: 'center', height: '100%' }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            Collecting data...
+          </Typography>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+function SensorCard({ sensorType, label, unit, icon, reading, history, color, hours, onOpenFullscreen }: SensorCardProps) {
   return (
     <Paper
       sx={{
@@ -82,15 +168,24 @@ function SensorCard({ label, unit, icon, reading, history, color, hours }: Senso
         <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 700 }}>
           {label}
         </Typography>
+        <Box sx={{ flexGrow: 1 }} />
+        <IconButton
+          aria-label={`Open ${label} in fullscreen`}
+          onClick={() => onOpenFullscreen(sensorType)}
+          size="small"
+          sx={{ color: 'text.secondary' }}
+        >
+          <OpenInFullRoundedIcon fontSize="small" />
+        </IconButton>
       </Stack>
 
       {reading ? (
         <>
           <Typography variant="h3" sx={{ fontWeight: 800, mb: 0.5 }}>
             {formatValue(reading.value, unit)}
-            <Typography component="span" variant="h5" sx={{ color: 'text.secondary', ml: 0.5 }}>
+            <Box component="span" sx={{ color: 'text.secondary', ml: 0.5, fontSize: '1.5rem', fontWeight: 500 }}>
               {unit}
-            </Typography>
+            </Box>
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
             {formatTimestamp(reading.timestamp)}
@@ -102,64 +197,188 @@ function SensorCard({ label, unit, icon, reading, history, color, hours }: Senso
         </Typography>
       )}
 
-      <Box sx={{ width: '100%', height: 120 }}>
-        {history.length > 1 ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={history} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-              <defs>
-                <linearGradient id={`grad-${label}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-                  <stop offset="100%" stopColor={color} stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <XAxis
-                dataKey="time"
-                type="number"
-                domain={['dataMin', 'dataMax']}
-                tickFormatter={tickFormatter}
-                tick={{ fill: '#a0a8b8', fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-                minTickGap={60}
-              />
-              <YAxis
-                domain={['auto', 'auto']}
-                tick={{ fill: '#a0a8b8', fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-                width={40}
-                tickFormatter={(v: number) => unit === 'ppm' || unit === 'dB' ? String(Math.round(v)) : v.toFixed(1)}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#20242c',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 6,
-                  fontSize: 12,
-                }}
-                labelFormatter={(v) => new Date(v as number).toLocaleString()}
-                formatter={(v) => [`${formatValue(v as number, unit)} ${unit}`, label]}
-              />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke={color}
-                strokeWidth={1.5}
-                fill={`url(#grad-${label})`}
-                isAnimationActive={false}
-                dot={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        ) : (
-          <Box sx={{ display: 'grid', placeItems: 'center', height: '100%' }}>
+      <SensorHistoryChart
+        label={label}
+        unit={unit}
+        history={history}
+        color={color}
+        hours={hours}
+        height={120}
+      />
+    </Paper>
+  );
+}
+
+function StatisticPanel({ label, value, unit }: { label: string; value: number; unit: string }) {
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2,
+        minWidth: 160,
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        borderColor: 'rgba(255,255,255,0.08)',
+      }}
+    >
+      <Typography variant="body2" sx={{ color: 'text.secondary', mb: 0.5 }}>
+        {label}
+      </Typography>
+      <Typography variant="h5" sx={{ fontWeight: 700 }}>
+        {formatValue(value, unit)} {unit}
+      </Typography>
+    </Paper>
+  );
+}
+
+interface SensorFullscreenDialogProps {
+  open: boolean;
+  sensorId: string;
+  sensorType: string | null;
+  sensorName: string;
+  sensorLocation: string;
+  label: string;
+  unit: string;
+  icon: React.ReactNode;
+  color: string;
+  onClose: () => void;
+}
+
+function SensorFullscreenDialog({
+  open,
+  sensorId,
+  sensorType,
+  sensorName,
+  sensorLocation,
+  label,
+  unit,
+  icon,
+  color,
+  onClose,
+}: SensorFullscreenDialogProps) {
+  const [hours, setHours] = useState(3);
+  const { readings, history } = useSensorHub(sensorId, hours, open && sensorType !== null);
+
+  useEffect(() => {
+    if (open) {
+      setHours(3);
+    }
+  }, [open, sensorType]);
+
+  if (!sensorType) {
+    return null;
+  }
+
+  const reading = readings[sensorType];
+  const sensorHistory = history[sensorType] ?? [];
+  const statistics = calculateSensorStatistics(sensorHistory);
+  const subtitle = sensorLocation ? `${label} - ${sensorLocation}` : label;
+
+  return (
+    <Dialog fullScreen open={open} onClose={onClose}>
+      <DialogTitle sx={{ px: { xs: 2, md: 4 }, pt: { xs: 2, md: 3 }, pb: 1 }}>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Box
+            sx={{
+              display: 'grid',
+              placeItems: 'center',
+              width: 48,
+              height: 48,
+              borderRadius: '8px',
+              backgroundColor: `${color}20`,
+              color,
+            }}
+          >
+            {icon}
+          </Box>
+          <Box>
+            <Typography variant="h4">{sensorName}</Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Collecting data...
+              {subtitle}
             </Typography>
           </Box>
-        )}
-      </Box>
-    </Paper>
+          <Box sx={{ flexGrow: 1 }} />
+          <IconButton aria-label="Close fullscreen dialog" onClick={onClose}>
+            <CloseRoundedIcon />
+          </IconButton>
+        </Stack>
+      </DialogTitle>
+      <DialogContent sx={{ px: { xs: 2, md: 4 }, pb: { xs: 3, md: 4 } }}>
+        <Stack spacing={3}>
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={2}
+            alignItems={{ xs: 'stretch', md: 'center' }}
+            justifyContent="space-between"
+          >
+            <Box>
+              {reading ? (
+                <>
+                  <Typography variant="h2" sx={{ fontWeight: 800, mb: 0.5 }}>
+                    {formatValue(reading.value, unit)}
+                    <Box component="span" sx={{ color: 'text.secondary', ml: 1, fontSize: '2.125rem', fontWeight: 500 }}>
+                      {unit}
+                    </Box>
+                  </Typography>
+                  <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                    Latest reading: {new Date(reading.timestamp).toLocaleString()}
+                  </Typography>
+                </>
+              ) : (
+                <Typography variant="h4" sx={{ color: 'text.secondary' }}>
+                  Waiting for data...
+                </Typography>
+              )}
+            </Box>
+            <ButtonGroup size="small" variant="outlined">
+              {timeRanges.map((range) => (
+                <Button
+                  key={range.label}
+                  onClick={() => setHours(range.hours)}
+                  variant={hours === range.hours ? 'contained' : 'outlined'}
+                >
+                  {range.label}
+                </Button>
+              ))}
+            </ButtonGroup>
+          </Stack>
+
+          <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
+            {statistics ? (
+              <>
+                <StatisticPanel label="Lowest" value={statistics.min} unit={unit} />
+                <StatisticPanel label="Highest" value={statistics.max} unit={unit} />
+                <StatisticPanel label="Median" value={statistics.median} unit={unit} />
+                <StatisticPanel label="Average" value={statistics.average} unit={unit} />
+              </>
+            ) : (
+              <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                Statistics will appear when enough history is available.
+              </Typography>
+            )}
+          </Stack>
+
+          <Paper
+            sx={{
+              p: { xs: 2, md: 3 },
+              height: { xs: 360, md: 'calc(100vh - 320px)' },
+              minHeight: 360,
+              backgroundColor: 'rgba(36, 42, 51, 0.82)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              boxShadow: '0 28px 80px rgba(0, 0, 0, 0.24)',
+            }}
+          >
+            <SensorHistoryChart
+              label={label}
+              unit={unit}
+              history={sensorHistory}
+              color={color}
+              hours={hours}
+              height="100%"
+            />
+          </Paper>
+        </Stack>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -191,6 +410,7 @@ function SensorsView({ initialSensorId, locationId, locationName }: SensorsViewP
   const [devices, setDevices] = useState<SensorListItemDto[]>([]);
   const [selectedSensorId, setSelectedSensorId] = useState(initialSensorId ?? '');
   const [hours, setHours] = useState(3);
+  const [fullscreenSensorType, setFullscreenSensorType] = useState<string | null>(null);
   const { readings, history, connected } = useSensorHub(selectedSensorId, hours);
 
   useEffect(() => {
@@ -213,78 +433,101 @@ function SensorsView({ initialSensorId, locationId, locationName }: SensorsViewP
 
   const selectedDevice = devices.find((d) => d.uniqueId === selectedSensorId);
   const activeSensorTypes = Object.keys(readings);
+  const deviceSelectValue = devices.some((device) => device.uniqueId === selectedSensorId)
+    ? selectedSensorId
+    : '';
+  const fullscreenConfig = fullscreenSensorType
+    ? sensorTypeConfig[fullscreenSensorType] ?? { ...defaultConfig, label: fullscreenSensorType }
+    : defaultConfig;
 
   return (
-    <Paper
-      sx={{
-        p: { xs: 2.5, md: 3.5 },
-        borderRadius: '6px',
-        backgroundColor: 'rgba(36, 42, 51, 0.82)',
-        border: '1px solid rgba(255,255,255,0.06)',
-        boxShadow: '0 28px 80px rgba(0, 0, 0, 0.24)',
-      }}
-    >
-      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3 }}>
-        <Box>
-          <Typography variant="h4" sx={{ mb: 0.75 }}>
-            {selectedDevice?.name ?? (selectedSensorId || 'Live Sensors')}
-          </Typography>
-          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-            {locationName ?? selectedDevice?.locationName ?? ''}
-          </Typography>
-        </Box>
-        <Box sx={{ flexGrow: 1 }} />
-        <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel>Device</InputLabel>
-          <Select
-            value={selectedSensorId}
-            label="Device"
-            onChange={(e) => setSelectedSensorId(e.target.value)}
-          >
-            {devices.map((d) => (
-              <MenuItem key={d.uniqueId} value={d.uniqueId}>
-                {d.name ?? d.uniqueId}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <ButtonGroup size="small" variant="outlined">
-          {timeRanges.map((range) => (
-            <Button
-              key={range.label}
-              onClick={() => setHours(range.hours)}
-              variant={hours === range.hours ? 'contained' : 'outlined'}
+    <>
+      <Paper
+        sx={{
+          p: { xs: 2.5, md: 3.5 },
+          borderRadius: '6px',
+          backgroundColor: 'rgba(36, 42, 51, 0.82)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          boxShadow: '0 28px 80px rgba(0, 0, 0, 0.24)',
+        }}
+      >
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3 }}>
+          <Box>
+            <Typography variant="h4" sx={{ mb: 0.75 }}>
+              {selectedDevice?.name ?? (selectedSensorId || 'Live Sensors')}
+            </Typography>
+            <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+              {locationName ?? selectedDevice?.locationName ?? ''}
+            </Typography>
+          </Box>
+          <Box sx={{ flexGrow: 1 }} />
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>Device</InputLabel>
+            <Select
+              value={deviceSelectValue}
+              label="Device"
+              onChange={(e) => setSelectedSensorId(e.target.value)}
             >
-              {range.label}
-            </Button>
-          ))}
-        </ButtonGroup>
-        <Chip
-          label={connected ? 'Connected' : 'Disconnected'}
-          color={connected ? 'success' : 'error'}
-          size="small"
-          variant="outlined"
-        />
-      </Stack>
+              {devices.map((d) => (
+                <MenuItem key={d.uniqueId} value={d.uniqueId}>
+                  {d.name ?? d.uniqueId}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <ButtonGroup size="small" variant="outlined">
+            {timeRanges.map((range) => (
+              <Button
+                key={range.label}
+                onClick={() => setHours(range.hours)}
+                variant={hours === range.hours ? 'contained' : 'outlined'}
+              >
+                {range.label}
+              </Button>
+            ))}
+          </ButtonGroup>
+          <Chip
+            label={connected ? 'Connected' : 'Disconnected'}
+            color={connected ? 'success' : 'error'}
+            size="small"
+            variant="outlined"
+          />
+        </Stack>
 
-      <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
-        {activeSensorTypes.map((sensorType) => {
-          const config = sensorTypeConfig[sensorType] ?? { ...defaultConfig, label: sensorType };
-          return (
-            <SensorCard
-              key={sensorType}
-              label={config.label}
-              unit={config.unit}
-              icon={config.icon}
-              reading={readings[sensorType]}
-              history={history[sensorType] ?? []}
-              color={config.color}
-              hours={hours}
-            />
-          );
-        })}
-      </Stack>
-    </Paper>
+        <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
+          {activeSensorTypes.map((sensorType) => {
+            const config = sensorTypeConfig[sensorType] ?? { ...defaultConfig, label: sensorType };
+            return (
+              <SensorCard
+                key={sensorType}
+                sensorType={sensorType}
+                label={config.label}
+                unit={config.unit}
+                icon={config.icon}
+                reading={readings[sensorType]}
+                history={history[sensorType] ?? []}
+                color={config.color}
+                hours={hours}
+                onOpenFullscreen={setFullscreenSensorType}
+              />
+            );
+          })}
+        </Stack>
+      </Paper>
+
+      <SensorFullscreenDialog
+        open={fullscreenSensorType !== null}
+        sensorId={selectedSensorId}
+        sensorType={fullscreenSensorType}
+        sensorName={selectedDevice?.name ?? selectedSensorId}
+        sensorLocation={locationName ?? selectedDevice?.locationName ?? ''}
+        label={fullscreenConfig.label}
+        unit={fullscreenConfig.unit}
+        icon={fullscreenConfig.icon}
+        color={fullscreenConfig.color}
+        onClose={() => setFullscreenSensorType(null)}
+      />
+    </>
   );
 }
 
