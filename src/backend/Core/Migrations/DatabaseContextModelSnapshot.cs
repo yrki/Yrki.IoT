@@ -144,7 +144,12 @@ namespace Core.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("ParentLocationId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("ParentLocationId");
 
                     b.ToTable("Locations", (string)null);
                 });
@@ -218,6 +223,16 @@ namespace Core.Migrations
                     b.Navigation("Location");
                 });
 
+            modelBuilder.Entity("Core.Models.Location", b =>
+                {
+                    b.HasOne("Core.Models.Location", "ParentLocation")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentLocationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ParentLocation");
+                });
+
             modelBuilder.Entity("Core.Models.MagicLinkToken", b =>
                 {
                     b.HasOne("Core.Models.AppUser", "User")
@@ -236,6 +251,8 @@ namespace Core.Migrations
 
             modelBuilder.Entity("Core.Models.Location", b =>
                 {
+                    b.Navigation("Children");
+
                     b.Navigation("Devices");
                 });
 #pragma warning restore 612, 618

@@ -1,3 +1,3 @@
 namespace Contracts.Requests;
 
-public record UpdateLocationRequest(string? Name, string? Description);
+public record UpdateLocationRequest(string? Name, string? Description, Guid? ParentLocationId);

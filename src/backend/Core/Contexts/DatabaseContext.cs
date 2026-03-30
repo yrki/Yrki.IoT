@@ -38,6 +38,11 @@ public class DatabaseContext : DbContext
             entity.HasKey(location => location.Id);
             entity.Property(location => location.Name).IsRequired();
             entity.Property(location => location.Description).IsRequired();
+            entity.HasOne(location => location.ParentLocation)
+                .WithMany(location => location.Children)
+                .HasForeignKey(location => location.ParentLocationId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
         });
         modelBuilder.Entity<AppUser>(entity =>
         {

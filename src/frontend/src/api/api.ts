@@ -137,6 +137,7 @@ export interface LocationDto {
   name: string;
   description: string;
   deviceCount: number;
+  parentLocationId: string | null;
 }
 
 export async function getLocations(): Promise<LocationDto[]> {
@@ -144,12 +145,12 @@ export async function getLocations(): Promise<LocationDto[]> {
   return response.data;
 }
 
-export async function createLocation(name: string, description?: string): Promise<LocationDto> {
-  const response = await api.post<LocationDto>('/locations', { name, description });
+export async function createLocation(name: string, description?: string, parentLocationId?: string): Promise<LocationDto> {
+  const response = await api.post<LocationDto>('/locations', { name, description, parentLocationId });
   return response.data;
 }
 
-export async function updateLocation(id: string, request: { name?: string; description?: string }): Promise<LocationDto> {
+export async function updateLocation(id: string, request: { name?: string; description?: string; parentLocationId?: string | null }): Promise<LocationDto> {
   const response = await api.put<LocationDto>(`/locations/${id}`, request);
   return response.data;
 }

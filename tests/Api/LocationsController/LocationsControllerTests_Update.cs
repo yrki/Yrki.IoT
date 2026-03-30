@@ -22,7 +22,7 @@ public sealed class LocationsControllerTests_Update : IClassFixture<ApiDatabaseF
             new CreateLocationCommandHandler(_dbContext),
             new UpdateLocationCommandHandler(_dbContext),
             new DeleteLocationCommandHandler(_dbContext));
-        var request = new UpdateLocationRequest("New name", "New description");
+        var request = new UpdateLocationRequest("New name", "New description", null);
 
         // Act
         var result = await controller.Update(location.Id, request, CancellationToken.None);
@@ -45,7 +45,7 @@ public sealed class LocationsControllerTests_Update : IClassFixture<ApiDatabaseF
             new CreateLocationCommandHandler(_dbContext),
             new UpdateLocationCommandHandler(_dbContext),
             new DeleteLocationCommandHandler(_dbContext));
-        var request = new UpdateLocationRequest("New name", "New description");
+        var request = new UpdateLocationRequest("New name", "New description", null);
 
         // Act
         var result = await controller.Update(Guid.NewGuid(), request, CancellationToken.None);
