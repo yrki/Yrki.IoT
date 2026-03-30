@@ -9,5 +9,6 @@
   </Folder>
   <Folder Name="/src/backend/tests/">
     <Project Path="src/backend/tests/tests.csproj" />
+    <Project Path="tests/Api/Api.Tests.csproj" />
   </Folder>
 </Solution>
