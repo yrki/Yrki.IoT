@@ -32,7 +32,10 @@ builder.Services.AddDbContext<DatabaseContext>(options =>
 builder.Services.AddScoped<SensorReadingsQueryHandler>();
 builder.Services.AddScoped<NewDevicesQueryHandler>();
 builder.Services.AddScoped<UpdateDeviceCommandHandler>();
-builder.Services.AddScoped<SensorsQueryHandler>();
+builder.Services.AddScoped<AllSensorsQueryHandler>();
+builder.Services.AddScoped<SensorsByLocationQueryHandler>();
+builder.Services.AddScoped<SensorsBySensorLocationQueryHandler>();
+builder.Services.AddScoped<SensorByUniqueIdQueryHandler>();
 builder.Services.AddScoped<DeleteSensorCommandHandler>();
 builder.Services.AddScoped<LocationsQueryHandler>();
 builder.Services.AddScoped<CreateLocationCommandHandler>();

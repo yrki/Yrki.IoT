@@ -21,7 +21,10 @@ public sealed class DevicesControllerTests_GetByUniqueId : IClassFixture<ApiData
         await _dbContext.SaveChangesAsync();
 
         var controller = new DevicesController(
-            new SensorsQueryHandler(_dbContext),
+            new AllSensorsQueryHandler(_dbContext),
+            new SensorsByLocationQueryHandler(_dbContext),
+            new SensorsBySensorLocationQueryHandler(_dbContext),
+            new SensorByUniqueIdQueryHandler(_dbContext),
             new UpdateDeviceCommandHandler(_dbContext),
             new DeleteSensorCommandHandler(_dbContext));
 

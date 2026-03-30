@@ -9,35 +9,38 @@ namespace Api.Controllers;
 [ApiController]
 [Route("[controller]")]
 public class DevicesController(
-    SensorsQueryHandler queryHandler,
+    AllSensorsQueryHandler allSensorsQueryHandler,
+    SensorsByLocationQueryHandler sensorsByLocationQueryHandler,
+    SensorsBySensorLocationQueryHandler sensorsBySensorLocationQueryHandler,
+    SensorByUniqueIdQueryHandler sensorByUniqueIdQueryHandler,
     UpdateDeviceCommandHandler updateHandler,
     DeleteSensorCommandHandler deleteHandler) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        var sensors = await queryHandler.HandleAsync(cancellationToken);
+        var sensors = await allSensorsQueryHandler.HandleAsync(cancellationToken);
         return Ok(sensors);
     }
 
     [HttpGet("location/{locationId:guid}")]
     public async Task<IActionResult> GetByLocation(Guid locationId, CancellationToken cancellationToken)
     {
-        var sensors = await queryHandler.HandleByLocationAsync(locationId, cancellationToken);
+        var sensors = await sensorsByLocationQueryHandler.HandleAsync(locationId, cancellationToken);
         return Ok(sensors);
     }
 
     [HttpGet("sensor/{sensorId}")]
     public async Task<IActionResult> GetBySensorLocation(string sensorId, CancellationToken cancellationToken)
     {
-        var sensors = await queryHandler.HandleBySensorLocationAsync(sensorId, cancellationToken);
+        var sensors = await sensorsBySensorLocationQueryHandler.HandleAsync(sensorId, cancellationToken);
         return Ok(sensors);
     }
 
     [HttpGet("unique/{sensorId}")]
     public async Task<IActionResult> GetByUniqueId(string sensorId, CancellationToken cancellationToken)
     {
-        var sensor = await queryHandler.HandleByUniqueIdAsync(sensorId, cancellationToken);
+        var sensor = await sensorByUniqueIdQueryHandler.HandleAsync(sensorId, cancellationToken);
         if (sensor is null)
             return NotFound();
 
