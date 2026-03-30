@@ -1,12 +1,8 @@
 using System.Text;
 using System.Text.Json.Serialization;
-
-
 using Api.Configuration;
 using Api.Hubs;
 using Api.Services;
-
-
 using Core.Contexts;
 using Core.Features.Devices.Command;
 using Core.Features.Devices.Query;
@@ -15,11 +11,10 @@ using Core.Features.EncryptionKeys.Query;
 using Core.Features.Locations.Command;
 using Core.Features.Locations.Query;
 using Core.Features.SensorData.Query;
+using Core.Features.Sensors.Command;
 using Core.Features.Sensors.Query;
 using Core.Services.Email;
 using Core.Services.Encryption;
-
-
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -38,6 +33,7 @@ builder.Services.AddScoped<SensorReadingsQueryHandler>();
 builder.Services.AddScoped<NewDevicesQueryHandler>();
 builder.Services.AddScoped<UpdateDeviceCommandHandler>();
 builder.Services.AddScoped<SensorsQueryHandler>();
+builder.Services.AddScoped<DeleteSensorCommandHandler>();
 builder.Services.AddScoped<LocationsQueryHandler>();
 builder.Services.AddScoped<CreateLocationCommandHandler>();
 builder.Services.AddScoped<UpdateLocationCommandHandler>();

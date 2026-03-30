@@ -107,6 +107,10 @@ export async function getDevices(): Promise<SensorListItemDto[]> {
   return response.data;
 }
 
+export async function deleteDevice(id: string): Promise<void> {
+  await api.delete(`/devices/${id}`);
+}
+
 export async function getDevicesByLocation(locationId: string): Promise<SensorListItemDto[]> {
   const response = await api.get<SensorListItemDto[]>(`/devices/location/${locationId}`);
   return response.data;

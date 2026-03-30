@@ -1,3 +1,4 @@
+using Core.Features.Sensors.Command;
 using Core.Features.Sensors.Query;
 using Microsoft.AspNetCore.Mvc;
 
@@ -5,7 +6,9 @@ namespace Api.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class DevicesController(SensorsQueryHandler queryHandler) : ControllerBase
+public class DevicesController(
+    SensorsQueryHandler queryHandler,
+    DeleteSensorCommandHandler deleteHandler) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
@@ -19,5 +22,15 @@ public class DevicesController(SensorsQueryHandler queryHandler) : ControllerBas
     {
         var sensors = await queryHandler.HandleByLocationAsync(locationId, cancellationToken);
         return Ok(sensors);
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var deleted = await deleteHandler.HandleAsync(id, cancellationToken);
+        if (!deleted)
+            return NotFound();
+
+        return NoContent();
     }
 }

@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Box,
+  Button,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   IconButton,
   InputAdornment,
   Paper,
@@ -19,7 +25,8 @@ import {
 } from '@mui/material';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
-import { getDevices, SensorListItemDto } from '../../api/api';
+import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
+import { deleteDevice, getDevices, SensorListItemDto } from '../../api/api';
 
 type SortableField = 'uniqueId' | 'name' | 'manufacturer' | 'type' | 'locationName' | 'lastContact';
 type SortDirection = 'asc' | 'desc';
@@ -36,13 +43,23 @@ function SensorListView({ onNavigateToLiveView }: SensorListViewProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [filterManufacturer, setFilterManufacturer] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SensorListItemDto | null>(null);
 
-  useEffect(() => {
+  const loadSensors = () => {
     getDevices()
       .then(setSensors)
       .catch((err) => console.error('Failed to fetch sensors:', err))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { loadSensors(); }, []);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    await deleteDevice(deleteTarget.id);
+    setDeleteTarget(null);
+    loadSensors();
+  };
 
   const manufacturers = useMemo(() => [...new Set(sensors.map((s) => s.manufacturer).filter(Boolean))] as string[], [sensors]);
   const types = useMemo(() => [...new Set(sensors.map((s) => s.type).filter(Boolean))] as string[], [sensors]);
@@ -183,7 +200,7 @@ function SensorListView({ onNavigateToLiveView }: SensorListViewProps) {
                 sx={{
                   backgroundColor: 'rgba(255,255,255,0.02)',
                   borderBottomColor: 'rgba(255,255,255,0.06)',
-                  width: 60,
+                  width: 100,
                 }}
               />
             </TableRow>
@@ -207,17 +224,31 @@ function SensorListView({ onNavigateToLiveView }: SensorListViewProps) {
                 <TableCell>{sensor.locationName ?? '-'}</TableCell>
                 <TableCell>{new Date(sensor.lastContact).toLocaleString()}</TableCell>
                 <TableCell>
-                  <Tooltip title="View live data">
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onNavigateToLiveView(sensor.uniqueId);
-                      }}
-                    >
-                      <OpenInNewRoundedIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <Stack direction="row" spacing={0.5}>
+                    <Tooltip title="View live data">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onNavigateToLiveView(sensor.uniqueId);
+                        }}
+                      >
+                        <OpenInNewRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete sensor">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteTarget(sensor);
+                        }}
+                      >
+                        <DeleteRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
                 </TableCell>
               </TableRow>
             ))}
@@ -231,6 +262,19 @@ function SensorListView({ onNavigateToLiveView }: SensorListViewProps) {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Dialog open={deleteTarget !== null} onClose={() => setDeleteTarget(null)}>
+        <DialogTitle>Delete sensor</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Do you really want to delete {deleteTarget?.name ?? deleteTarget?.uniqueId}?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          <Button color="error" variant="contained" onClick={handleDelete}>Delete</Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 }
