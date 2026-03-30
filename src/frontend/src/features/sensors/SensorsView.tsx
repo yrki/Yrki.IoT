@@ -42,6 +42,7 @@ import {
   SensorListItemDto,
   updateExistingDevice,
 } from '../../api/api';
+import { buildTree, flattenTree } from '../locations/locationTree';
 import { calculateSensorStatistics } from './sensorStats';
 
 interface SensorCardProps {
@@ -397,8 +398,8 @@ function EditSensorLocationDialog({
                 label="Location"
                 onChange={(e) => setLocationId(e.target.value)}
               >
-                {locations.map((location) => (
-                  <MenuItem key={location.id} value={location.id}>
+                {flattenTree(buildTree(locations)).map(({ location, depth }) => (
+                  <MenuItem key={location.id} value={location.id} sx={{ pl: 2 + depth * 2 }}>
                     {location.name}
                   </MenuItem>
                 ))}

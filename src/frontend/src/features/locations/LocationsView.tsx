@@ -41,32 +41,8 @@ import {
   updateLocation,
 } from '../../api/api';
 
-interface LocationNode {
-  location: LocationDto;
-  children: LocationNode[];
-}
+import { LocationNode, buildTree, accumulatedDeviceCount, flattenTree } from './locationTree';
 
-function buildTree(locations: LocationDto[]): LocationNode[] {
-  const byId = new Map(locations.map((l) => [l.id, { location: l, children: [] as LocationNode[] }]));
-  const roots: LocationNode[] = [];
-
-  for (const node of byId.values()) {
-    const parentId = node.location.parentLocationId;
-    if (parentId && byId.has(parentId)) {
-      byId.get(parentId)!.children.push(node);
-    } else {
-      roots.push(node);
-    }
-  }
-
-  const sortNodes = (nodes: LocationNode[]) => {
-    nodes.sort((a, b) => a.location.name.localeCompare(b.location.name));
-    nodes.forEach((n) => sortNodes(n.children));
-  };
-  sortNodes(roots);
-
-  return roots;
-}
 
 function filterTree(nodes: LocationNode[], term: string): LocationNode[] {
   if (!term) return nodes;
@@ -198,17 +174,15 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
     loadLocations();
   };
 
-  const hasChildren = (locationId: string) =>
-    locations.some((l) => l.parentLocationId === locationId);
-
-  const canExpand = (location: LocationDto) =>
-    hasChildren(location.id) || location.deviceCount > 0;
+  const canExpand = (node: LocationNode) =>
+    node.children.length > 0 || node.location.deviceCount > 0;
 
   const renderLocationRows = (nodes: LocationNode[], depth: number): React.ReactNode =>
     nodes.map((node) => {
       const { location } = node;
       const isExpanded = expandedIds.has(location.id);
       const sensorsOpen = sensorExpandedIds.has(location.id);
+      const totalDevices = accumulatedDeviceCount(node);
 
       return (
         <Fragment key={location.id}>
@@ -224,11 +198,11 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
                   size="small"
                   onClick={() => {
                     toggleExpanded(location.id);
-                    if (location.deviceCount > 0 && !hasChildren(location.id)) {
+                    if (location.deviceCount > 0 && node.children.length === 0) {
                       toggleSensors(location.id);
                     }
                   }}
-                  disabled={!canExpand(location)}
+                  disabled={!canExpand(node)}
                   aria-label={isExpanded ? `Collapse ${location.name}` : `Expand ${location.name}`}
                 >
                   {isExpanded
@@ -240,11 +214,11 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
             </TableCell>
             <TableCell sx={{ color: 'text.secondary' }}>{location.description || '-'}</TableCell>
             <TableCell>
-              <Chip label={location.deviceCount} size="small" variant="outlined" />
+              <Chip label={totalDevices} size="small" variant="outlined" />
             </TableCell>
             <TableCell>
               <Stack direction="row" spacing={0.5}>
-                {location.deviceCount > 0 && hasChildren(location.id) && (
+                {location.deviceCount > 0 && node.children.length > 0 && (
                   <Tooltip title={sensorsOpen ? 'Hide sensors' : 'Show sensors'}>
                     <IconButton
                       size="small"
@@ -255,7 +229,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
                     </IconButton>
                   </Tooltip>
                 )}
-                {(!hasChildren(location.id) || location.deviceCount === 0) && (
+                {(node.children.length === 0 || location.deviceCount === 0) && (
                   <Tooltip title="Show live data">
                     <IconButton
                       size="small"
@@ -282,7 +256,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
                     size="small"
                     color="error"
                     onClick={() => handleDelete(location.id)}
-                    disabled={location.deviceCount > 0 || hasChildren(location.id)}
+                    disabled={totalDevices > 0 || node.children.length > 0}
                   >
                     <DeleteRoundedIcon fontSize="small" />
                   </IconButton>
@@ -292,7 +266,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
           </TableRow>
 
           {/* Sensor details row */}
-          {(sensorsOpen || (isExpanded && !hasChildren(location.id) && location.deviceCount > 0)) && (
+          {(sensorsOpen || (isExpanded && node.children.length === 0 && location.deviceCount > 0)) && (
             <TableRow>
               <TableCell
                 colSpan={4}
@@ -376,7 +350,9 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
       );
     });
 
-  const parentOptions = locations.filter((l) => l.id !== editingLocation?.id);
+  const parentOptions = flattenTree(
+    buildTree(locations.filter((l) => l.id !== editingLocation?.id)),
+  );
 
   return (
     <>
@@ -500,8 +476,10 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
             onChange={(e) => setFormParentId(e.target.value)}
           >
             <MenuItem value="">None (top-level)</MenuItem>
-            {parentOptions.map((l) => (
-              <MenuItem key={l.id} value={l.id}>{l.name}</MenuItem>
+            {parentOptions.map(({ location, depth }) => (
+              <MenuItem key={location.id} value={location.id} sx={{ pl: 2 + depth * 2 }}>
+                {location.name}
+              </MenuItem>
             ))}
           </TextField>
         </DialogContent>
