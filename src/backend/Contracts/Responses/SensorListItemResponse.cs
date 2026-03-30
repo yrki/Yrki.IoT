@@ -8,4 +8,5 @@ public record SensorListItemResponse(
     string Type,
     string? LocationName,
     Guid? LocationId,
-    DateTimeOffset LastContact);
+    DateTimeOffset LastContact,
+    DateTimeOffset InstallationDate);

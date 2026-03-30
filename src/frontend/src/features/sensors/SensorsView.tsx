@@ -1,10 +1,12 @@
 import { useEffect, useId, useState } from 'react';
 import {
+  Alert,
   Box,
   Button,
   ButtonGroup,
   Chip,
   Dialog,
+  DialogActions,
   DialogContent,
   DialogTitle,
   FormControl,
@@ -14,6 +16,7 @@ import {
   Paper,
   Select,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material';
 import ThermostatRoundedIcon from '@mui/icons-material/ThermostatRounded';
@@ -24,9 +27,21 @@ import WaterRoundedIcon from '@mui/icons-material/WaterRounded';
 import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
 import OpenInFullRoundedIcon from '@mui/icons-material/OpenInFullRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import EditLocationAltRoundedIcon from '@mui/icons-material/EditLocationAltRounded';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { useSensorHub, SensorReading, SensorDataPoint } from './useSensorHub';
-import { getDevices, getDevicesByLocation, SensorListItemDto } from '../../api/api';
+import {
+  createLocation,
+  getDeviceByUniqueId,
+  getDevices,
+  getDevicesByLocation,
+  getLocations,
+  LocationDto,
+  SensorListItemDto,
+  updateExistingDevice,
+} from '../../api/api';
 import { calculateSensorStatistics } from './sensorStats';
 
 interface SensorCardProps {
@@ -52,6 +67,15 @@ function formatDateTime(epoch: number) {
 
 function formatTimestamp(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function formatDateLabel(iso: string) {
+  return new Date(iso).toLocaleString([], {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function formatValue(value: number, unit: string) {
@@ -230,12 +254,181 @@ function StatisticPanel({ label, value, unit }: { label: string; value: number; 
   );
 }
 
+interface AddLocationDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onCreated: (location: LocationDto) => void;
+}
+
+function AddLocationDialog({ open, onClose, onCreated }: AddLocationDialogProps) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const location = await createLocation(name.trim(), description.trim() || undefined);
+      onCreated(location);
+      setName('');
+      setDescription('');
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle>Add Location</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <TextField
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            fullWidth
+            size="small"
+            autoFocus
+          />
+          <TextField
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            fullWidth
+            size="small"
+          />
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" onClick={handleSave} disabled={saving || !name.trim()}>
+          {saving ? 'Creating...' : 'Create'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+interface EditSensorLocationDialogProps {
+  open: boolean;
+  device: SensorListItemDto | null;
+  locations: LocationDto[];
+  onClose: () => void;
+  onAddLocation: () => void;
+  onSaved: (updatedDevice: SensorListItemDto) => void;
+}
+
+function EditSensorLocationDialog({
+  open,
+  device,
+  locations,
+  onClose,
+  onAddLocation,
+  onSaved,
+}: EditSensorLocationDialogProps) {
+  const [locationId, setLocationId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (device) {
+      setLocationId(device.locationId ?? '');
+      setError('');
+    }
+  }, [device]);
+
+  const handleSave = async () => {
+    if (!device) {
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    try {
+      const updated = await updateExistingDevice(device.id, {
+        name: device.name ?? undefined,
+        description: undefined,
+        locationId: locationId || undefined,
+      });
+
+      const selectedLocation = locations.find((location) => location.id === updated.locationId);
+      onSaved({
+        id: updated.id,
+        uniqueId: updated.uniqueId,
+        name: updated.name,
+        manufacturer: updated.manufacturer,
+        type: updated.type,
+        locationId: updated.locationId,
+        locationName: selectedLocation?.name ?? null,
+        lastContact: updated.lastContact,
+        installationDate: updated.installationDate,
+      });
+      onClose();
+    } catch (err) {
+      console.error('Failed to update device location:', err);
+      setError('Failed to save location.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Update Sensor Location</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <TextField
+            label="Sensor"
+            value={device?.name ?? device?.uniqueId ?? ''}
+            fullWidth
+            size="small"
+            disabled
+          />
+          <Stack direction="row" spacing={1} alignItems="flex-end">
+            <FormControl fullWidth size="small">
+              <InputLabel>Location</InputLabel>
+              <Select
+                value={locationId}
+                label="Location"
+                onChange={(e) => setLocationId(e.target.value)}
+              >
+                {locations.map((location) => (
+                  <MenuItem key={location.id} value={location.id}>
+                    {location.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Button variant="outlined" size="small" onClick={onAddLocation} sx={{ minWidth: 40, px: 1 }}>
+              <AddRoundedIcon fontSize="small" />
+            </Button>
+          </Stack>
+          {error ? <Alert severity="error">{error}</Alert> : null}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" onClick={handleSave} disabled={saving || !locationId}>
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 interface SensorFullscreenDialogProps {
   open: boolean;
   sensorId: string;
   sensorType: string | null;
   sensorName: string;
   sensorLocation: string;
+  firstReadingAt: string;
+  lastReadingAt: string;
   label: string;
   unit: string;
   icon: React.ReactNode;
@@ -249,6 +442,8 @@ function SensorFullscreenDialog({
   sensorType,
   sensorName,
   sensorLocation,
+  firstReadingAt,
+  lastReadingAt,
   label,
   unit,
   icon,
@@ -328,6 +523,12 @@ function SensorFullscreenDialog({
                   Waiting for data...
                 </Typography>
               )}
+              <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
+                First reading: {formatDateLabel(firstReadingAt)}
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Last reading: {formatDateLabel(lastReadingAt)}
+              </Typography>
             </Box>
             <ButtonGroup size="small" variant="outlined">
               {timeRanges.map((range) => (
@@ -404,32 +605,73 @@ interface SensorsViewProps {
   initialSensorId?: string;
   locationId?: string;
   locationName?: string;
+  onBack?: () => void;
 }
 
-function SensorsView({ initialSensorId, locationId, locationName }: SensorsViewProps) {
+function SensorsView({ initialSensorId, locationId, locationName, onBack }: SensorsViewProps) {
   const [devices, setDevices] = useState<SensorListItemDto[]>([]);
+  const [locations, setLocations] = useState<LocationDto[]>([]);
   const [selectedSensorId, setSelectedSensorId] = useState(initialSensorId ?? '');
   const [hours, setHours] = useState(3);
   const [fullscreenSensorType, setFullscreenSensorType] = useState<string | null>(null);
+  const [editLocationOpen, setEditLocationOpen] = useState(false);
+  const [addLocationOpen, setAddLocationOpen] = useState(false);
   const { readings, history, connected } = useSensorHub(selectedSensorId, hours);
 
   useEffect(() => {
-    const load = locationId
-      ? getDevicesByLocation(locationId)
-      : getDevices();
-
-    load
-      .then((result) => {
-        setDevices(result);
-        const ids = result.map((d) => d.uniqueId);
-        if (initialSensorId && ids.includes(initialSensorId)) {
-          setSelectedSensorId(initialSensorId);
-        } else if (ids.length > 0 && !ids.includes(selectedSensorId)) {
-          setSelectedSensorId(ids[0]);
+    const loadDevices = async () => {
+      try {
+        if (locationId) {
+          return await getDevicesByLocation(locationId);
         }
-      })
-      .catch((err: unknown) => console.error('Failed to fetch devices:', err));
-  }, [locationId]);
+
+        if (initialSensorId) {
+          try {
+            const selectedDevice = await getDeviceByUniqueId(initialSensorId);
+            if (!selectedDevice.locationId) {
+              return [selectedDevice];
+            }
+
+            const sameLocationDevices = await getDevicesByLocation(selectedDevice.locationId);
+            if (sameLocationDevices.length > 0) {
+              return sameLocationDevices;
+            }
+
+            const allDevices = await getDevices();
+            const fallbackDevices = allDevices.filter((device) => device.locationId === selectedDevice.locationId);
+            return fallbackDevices.length > 0 ? fallbackDevices : [selectedDevice];
+          } catch (err) {
+            console.error('Failed to fetch selected device metadata:', err);
+          }
+        }
+
+        return await getDevices();
+      } catch (err) {
+        console.error('Failed to fetch devices:', err);
+        return [];
+      }
+    };
+
+    loadDevices().then((result) => {
+      setDevices(result);
+      const ids = result.map((d) => d.uniqueId);
+      if (initialSensorId && ids.includes(initialSensorId)) {
+        setSelectedSensorId(initialSensorId);
+      } else if (ids.length > 0 && !ids.includes(selectedSensorId)) {
+        setSelectedSensorId(ids[0]);
+      }
+    });
+  }, [initialSensorId, locationId]);
+
+  useEffect(() => {
+    setSelectedSensorId(initialSensorId ?? '');
+  }, [initialSensorId]);
+
+  useEffect(() => {
+    getLocations()
+      .then((result) => setLocations(result.sort((left, right) => left.name.localeCompare(right.name))))
+      .catch((err: unknown) => console.error('Failed to fetch locations:', err));
+  }, []);
 
   const selectedDevice = devices.find((d) => d.uniqueId === selectedSensorId);
   const activeSensorTypes = Object.keys(readings);
@@ -439,6 +681,14 @@ function SensorsView({ initialSensorId, locationId, locationName }: SensorsViewP
   const fullscreenConfig = fullscreenSensorType
     ? sensorTypeConfig[fullscreenSensorType] ?? { ...defaultConfig, label: fullscreenSensorType }
     : defaultConfig;
+
+  const handleLocationCreated = (location: LocationDto) => {
+    setLocations((prev) => [...prev, location].sort((left, right) => left.name.localeCompare(right.name)));
+  };
+
+  const handleDeviceUpdated = (updatedDevice: SensorListItemDto) => {
+    setDevices((prev) => prev.map((device) => device.id === updatedDevice.id ? updatedDevice : device));
+  };
 
   return (
     <>
@@ -452,13 +702,41 @@ function SensorsView({ initialSensorId, locationId, locationName }: SensorsViewP
         }}
       >
         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3 }}>
+          {onBack ? (
+            <IconButton aria-label="Back" onClick={onBack} sx={{ alignSelf: 'flex-start', mt: 0.25 }}>
+              <ArrowBackRoundedIcon />
+            </IconButton>
+          ) : null}
           <Box>
             <Typography variant="h4" sx={{ mb: 0.75 }}>
-              {selectedDevice?.name ?? (selectedSensorId || 'Live Sensors')}
+                {selectedDevice?.name ?? (selectedSensorId || 'Live Sensors')}
             </Typography>
-            <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-              {locationName ?? selectedDevice?.locationName ?? ''}
-            </Typography>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                {selectedDevice?.locationName ?? locationName ?? 'No location set'}
+              </Typography>
+              {selectedDevice ? (
+                <Button
+                  size="small"
+                  variant="text"
+                  startIcon={<EditLocationAltRoundedIcon fontSize="small" />}
+                  onClick={() => setEditLocationOpen(true)}
+                  sx={{ minWidth: 0, px: 0 }}
+                >
+                  Edit location
+                </Button>
+              ) : null}
+            </Stack>
+            {selectedDevice ? (
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 1 }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  First reading: {formatDateLabel(selectedDevice.installationDate)}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Last reading: {formatDateLabel(selectedDevice.lastContact)}
+                </Typography>
+              </Stack>
+            ) : null}
           </Box>
           <Box sx={{ flexGrow: 1 }} />
           <FormControl size="small" sx={{ minWidth: 200 }}>
@@ -520,12 +798,29 @@ function SensorsView({ initialSensorId, locationId, locationName }: SensorsViewP
         sensorId={selectedSensorId}
         sensorType={fullscreenSensorType}
         sensorName={selectedDevice?.name ?? selectedSensorId}
-        sensorLocation={locationName ?? selectedDevice?.locationName ?? ''}
+        sensorLocation={selectedDevice?.locationName ?? locationName ?? ''}
+        firstReadingAt={selectedDevice?.installationDate ?? new Date().toISOString()}
+        lastReadingAt={selectedDevice?.lastContact ?? new Date().toISOString()}
         label={fullscreenConfig.label}
         unit={fullscreenConfig.unit}
         icon={fullscreenConfig.icon}
         color={fullscreenConfig.color}
         onClose={() => setFullscreenSensorType(null)}
+      />
+
+      <EditSensorLocationDialog
+        open={editLocationOpen}
+        device={selectedDevice ?? null}
+        locations={locations}
+        onClose={() => setEditLocationOpen(false)}
+        onAddLocation={() => setAddLocationOpen(true)}
+        onSaved={handleDeviceUpdated}
+      />
+
+      <AddLocationDialog
+        open={addLocationOpen}
+        onClose={() => setAddLocationOpen(false)}
+        onCreated={handleLocationCreated}
       />
     </>
   );

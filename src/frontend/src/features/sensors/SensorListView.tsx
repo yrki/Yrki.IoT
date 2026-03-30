@@ -35,6 +35,10 @@ interface SensorListViewProps {
   onNavigateToLiveView: (sensorId: string) => void;
 }
 
+function normalizeSearchValue(value: string | null | undefined) {
+  return (value ?? '').toLowerCase().replace(/[\s_-]+/g, '');
+}
+
 function SensorListView({ onNavigateToLiveView }: SensorListViewProps) {
   const [sensors, setSensors] = useState<SensorListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,14 +70,22 @@ function SensorListView({ onNavigateToLiveView }: SensorListViewProps) {
 
   const filteredSensors = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
+    const normalizedTerm = normalizeSearchValue(searchTerm.trim());
 
     return [...sensors]
       .filter((s) => {
         if (filterManufacturer && s.manufacturer !== filterManufacturer) return false;
         if (filterType && s.type !== filterType) return false;
         if (!term) return true;
-        return [s.uniqueId, s.name, s.manufacturer, s.type, s.locationName]
-          .some((v) => v?.toLowerCase().includes(term));
+
+        const fields = [s.id, s.uniqueId, s.name, s.manufacturer, s.type, s.locationName];
+
+        return fields.some((value) => {
+          if (!value) return false;
+
+          const rawValue = value.toLowerCase();
+          return rawValue.includes(term) || normalizeSearchValue(value).includes(normalizedTerm);
+        });
       })
       .sort((a, b) => {
         const av = String(a[sortBy] ?? '');
@@ -126,7 +138,7 @@ function SensorListView({ onNavigateToLiveView }: SensorListViewProps) {
           </Typography>
         </Box>
         <TextField
-          placeholder="Search sensors"
+          placeholder="Search sensors by name, uniqueId or location"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           sx={{ minWidth: { sm: 320 } }}

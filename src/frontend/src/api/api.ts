@@ -91,6 +91,11 @@ export async function updateDevice(id: string, request: UpdateDeviceRequest): Pr
   return response.data;
 }
 
+export async function updateExistingDevice(id: string, request: UpdateDeviceRequest): Promise<NewDeviceDto> {
+  const response = await api.put<NewDeviceDto>(`/devices/${id}`, request);
+  return response.data;
+}
+
 export interface SensorListItemDto {
   id: string;
   uniqueId: string;
@@ -100,6 +105,7 @@ export interface SensorListItemDto {
   locationName: string | null;
   locationId: string | null;
   lastContact: string;
+  installationDate: string;
 }
 
 export async function getDevices(): Promise<SensorListItemDto[]> {
@@ -113,6 +119,16 @@ export async function deleteDevice(id: string): Promise<void> {
 
 export async function getDevicesByLocation(locationId: string): Promise<SensorListItemDto[]> {
   const response = await api.get<SensorListItemDto[]>(`/devices/location/${locationId}`);
+  return response.data;
+}
+
+export async function getDevicesBySensorLocation(sensorId: string): Promise<SensorListItemDto[]> {
+  const response = await api.get<SensorListItemDto[]>(`/devices/sensor/${encodeURIComponent(sensorId)}`);
+  return response.data;
+}
+
+export async function getDeviceByUniqueId(sensorId: string): Promise<SensorListItemDto> {
+  const response = await api.get<SensorListItemDto>(`/devices/unique/${encodeURIComponent(sensorId)}`);
   return response.data;
 }
 

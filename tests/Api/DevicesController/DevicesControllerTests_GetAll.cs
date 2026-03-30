@@ -24,6 +24,7 @@ public sealed class DevicesControllerTests_GetAll : IClassFixture<ApiDatabaseFix
 
         var controller = new DevicesController(
             new SensorsQueryHandler(_dbContext),
+            new UpdateDeviceCommandHandler(_dbContext),
             new DeleteSensorCommandHandler(_dbContext));
 
         // Act
@@ -35,6 +36,8 @@ public sealed class DevicesControllerTests_GetAll : IClassFixture<ApiDatabaseFix
         var device = Assert.Single(devices);
         Assert.Equal(activeDevice.Id, device.Id);
         Assert.Equal(location.Name, device.LocationName);
+        Assert.Equal(activeDevice.InstallationDate, device.InstallationDate);
+        Assert.Equal(activeDevice.LastContact, device.LastContact);
     }
 
     public void Dispose()

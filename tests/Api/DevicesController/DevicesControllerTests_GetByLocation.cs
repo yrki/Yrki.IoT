@@ -24,6 +24,7 @@ public sealed class DevicesControllerTests_GetByLocation : IClassFixture<ApiData
 
         var controller = new DevicesController(
             new SensorsQueryHandler(_dbContext),
+            new UpdateDeviceCommandHandler(_dbContext),
             new DeleteSensorCommandHandler(_dbContext));
 
         // Act
@@ -35,6 +36,7 @@ public sealed class DevicesControllerTests_GetByLocation : IClassFixture<ApiData
         var device = Assert.Single(devices);
         Assert.Equal(matchingDevice.Id, device.Id);
         Assert.Equal(matchingLocation.Id, device.LocationId);
+        Assert.Equal(matchingDevice.InstallationDate, device.InstallationDate);
     }
 
     public void Dispose()

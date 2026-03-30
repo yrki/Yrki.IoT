@@ -16,9 +16,10 @@ public sealed class LocationsControllerTests_GetAll : IClassFixture<ApiDatabaseF
         var location = ApiTestData.CreateLocation("Alpha site");
         var installedDevice = ApiTestData.CreateDevice("sensor-1", "Installed sensor", "CarbonDioxide", "Installed", locationId: location.Id, location: location);
         var newDevice = ApiTestData.CreateDevice("sensor-2", "New sensor", "CarbonDioxide", "Pending", locationId: location.Id, location: location, isNew: true);
+        var deletedDevice = ApiTestData.CreateDevice("sensor-3", "Deleted sensor", "CarbonDioxide", "Removed", locationId: location.Id, location: location, isDeleted: true);
 
         _dbContext.Locations.Add(location);
-        _dbContext.Devices.AddRange(installedDevice, newDevice);
+        _dbContext.Devices.AddRange(installedDevice, newDevice, deletedDevice);
         await _dbContext.SaveChangesAsync();
 
         var controller = new LocationsController(

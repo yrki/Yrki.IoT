@@ -19,6 +19,7 @@ public sealed class DevicesControllerTests_Delete : IClassFixture<ApiDatabaseFix
 
         var controller = new DevicesController(
             new SensorsQueryHandler(_dbContext),
+            new UpdateDeviceCommandHandler(_dbContext),
             new DeleteSensorCommandHandler(_dbContext));
 
         // Act
@@ -35,6 +36,7 @@ public sealed class DevicesControllerTests_Delete : IClassFixture<ApiDatabaseFix
         // Arrange
         var controller = new DevicesController(
             new SensorsQueryHandler(_dbContext),
+            new UpdateDeviceCommandHandler(_dbContext),
             new DeleteSensorCommandHandler(_dbContext));
 
         // Act

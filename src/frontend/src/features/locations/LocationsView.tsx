@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Button,
   Chip,
+  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -27,11 +28,16 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import BarChartRoundedIcon from '@mui/icons-material/BarChartRounded';
+import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
+import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
 import {
   createLocation,
   deleteLocation,
+  getDevices,
+  getDevicesByLocation,
   getLocations,
   LocationDto,
+  SensorListItemDto,
   updateLocation,
 } from '../../api/api';
 
@@ -40,10 +46,14 @@ type SortDirection = 'asc' | 'desc';
 
 interface LocationsViewProps {
   onNavigateToLiveView: (locationId: string, locationName: string) => void;
+  onNavigateToSensor: (sensorId: string) => void;
 }
 
-function LocationsView({ onNavigateToLiveView }: LocationsViewProps) {
+function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsViewProps) {
   const [locations, setLocations] = useState<LocationDto[]>([]);
+  const [locationSensors, setLocationSensors] = useState<Record<string, SensorListItemDto[]>>({});
+  const [expandedLocationId, setExpandedLocationId] = useState<string | null>(null);
+  const [loadingLocationId, setLoadingLocationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortableField>('name');
@@ -123,6 +133,40 @@ function LocationsView({ onNavigateToLiveView }: LocationsViewProps) {
   const handleDelete = async (id: string) => {
     await deleteLocation(id);
     loadLocations();
+  };
+
+  const handleToggleLocation = async (locationId: string) => {
+    if (expandedLocationId === locationId) {
+      setExpandedLocationId(null);
+      return;
+    }
+
+    setExpandedLocationId(locationId);
+
+    if (locationSensors[locationId]) {
+      return;
+    }
+
+    setLoadingLocationId(locationId);
+
+    try {
+      let sensors = await getDevicesByLocation(locationId);
+
+      if (sensors.length === 0) {
+        const location = locations.find((item) => item.id === locationId);
+        if (location && location.deviceCount > 0) {
+          const allDevices = await getDevices();
+          sensors = allDevices.filter((device) => device.locationId === locationId);
+        }
+      }
+
+      setLocationSensors((current) => ({ ...current, [locationId]: sensors }));
+    } catch (err) {
+      console.error('Failed to fetch sensors for location:', err);
+      setLocationSensors((current) => ({ ...current, [locationId]: [] }));
+    } finally {
+      setLoadingLocationId((current) => current === locationId ? null : current);
+    }
   };
 
   const columns: Array<{ id: SortableField; label: string }> = [
@@ -226,49 +270,103 @@ function LocationsView({ onNavigateToLiveView }: LocationsViewProps) {
             </TableHead>
             <TableBody>
               {filteredLocations.map((location) => (
-                <TableRow
-                  key={location.id}
-                  hover
-                  sx={{
-                    '&:last-child td': { borderBottom: 0 },
-                    '& .MuiTableCell-root': { borderBottomColor: 'rgba(255,255,255,0.06)' },
-                  }}
-                >
-                  <TableCell>{location.name}</TableCell>
-                  <TableCell sx={{ color: 'text.secondary' }}>{location.description || '-'}</TableCell>
-                  <TableCell>
-                    <Chip label={location.deviceCount} size="small" variant="outlined" />
-                  </TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={0.5}>
-                      <Tooltip title="Show live data">
+                <Fragment key={location.id}>
+                  <TableRow
+                    hover
+                    sx={{
+                      '& .MuiTableCell-root': { borderBottomColor: 'rgba(255,255,255,0.06)' },
+                    }}
+                  >
+                    <TableCell>
+                      <Stack direction="row" spacing={1} alignItems="center">
                         <IconButton
                           size="small"
-                          color="primary"
-                          onClick={() => onNavigateToLiveView(location.id, location.name)}
+                          onClick={() => handleToggleLocation(location.id)}
                           disabled={location.deviceCount === 0}
+                          aria-label={expandedLocationId === location.id ? `Collapse ${location.name}` : `Expand ${location.name}`}
                         >
-                          <BarChartRoundedIcon fontSize="small" />
+                          {expandedLocationId === location.id
+                            ? <KeyboardArrowUpRoundedIcon fontSize="small" />
+                            : <KeyboardArrowDownRoundedIcon fontSize="small" />}
                         </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Edit">
-                        <IconButton size="small" onClick={() => openEditDialog(location)}>
-                          <EditRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => handleDelete(location.id)}
-                          disabled={location.deviceCount > 0}
-                        >
-                          <DeleteRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
+                        <Typography>{location.name}</Typography>
+                      </Stack>
+                    </TableCell>
+                    <TableCell sx={{ color: 'text.secondary' }}>{location.description || '-'}</TableCell>
+                    <TableCell>
+                      <Chip label={location.deviceCount} size="small" variant="outlined" />
+                    </TableCell>
+                    <TableCell>
+                      <Stack direction="row" spacing={0.5}>
+                        <Tooltip title="Show live data">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => onNavigateToLiveView(location.id, location.name)}
+                            disabled={location.deviceCount === 0}
+                          >
+                            <BarChartRoundedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Edit">
+                          <IconButton size="small" onClick={() => openEditDialog(location)}>
+                            <EditRoundedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDelete(location.id)}
+                            disabled={location.deviceCount > 0}
+                          >
+                            <DeleteRoundedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length + 1}
+                      sx={{
+                        p: 0,
+                        borderBottomColor: 'rgba(255,255,255,0.06)',
+                        backgroundColor: 'rgba(255,255,255,0.02)',
+                      }}
+                    >
+                      <Collapse in={expandedLocationId === location.id} timeout="auto" unmountOnExit>
+                        <Box sx={{ p: 2.5 }}>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
+                            Sensors at this location
+                          </Typography>
+                          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                            {loadingLocationId === location.id ? (
+                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                Loading sensors...
+                              </Typography>
+                            ) : (locationSensors[location.id] ?? []).length > 0 ? (
+                              locationSensors[location.id].map((sensor) => (
+                                <Button
+                                  key={sensor.id}
+                                  variant="outlined"
+                                  size="small"
+                                  onClick={() => onNavigateToSensor(sensor.uniqueId)}
+                                >
+                                  {sensor.name ?? sensor.uniqueId}
+                                </Button>
+                              ))
+                            ) : (
+                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                No sensors found for this location.
+                              </Typography>
+                            )}
+                          </Stack>
+                        </Box>
+                      </Collapse>
+                    </TableCell>
+                  </TableRow>
+                </Fragment>
               ))}
               {!loading && filteredLocations.length === 0 && (
                 <TableRow>

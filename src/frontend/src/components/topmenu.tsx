@@ -38,14 +38,18 @@ function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
   const [loginOpen, setLoginOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState<NavigationSection>('Sensors');
+  const [previousSection, setPreviousSection] = useState<NavigationSection>('Sensors');
   const [liveViewParams, setLiveViewParams] = useState<LiveViewParams>({});
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
 
   const navigateToLiveView = useCallback((params: LiveViewParams) => {
+    if (selectedSection !== 'Live View') {
+      setPreviousSection(selectedSection);
+    }
     setLiveViewParams(params);
     setSelectedSection('Live View');
-  }, []);
+  }, [selectedSection]);
 
   const handleSelectSection = useCallback((section: NavigationSection) => {
     setSelectedSection(section);
@@ -67,7 +71,12 @@ function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
       case 'Sensors':
         return <SensorListView onNavigateToLiveView={(sensorId) => navigateToLiveView({ sensorId })} />;
       case 'Locations':
-        return <LocationsView onNavigateToLiveView={(locationId, locationName) => navigateToLiveView({ locationId, locationName })} />;
+        return (
+          <LocationsView
+            onNavigateToLiveView={(locationId, locationName) => navigateToLiveView({ locationId, locationName })}
+            onNavigateToSensor={(sensorId) => navigateToLiveView({ sensorId })}
+          />
+        );
       case 'New Sensors':
         return <NewSensorsView />;
       case 'Live View':
@@ -76,6 +85,7 @@ function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
             initialSensorId={liveViewParams.sensorId}
             locationId={liveViewParams.locationId}
             locationName={liveViewParams.locationName}
+            onBack={() => setSelectedSection(previousSection)}
           />
         );
       default:
