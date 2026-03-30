@@ -340,28 +340,63 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
                           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
                             Sensors at this location
                           </Typography>
-                          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                            {loadingLocationId === location.id ? (
-                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                Loading sensors...
-                              </Typography>
-                            ) : (locationSensors[location.id] ?? []).length > 0 ? (
-                              locationSensors[location.id].map((sensor) => (
-                                <Button
-                                  key={sensor.id}
-                                  variant="outlined"
-                                  size="small"
-                                  onClick={() => onNavigateToSensor(sensor.uniqueId)}
-                                >
-                                  {sensor.name ?? sensor.uniqueId}
-                                </Button>
-                              ))
-                            ) : (
-                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                No sensors found for this location.
-                              </Typography>
-                            )}
-                          </Stack>
+                          {loadingLocationId === location.id ? (
+                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                              Loading sensors...
+                            </Typography>
+                          ) : (locationSensors[location.id] ?? []).length > 0 ? (
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  {['Unique ID', 'Name', 'Type', 'Last Received'].map((header) => (
+                                    <TableCell
+                                      key={header}
+                                      sx={{
+                                        backgroundColor: 'rgba(255,255,255,0.03)',
+                                        borderBottomColor: 'rgba(255,255,255,0.08)',
+                                        fontWeight: 600,
+                                        fontSize: '0.8rem',
+                                      }}
+                                    >
+                                      {header}
+                                    </TableCell>
+                                  ))}
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {locationSensors[location.id].map((sensor) => (
+                                  <TableRow
+                                    key={sensor.id}
+                                    hover
+                                    onClick={() => onNavigateToSensor(sensor.uniqueId)}
+                                    sx={{
+                                      cursor: 'pointer',
+                                      '& .MuiTableCell-root': {
+                                        borderBottomColor: 'rgba(255,255,255,0.04)',
+                                        fontSize: '0.85rem',
+                                        py: 1,
+                                      },
+                                    }}
+                                  >
+                                    <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem !important' }}>
+                                      {sensor.uniqueId}
+                                    </TableCell>
+                                    <TableCell>{sensor.name ?? '-'}</TableCell>
+                                    <TableCell>{sensor.type}</TableCell>
+                                    <TableCell sx={{ color: 'text.secondary' }}>
+                                      {sensor.lastContact
+                                        ? new Date(sensor.lastContact).toLocaleString()
+                                        : '-'}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          ) : (
+                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                              No sensors found for this location.
+                            </Typography>
+                          )}
                         </Box>
                       </Collapse>
                     </TableCell>
