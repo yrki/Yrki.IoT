@@ -186,16 +186,16 @@ describe('SensorsView', () => {
     expect(within(dialog).getByText('Highest')).toBeInTheDocument();
     expect(within(dialog).getByText('Median')).toBeInTheDocument();
     expect(within(dialog).getByText('Average')).toBeInTheDocument();
-    expect(within(dialog).getByText('18.000 °C')).toBeInTheDocument();
-    expect(within(dialog).getAllByText('22.000 °C')).toHaveLength(2);
+    expect(within(dialog).getByText('18.00 °C')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('22.00 °C')).toHaveLength(2);
 
     await user.click(within(dialog).getByRole('button', { name: '12h' }));
 
     await waitFor(() => {
       expect(useSensorHub).toHaveBeenCalledWith('sensor-1', 12, true);
     });
-    expect(within(dialog).getByText('20.000 °C')).toBeInTheDocument();
-    expect(within(dialog).getAllByText('24.000 °C')).toHaveLength(2);
+    expect(within(dialog).getByText('20.00 °C')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('24.00 °C')).toHaveLength(2);
   });
 
   it('Shall_update_sensor_location_from_live_view', async () => {

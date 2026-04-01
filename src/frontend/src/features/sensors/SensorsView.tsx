@@ -53,6 +53,7 @@ interface SensorCardProps {
   sensorType: string;
   label: string;
   unit: string;
+  decimals: number;
   icon: React.ReactNode;
   reading: SensorReading | undefined;
   history: SensorDataPoint[];
@@ -91,8 +92,8 @@ function formatDateLabel(iso: string) {
   });
 }
 
-function formatValue(value: number, unit: string) {
-  return value.toFixed(3);
+function formatValue(value: number, decimals: number) {
+  return value.toFixed(decimals);
 }
 
 function formatAverageRssi(value: number) {
@@ -102,6 +103,7 @@ function formatAverageRssi(value: number) {
 function SensorHistoryChart({
   label,
   unit,
+  decimals,
   history,
   color,
   hours,
@@ -109,6 +111,7 @@ function SensorHistoryChart({
 }: {
   label: string;
   unit: string;
+  decimals: number;
   history: SensorDataPoint[];
   color: string;
   hours: number;
@@ -117,6 +120,7 @@ function SensorHistoryChart({
   const showDate = hours > 24;
   const tickFormatter = showDate ? formatDateTime : formatTime;
   const gradientId = useId();
+  const yAxisWidth = decimals >= 3 ? 64 : decimals >= 2 ? 56 : 48;
 
   return (
     <Box sx={{ width: '100%', height }}>
@@ -144,8 +148,8 @@ function SensorHistoryChart({
               tick={{ fill: '#a0a8b8', fontSize: 11 }}
               axisLine={false}
               tickLine={false}
-              width={40}
-              tickFormatter={(v: number) => v.toFixed(3)}
+              width={yAxisWidth}
+              tickFormatter={(v: number) => v.toFixed(decimals)}
             />
             <Tooltip
               contentStyle={{
@@ -155,7 +159,7 @@ function SensorHistoryChart({
                 fontSize: 12,
               }}
               labelFormatter={(v) => new Date(v as number).toLocaleString()}
-              formatter={(v) => [`${formatValue(v as number, unit)} ${unit}`, label]}
+              formatter={(v) => [`${formatValue(v as number, decimals)} ${unit}`, label]}
             />
             <Area
               type="monotone"
@@ -179,7 +183,7 @@ function SensorHistoryChart({
   );
 }
 
-function SensorCard({ sensorType, label, unit, icon, reading, history, color, hours, onOpenFullscreen }: SensorCardProps) {
+function SensorCard({ sensorType, label, unit, decimals, icon, reading, history, color, hours, onOpenFullscreen }: SensorCardProps) {
   return (
     <Paper
       sx={{
@@ -222,7 +226,7 @@ function SensorCard({ sensorType, label, unit, icon, reading, history, color, ho
       {reading ? (
         <>
           <Typography variant="h3" sx={{ fontWeight: 800, mb: 0.5 }}>
-            {formatValue(reading.value, unit)}
+            {formatValue(reading.value, decimals)}
             <Box component="span" sx={{ color: 'text.secondary', ml: 0.5, fontSize: '1.5rem', fontWeight: 500 }}>
               {unit}
             </Box>
@@ -240,6 +244,7 @@ function SensorCard({ sensorType, label, unit, icon, reading, history, color, ho
       <SensorHistoryChart
         label={label}
         unit={unit}
+        decimals={decimals}
         history={history}
         color={color}
         hours={hours}
@@ -249,7 +254,7 @@ function SensorCard({ sensorType, label, unit, icon, reading, history, color, ho
   );
 }
 
-function StatisticPanel({ label, value, unit }: { label: string; value: number; unit: string }) {
+function StatisticPanel({ label, value, unit, decimals }: { label: string; value: number; unit: string; decimals: number }) {
   return (
     <Paper
       variant="outlined"
@@ -264,7 +269,7 @@ function StatisticPanel({ label, value, unit }: { label: string; value: number; 
         {label}
       </Typography>
       <Typography variant="h5" sx={{ fontWeight: 700 }}>
-        {formatValue(value, unit)} {unit}
+        {formatValue(value, decimals)} {unit}
       </Typography>
     </Paper>
   );
@@ -583,6 +588,7 @@ interface SensorFullscreenDialogProps {
   lastReadingAt: string;
   label: string;
   unit: string;
+  decimals: number;
   icon: React.ReactNode;
   color: string;
   onClose: () => void;
@@ -598,6 +604,7 @@ function SensorFullscreenDialog({
   lastReadingAt,
   label,
   unit,
+  decimals,
   icon,
   color,
   onClose,
@@ -661,7 +668,7 @@ function SensorFullscreenDialog({
               {reading ? (
                 <>
                   <Typography variant="h2" sx={{ fontWeight: 800, mb: 0.5 }}>
-                    {formatValue(reading.value, unit)}
+                    {formatValue(reading.value, decimals)}
                     <Box component="span" sx={{ color: 'text.secondary', ml: 1, fontSize: '2.125rem', fontWeight: 500 }}>
                       {unit}
                     </Box>
@@ -698,10 +705,10 @@ function SensorFullscreenDialog({
           <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
             {statistics ? (
               <>
-                <StatisticPanel label="Lowest" value={statistics.min} unit={unit} />
-                <StatisticPanel label="Highest" value={statistics.max} unit={unit} />
-                <StatisticPanel label="Median" value={statistics.median} unit={unit} />
-                <StatisticPanel label="Average" value={statistics.average} unit={unit} />
+                <StatisticPanel label="Lowest" value={statistics.min} unit={unit} decimals={decimals} />
+                <StatisticPanel label="Highest" value={statistics.max} unit={unit} decimals={decimals} />
+                <StatisticPanel label="Median" value={statistics.median} unit={unit} decimals={decimals} />
+                <StatisticPanel label="Average" value={statistics.average} unit={unit} decimals={decimals} />
               </>
             ) : (
               <Typography variant="body1" sx={{ color: 'text.secondary' }}>
@@ -723,6 +730,7 @@ function SensorFullscreenDialog({
             <SensorHistoryChart
               label={label}
               unit={unit}
+              decimals={decimals}
               history={sensorHistory}
               color={color}
               hours={hours}
@@ -735,38 +743,38 @@ function SensorFullscreenDialog({
   );
 }
 
-const sensorTypeConfig: Record<string, { label: string; unit: string; icon: React.ReactNode; color: string }> = {
-  CO2: { label: 'CO2', unit: 'ppm', icon: <Co2RoundedIcon />, color: '#5c8dff' },
-  CO2AverageLastHour: { label: 'CO2 avg 1h', unit: 'ppm', icon: <Co2RoundedIcon />, color: '#4f7df3' },
-  CO2AverageLast24Hours: { label: 'CO2 avg 24h', unit: 'ppm', icon: <Co2RoundedIcon />, color: '#3d6be0' },
-  CO2LastUsedCalibrationValue: { label: 'CO2 calibration', unit: 'ppm', icon: <Co2RoundedIcon />, color: '#6d8fff' },
-  CO2MinutesToNextCalibration: { label: 'Minutes to calibration', unit: 'min', icon: <Co2RoundedIcon />, color: '#8aa4ff' },
-  Temperature: { label: 'Temperature', unit: '\u00B0C', icon: <ThermostatRoundedIcon />, color: '#ff6b6b' },
-  TemperatureAverageLastHour: { label: 'Temperature avg 1h', unit: '\u00B0C', icon: <ThermostatRoundedIcon />, color: '#ff8a7a' },
-  TemperatureAverageLast24Hours: { label: 'Temperature avg 24h', unit: '\u00B0C', icon: <ThermostatRoundedIcon />, color: '#ff9f8f' },
-  Humidity: { label: 'Humidity', unit: '%', icon: <WaterDropRoundedIcon />, color: '#38c7ff' },
-  HumidityAverageLastHour: { label: 'Humidity avg 1h', unit: '%', icon: <WaterDropRoundedIcon />, color: '#2bb7ed' },
-  HumidityAverageLast24Hours: { label: 'Humidity avg 24h', unit: '%', icon: <WaterDropRoundedIcon />, color: '#1fa8da' },
-  Sound: { label: 'Sound level', unit: 'dB', icon: <VolumeUpRoundedIcon />, color: '#f5c451' },
-  SoundAverageLastHour: { label: 'Sound avg 1h', unit: 'dB', icon: <VolumeUpRoundedIcon />, color: '#dca93f' },
-  OnTimeInDays: { label: 'On time', unit: 'days', icon: <SpeedRoundedIcon />, color: '#7dd3fc' },
-  OperatingTimeInDays: { label: 'Operating time', unit: 'days', icon: <SpeedRoundedIcon />, color: '#38bdf8' },
-  ProductVersion: { label: 'Product version', unit: '', icon: <SpeedRoundedIcon />, color: '#94a3b8' },
-  Flow: { label: 'Flow', unit: 'l/h', icon: <SpeedRoundedIcon />, color: '#a78bfa' },
-  Volume: { label: 'Volume', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#34d399' },
-  TotalVolume: { label: 'Total volume', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#34d399' },
-  PositiveVolume: { label: 'Forward volume', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#2dd4bf' },
-  NegativeVolume: { label: 'Reverse volume', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#f97316' },
-  LastMonthVolume: { label: 'Last month volume', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#10b981' },
-  LastMonthPositiveVolume: { label: 'Last month forward', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#14b8a6' },
-  LastMonthNegativeVolume: { label: 'Last month reverse', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#fb7185' },
-  RemainingBattery: { label: 'Battery remaining', unit: '%', icon: <SpeedRoundedIcon />, color: '#f59e0b' },
-  AlarmCode: { label: 'Alarm code', unit: '', icon: <SpeedRoundedIcon />, color: '#ef4444' },
-  HasAlarm: { label: 'Alarm active', unit: '', icon: <SpeedRoundedIcon />, color: '#dc2626' },
-  ErrorFreeTimeSeconds: { label: 'Error-free time', unit: 's', icon: <SpeedRoundedIcon />, color: '#60a5fa' },
+const sensorTypeConfig: Record<string, { label: string; unit: string; decimals: number; icon: React.ReactNode; color: string }> = {
+  CO2: { label: 'CO2', unit: 'ppm', decimals: 0, icon: <Co2RoundedIcon />, color: '#5c8dff' },
+  CO2AverageLastHour: { label: 'CO2 avg 1h', unit: 'ppm', decimals: 0, icon: <Co2RoundedIcon />, color: '#4f7df3' },
+  CO2AverageLast24Hours: { label: 'CO2 avg 24h', unit: 'ppm', decimals: 0, icon: <Co2RoundedIcon />, color: '#3d6be0' },
+  CO2LastUsedCalibrationValue: { label: 'CO2 calibration', unit: 'ppm', decimals: 0, icon: <Co2RoundedIcon />, color: '#6d8fff' },
+  CO2MinutesToNextCalibration: { label: 'Minutes to calibration', unit: 'min', decimals: 0, icon: <Co2RoundedIcon />, color: '#8aa4ff' },
+  Temperature: { label: 'Temperature', unit: '\u00B0C', decimals: 2, icon: <ThermostatRoundedIcon />, color: '#ff6b6b' },
+  TemperatureAverageLastHour: { label: 'Temperature avg 1h', unit: '\u00B0C', decimals: 2, icon: <ThermostatRoundedIcon />, color: '#ff8a7a' },
+  TemperatureAverageLast24Hours: { label: 'Temperature avg 24h', unit: '\u00B0C', decimals: 2, icon: <ThermostatRoundedIcon />, color: '#ff9f8f' },
+  Humidity: { label: 'Humidity', unit: '%', decimals: 1, icon: <WaterDropRoundedIcon />, color: '#38c7ff' },
+  HumidityAverageLastHour: { label: 'Humidity avg 1h', unit: '%', decimals: 1, icon: <WaterDropRoundedIcon />, color: '#2bb7ed' },
+  HumidityAverageLast24Hours: { label: 'Humidity avg 24h', unit: '%', decimals: 1, icon: <WaterDropRoundedIcon />, color: '#1fa8da' },
+  Sound: { label: 'Sound level', unit: 'dB', decimals: 0, icon: <VolumeUpRoundedIcon />, color: '#f5c451' },
+  SoundAverageLastHour: { label: 'Sound avg 1h', unit: 'dB', decimals: 0, icon: <VolumeUpRoundedIcon />, color: '#dca93f' },
+  OnTimeInDays: { label: 'On time', unit: 'days', decimals: 0, icon: <SpeedRoundedIcon />, color: '#7dd3fc' },
+  OperatingTimeInDays: { label: 'Operating time', unit: 'days', decimals: 0, icon: <SpeedRoundedIcon />, color: '#38bdf8' },
+  ProductVersion: { label: 'Product version', unit: '', decimals: 0, icon: <SpeedRoundedIcon />, color: '#94a3b8' },
+  Flow: { label: 'Flow', unit: 'l/h', decimals: 0, icon: <SpeedRoundedIcon />, color: '#a78bfa' },
+  Volume: { label: 'Volume', unit: 'm\u00B3', decimals: 3, icon: <WaterRoundedIcon />, color: '#34d399' },
+  TotalVolume: { label: 'Total volume', unit: 'm\u00B3', decimals: 3, icon: <WaterRoundedIcon />, color: '#34d399' },
+  PositiveVolume: { label: 'Forward volume', unit: 'm\u00B3', decimals: 3, icon: <WaterRoundedIcon />, color: '#2dd4bf' },
+  NegativeVolume: { label: 'Reverse volume', unit: 'm\u00B3', decimals: 3, icon: <WaterRoundedIcon />, color: '#f97316' },
+  LastMonthVolume: { label: 'Last month volume', unit: 'm\u00B3', decimals: 3, icon: <WaterRoundedIcon />, color: '#10b981' },
+  LastMonthPositiveVolume: { label: 'Last month forward', unit: 'm\u00B3', decimals: 3, icon: <WaterRoundedIcon />, color: '#14b8a6' },
+  LastMonthNegativeVolume: { label: 'Last month reverse', unit: 'm\u00B3', decimals: 3, icon: <WaterRoundedIcon />, color: '#fb7185' },
+  RemainingBattery: { label: 'Battery remaining', unit: '%', decimals: 0, icon: <SpeedRoundedIcon />, color: '#f59e0b' },
+  AlarmCode: { label: 'Alarm code', unit: '', decimals: 0, icon: <SpeedRoundedIcon />, color: '#ef4444' },
+  HasAlarm: { label: 'Alarm active', unit: '', decimals: 0, icon: <SpeedRoundedIcon />, color: '#dc2626' },
+  ErrorFreeTimeSeconds: { label: 'Error-free time', unit: 's', decimals: 0, icon: <SpeedRoundedIcon />, color: '#60a5fa' },
 };
 
-const defaultConfig = { label: 'Unknown', unit: '', icon: <SpeedRoundedIcon />, color: '#999' };
+const defaultConfig = { label: 'Unknown', unit: '', decimals: 3, icon: <SpeedRoundedIcon />, color: '#999' };
 
 const timeRanges = [
   { label: '3h', hours: 3 },
@@ -977,6 +985,7 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack, onNavi
                 sensorType={sensorType}
                 label={config.label}
                 unit={config.unit}
+                decimals={config.decimals}
                 icon={config.icon}
                 reading={readings[sensorType]}
                 history={history[sensorType] ?? []}
@@ -1072,6 +1081,7 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack, onNavi
         lastReadingAt={selectedDevice?.lastContact ?? new Date().toISOString()}
         label={fullscreenConfig.label}
         unit={fullscreenConfig.unit}
+        decimals={fullscreenConfig.decimals}
         icon={fullscreenConfig.icon}
         color={fullscreenConfig.color}
         onClose={() => setFullscreenSensorType(null)}
