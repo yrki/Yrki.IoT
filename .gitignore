@@ -238,6 +238,10 @@ _pkginfo.txt
 
 # Others
 ClientBin/
+
+# Core dumps
+core
+core.*
 ~$*
 *~
 *.dbmdl
