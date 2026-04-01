@@ -20,7 +20,9 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
                 r.SensorId,
                 r.SensorType,
                 r.Value,
-                r.Timestamp))
+                r.Timestamp,
+                r.GatewayId,
+                r.Rssi))
             .ToListAsync(cancellationToken);
     }
 
@@ -46,7 +48,9 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
                     r.SensorId,
                     r.SensorType,
                     r.Value,
-                    r.Timestamp))
+                    r.Timestamp,
+                    r.GatewayId,
+                    r.Rssi))
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (reading is not null)
@@ -65,5 +69,45 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
             .Distinct()
             .OrderBy(id => id)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<SensorGatewayResponse>> GetGatewayStatisticsAsync(
+        string sensorId,
+        CancellationToken cancellationToken = default)
+    {
+        var readings = await db.GatewayReadings
+            .AsNoTracking()
+            .Where(reading => reading.SensorUniqueId == sensorId)
+            .ToListAsync(cancellationToken);
+
+        return readings
+            .GroupBy(reading => reading.GatewayUniqueId)
+            .Select(group => new SensorGatewayResponse(
+                group.Key,
+                group.Count(),
+                group.Where(reading => reading.Rssi.HasValue).Average(reading => (decimal?)reading.Rssi) ?? 0m,
+                group.Max(reading => reading.ReceivedAt)))
+            .OrderByDescending(gateway => gateway.LastSeenAt)
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<GatewaySensorResponse>> GetSensorStatisticsForGatewayAsync(
+        string gatewayId,
+        CancellationToken cancellationToken = default)
+    {
+        var readings = await db.GatewayReadings
+            .AsNoTracking()
+            .Where(reading => reading.GatewayUniqueId == gatewayId)
+            .ToListAsync(cancellationToken);
+
+        return readings
+            .GroupBy(reading => reading.SensorUniqueId)
+            .Select(group => new GatewaySensorResponse(
+                group.Key,
+                group.Count(),
+                group.Where(reading => reading.Rssi.HasValue).Average(reading => (decimal?)reading.Rssi) ?? 0m,
+                group.Max(reading => reading.ReceivedAt)))
+            .OrderByDescending(sensor => sensor.LastSeenAt)
+            .ToList();
     }
 }

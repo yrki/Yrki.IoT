@@ -5,4 +5,6 @@ public record SensorReadingReceived(
     string SensorType,
     string? Manufacturer,
     decimal Value,
-    DateTimeOffset Timestamp);
+    DateTimeOffset Timestamp,
+    string? GatewayId,
+    int? Rssi);

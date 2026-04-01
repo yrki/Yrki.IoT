@@ -14,6 +14,7 @@ public class Device
     public required string Description { get; set; }
 
     public string? Manufacturer { get; set; }
+    public DeviceKind Kind { get; set; } = DeviceKind.Sensor;
     public bool IsNew { get; set; }
     public bool IsDeleted { get; set; }
 

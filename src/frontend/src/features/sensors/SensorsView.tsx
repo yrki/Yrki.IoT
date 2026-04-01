@@ -38,8 +38,10 @@ import {
   getDevices,
   getDevicesByLocation,
   getEncryptionKeyByDevice,
+  getSensorGateways,
   getLocations,
   LocationDto,
+  SensorGatewayDto,
   SensorListItemDto,
   updateEncryptionKey,
   updateExistingDevice,
@@ -90,7 +92,10 @@ function formatDateLabel(iso: string) {
 }
 
 function formatValue(value: number, unit: string) {
-  if (unit === 'ppm' || unit === 'dB') return Math.round(value);
+  return value.toFixed(3);
+}
+
+function formatAverageRssi(value: number) {
   return value.toFixed(1);
 }
 
@@ -140,7 +145,7 @@ function SensorHistoryChart({
               axisLine={false}
               tickLine={false}
               width={40}
-              tickFormatter={(v: number) => unit === 'ppm' || unit === 'dB' ? String(Math.round(v)) : v.toFixed(1)}
+              tickFormatter={(v: number) => v.toFixed(3)}
             />
             <Tooltip
               contentStyle={{
@@ -732,9 +737,21 @@ function SensorFullscreenDialog({
 
 const sensorTypeConfig: Record<string, { label: string; unit: string; icon: React.ReactNode; color: string }> = {
   CO2: { label: 'CO2', unit: 'ppm', icon: <Co2RoundedIcon />, color: '#5c8dff' },
+  CO2AverageLastHour: { label: 'CO2 avg 1h', unit: 'ppm', icon: <Co2RoundedIcon />, color: '#4f7df3' },
+  CO2AverageLast24Hours: { label: 'CO2 avg 24h', unit: 'ppm', icon: <Co2RoundedIcon />, color: '#3d6be0' },
+  CO2LastUsedCalibrationValue: { label: 'CO2 calibration', unit: 'ppm', icon: <Co2RoundedIcon />, color: '#6d8fff' },
+  CO2MinutesToNextCalibration: { label: 'Minutes to calibration', unit: 'min', icon: <Co2RoundedIcon />, color: '#8aa4ff' },
   Temperature: { label: 'Temperature', unit: '\u00B0C', icon: <ThermostatRoundedIcon />, color: '#ff6b6b' },
+  TemperatureAverageLastHour: { label: 'Temperature avg 1h', unit: '\u00B0C', icon: <ThermostatRoundedIcon />, color: '#ff8a7a' },
+  TemperatureAverageLast24Hours: { label: 'Temperature avg 24h', unit: '\u00B0C', icon: <ThermostatRoundedIcon />, color: '#ff9f8f' },
   Humidity: { label: 'Humidity', unit: '%', icon: <WaterDropRoundedIcon />, color: '#38c7ff' },
+  HumidityAverageLastHour: { label: 'Humidity avg 1h', unit: '%', icon: <WaterDropRoundedIcon />, color: '#2bb7ed' },
+  HumidityAverageLast24Hours: { label: 'Humidity avg 24h', unit: '%', icon: <WaterDropRoundedIcon />, color: '#1fa8da' },
   Sound: { label: 'Sound level', unit: 'dB', icon: <VolumeUpRoundedIcon />, color: '#f5c451' },
+  SoundAverageLastHour: { label: 'Sound avg 1h', unit: 'dB', icon: <VolumeUpRoundedIcon />, color: '#dca93f' },
+  OnTimeInDays: { label: 'On time', unit: 'days', icon: <SpeedRoundedIcon />, color: '#7dd3fc' },
+  OperatingTimeInDays: { label: 'Operating time', unit: 'days', icon: <SpeedRoundedIcon />, color: '#38bdf8' },
+  ProductVersion: { label: 'Product version', unit: '', icon: <SpeedRoundedIcon />, color: '#94a3b8' },
   Flow: { label: 'Flow', unit: 'l/h', icon: <SpeedRoundedIcon />, color: '#a78bfa' },
   Volume: { label: 'Volume', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#34d399' },
   TotalVolume: { label: 'Total volume', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#34d399' },
@@ -763,11 +780,13 @@ interface SensorsViewProps {
   locationId?: string;
   locationName?: string;
   onBack?: () => void;
+  onNavigateToGateway?: (gatewayId: string) => void;
 }
 
-function SensorsView({ initialSensorId, locationId, locationName, onBack }: SensorsViewProps) {
+function SensorsView({ initialSensorId, locationId, locationName, onBack, onNavigateToGateway }: SensorsViewProps) {
   const [devices, setDevices] = useState<SensorListItemDto[]>([]);
   const [locations, setLocations] = useState<LocationDto[]>([]);
+  const [gatewayStats, setGatewayStats] = useState<SensorGatewayDto[]>([]);
   const [selectedSensorId, setSelectedSensorId] = useState(initialSensorId ?? '');
   const [hours, setHours] = useState(3);
   const [fullscreenSensorType, setFullscreenSensorType] = useState<string | null>(null);
@@ -829,6 +848,20 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack }: Sens
       .then((result) => setLocations(result.sort((left, right) => left.name.localeCompare(right.name))))
       .catch((err: unknown) => console.error('Failed to fetch locations:', err));
   }, []);
+
+  useEffect(() => {
+    if (!selectedSensorId) {
+      setGatewayStats([]);
+      return;
+    }
+
+    getSensorGateways(selectedSensorId)
+      .then(setGatewayStats)
+      .catch((err: unknown) => {
+        console.error('Failed to fetch sensor gateways:', err);
+        setGatewayStats([]);
+      });
+  }, [selectedSensorId]);
 
   const selectedDevice = devices.find((d) => d.uniqueId === selectedSensorId);
   const activeSensorTypes = Object.keys(readings);
@@ -954,6 +987,79 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack }: Sens
             );
           })}
         </Stack>
+      </Paper>
+
+      <Paper
+        sx={{
+          mt: 2,
+          p: { xs: 2.5, md: 3 },
+          borderRadius: '6px',
+          backgroundColor: 'rgba(36, 42, 51, 0.82)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          boxShadow: '0 28px 80px rgba(0, 0, 0, 0.24)',
+        }}
+      >
+        <Typography variant="h6" sx={{ mb: 0.5 }}>
+          Gateways
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+          Gateways that have reported this sensor, with average RSSI across stored readings.
+        </Typography>
+
+        {gatewayStats.length === 0 ? (
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            No gateway data recorded for this sensor yet.
+          </Typography>
+        ) : (
+          <Stack spacing={1.5}>
+            {gatewayStats.map((gateway) => (
+              <Paper
+                key={gateway.gatewayId}
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  backgroundColor: 'rgba(255,255,255,0.03)',
+                  borderColor: 'rgba(255,255,255,0.08)',
+                }}
+              >
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1}
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
+                  justifyContent="space-between"
+                >
+                  <Box>
+                    {onNavigateToGateway ? (
+                      <Button
+                        variant="text"
+                        size="small"
+                        onClick={() => onNavigateToGateway(gateway.gatewayId)}
+                        sx={{ minWidth: 0, px: 0, fontWeight: 700, textTransform: 'none' }}
+                      >
+                        {gateway.gatewayId}
+                      </Button>
+                    ) : (
+                      <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                        {gateway.gatewayId}
+                      </Typography>
+                    )}
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      Last seen: {formatDateLabel(gateway.lastSeenAt)}
+                    </Typography>
+                  </Box>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      Readings: {gateway.readingCount}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      Avg RSSI: {formatAverageRssi(gateway.averageRssi)}
+                    </Typography>
+                  </Stack>
+                </Stack>
+              </Paper>
+            ))}
+          </Stack>
+        )}
       </Paper>
 
       <SensorFullscreenDialog

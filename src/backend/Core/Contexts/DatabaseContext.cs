@@ -17,6 +17,7 @@ public class DatabaseContext : DbContext
     public DbSet<SensorReading> SensorReadings { get; set; }
     public DbSet<EncryptionKey> EncryptionKeys { get; set; }
     public DbSet<RawPayload> RawPayloads { get; set; }
+    public DbSet<GatewayReading> GatewayReadings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,6 +26,9 @@ public class DatabaseContext : DbContext
             entity.ToTable("Devices");
             entity.HasKey(device => device.Id);
             entity.Property(device => device.UniqueId).IsRequired();
+            entity.Property(device => device.Kind)
+                .HasConversion<string>()
+                .IsRequired();
             entity.Property(device => device.Description).IsRequired();
             entity.Property(device => device.Type).IsRequired();
             entity.HasOne(device => device.Location)
@@ -97,7 +101,22 @@ public class DatabaseContext : DbContext
             entity.Property(r => r.SensorId).HasColumnName("sensor_id").IsRequired();
             entity.Property(r => r.SensorType).HasColumnName("sensor_type").IsRequired();
             entity.Property(r => r.Manufacturer).HasColumnName("manufacturer");
+            entity.Property(r => r.GatewayId).HasColumnName("gateway_id");
+            entity.Property(r => r.Rssi).HasColumnName("rssi");
             entity.Property(r => r.Value).HasColumnName("value");
+            entity.HasIndex(r => r.GatewayId);
+        });
+        modelBuilder.Entity<GatewayReading>(entity =>
+        {
+            entity.ToTable("gateway_readings");
+            entity.HasKey(r => r.Id);
+            entity.Property(r => r.GatewayUniqueId).HasColumnName("gateway_unique_id").IsRequired();
+            entity.Property(r => r.SensorUniqueId).HasColumnName("sensor_unique_id").IsRequired();
+            entity.Property(r => r.Rssi).HasColumnName("rssi");
+            entity.Property(r => r.ReceivedAt).HasColumnName("received_at");
+            entity.HasIndex(r => r.GatewayUniqueId);
+            entity.HasIndex(r => r.SensorUniqueId);
+            entity.HasIndex(r => r.ReceivedAt);
         });
     }
 }

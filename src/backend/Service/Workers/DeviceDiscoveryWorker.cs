@@ -68,6 +68,7 @@ public class DeviceDiscoveryWorker(
                 Description = string.Empty,
                 Type = "Unknown",
                 Manufacturer = latestReading.Manufacturer,
+                Kind = DeviceKind.Sensor,
                 IsNew = true,
                 LocationId = null,
                 LastContact = latestReading.Timestamp,

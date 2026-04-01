@@ -44,6 +44,22 @@ export interface SensorReadingDto {
   sensorType: string;
   value: number;
   timestamp: string;
+  gatewayId: string | null;
+  rssi: number | null;
+}
+
+export interface SensorGatewayDto {
+  gatewayId: string;
+  readingCount: number;
+  averageRssi: number;
+  lastSeenAt: string;
+}
+
+export interface GatewaySensorDto {
+  sensorId: string;
+  readingCount: number;
+  averageRssi: number;
+  lastSeenAt: string;
 }
 
 export async function getSensorIds(): Promise<string[]> {
@@ -60,6 +76,16 @@ export async function getRecentReadings(sensorId: string, hours = 3): Promise<Se
 
 export async function getLatestReadings(sensorId: string): Promise<SensorReadingDto[]> {
   const response = await api.get<SensorReadingDto[]>(`/sensorreadings/${encodeURIComponent(sensorId)}/latest`);
+  return response.data;
+}
+
+export async function getSensorGateways(sensorId: string): Promise<SensorGatewayDto[]> {
+  const response = await api.get<SensorGatewayDto[]>(`/sensorreadings/${encodeURIComponent(sensorId)}/gateways`);
+  return response.data;
+}
+
+export async function getGatewaySensors(gatewayId: string): Promise<GatewaySensorDto[]> {
+  const response = await api.get<GatewaySensorDto[]>(`/sensorreadings/gateway/${encodeURIComponent(gatewayId)}/sensors`);
   return response.data;
 }
 
@@ -102,6 +128,7 @@ export interface SensorListItemDto {
   name: string | null;
   manufacturer: string | null;
   type: string;
+  kind?: 'Sensor' | 'Gateway';
   locationName: string | null;
   locationId: string | null;
   lastContact: string;
@@ -110,6 +137,11 @@ export interface SensorListItemDto {
 
 export async function getDevices(): Promise<SensorListItemDto[]> {
   const response = await api.get<SensorListItemDto[]>('/devices');
+  return response.data;
+}
+
+export async function getGateways(): Promise<SensorListItemDto[]> {
+  const response = await api.get<SensorListItemDto[]>('/devices/gateways');
   return response.data;
 }
 

@@ -9,6 +9,8 @@ export interface SensorReading {
   sensorType: string;
   value: number;
   timestamp: string;
+  gatewayId?: string | null;
+  rssi?: number | null;
 }
 
 export interface SensorDataPoint {
@@ -86,6 +88,8 @@ export function useSensorHub(sensorId: string, hours: number, enabled = true) {
             sensorType: r.sensorType,
             value: r.value,
             timestamp: r.timestamp,
+            gatewayId: r.gatewayId,
+            rssi: r.rssi,
           };
         }
         setReadings(latestMap);

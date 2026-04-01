@@ -43,6 +43,7 @@ public class SensorReadingConsumer(
 
         var metadata = WMBusMessageMetadataMapper.Map(header);
         var sensorId = header.AField;
+        await UpsertGatewayContactAsync(msg.GatewayId, sensorId, msg.Rssi, msg.Timestamp, context.CancellationToken);
         var encryptionKey = await ResolveEncryptionKeyAsync(header, rawMessage, payloadHex, context.CancellationToken);
 
         if (header.EncryptionMethod != EncryptionMethod.None && string.IsNullOrWhiteSpace(encryptionKey))
@@ -58,7 +59,17 @@ public class SensorReadingConsumer(
             return;
         }
 
-        var readings = MapReadings(sensorId, header, metadata, payload, rawMessage, encryptionKey, msg.Timestamp, payloadHex);
+        var readings = MapReadings(
+            sensorId,
+            header,
+            metadata,
+            payload,
+            rawMessage,
+            encryptionKey,
+            msg.Timestamp,
+            payloadHex,
+            msg.GatewayId,
+            msg.Rssi);
         if (readings.Count == 0)
             return;
 
@@ -91,13 +102,22 @@ public class SensorReadingConsumer(
     {
         var deviceId = WMBusFrameReader.ReadAField(rawMessage);
         var manufacturer = WMBusFrameReader.ReadManufacturer(rawMessage);
+        var encryptionKey = await ResolveEncryptionKeyAsync(deviceId, manufacturer, msg.PayloadHex, cancellationToken);
+        var hasEncryptionKey = !string.IsNullOrWhiteSpace(encryptionKey);
+
+        var guidance = hasEncryptionKey
+            ? "An encryption key is configured, but the parser does not support this encryption method yet."
+            : "Add an encryption key for this device or update the parser.";
+        var errorMessage = hasEncryptionKey
+            ? $"{ex.Message} (encryption key found, but parser support is missing)"
+            : ex.Message;
 
         logger.LogWarning(
             "Unsupported encryption method for device {DeviceId} ({Manufacturer}): {Message}. " +
-            "Add an encryption key for this device or update the parser.",
-            deviceId, manufacturer, ex.Message);
+            "{Guidance}",
+            deviceId, manufacturer, ex.Message, guidance);
 
-        await StoreRawPayloadAsync(msg, deviceId, manufacturer, ex.Message, cancellationToken);
+        await StoreRawPayloadAsync(msg, deviceId, manufacturer, errorMessage, cancellationToken);
 
         await UpsertDeviceAsync(
             new SensorReading
@@ -106,6 +126,8 @@ public class SensorReadingConsumer(
                 Manufacturer = manufacturer,
                 Timestamp = msg.Timestamp,
                 SensorType = "Unknown",
+                GatewayId = msg.GatewayId,
+                Rssi = msg.Rssi,
                 Value = 0
             },
             new WMBusMessageMetadata(manufacturer, "Unknown"),
@@ -148,7 +170,15 @@ public class SensorReadingConsumer(
 
         var manufacturer = EncryptionKeyIdentity.NormalizeManufacturer(header.MField);
         var deviceId = EncryptionKeyIdentity.NormalizeDeviceUniqueId(header.AField);
+        return await ResolveEncryptionKeyAsync(deviceId, manufacturer, payloadHex, cancellationToken);
+    }
 
+    private async Task<string> ResolveEncryptionKeyAsync(
+        string? deviceId,
+        string? manufacturer,
+        string payloadHex,
+        CancellationToken cancellationToken)
+    {
         EncryptionKey? dbKey;
         try
         {
@@ -241,7 +271,9 @@ public class SensorReadingConsumer(
         byte[] rawMessage,
         string encryptionKey,
         DateTimeOffset timestamp,
-        string payloadHex)
+        string payloadHex,
+        string? gatewayId,
+        int? rssi)
     {
         var readings = SensorReadingMapper.Map(sensorId, metadata, payload, timestamp);
         if (readings.Count == 0 &&
@@ -249,6 +281,12 @@ public class SensorReadingConsumer(
             !string.IsNullOrWhiteSpace(encryptionKey))
         {
             readings = AxiomaCompactPayloadParser.Parse(rawMessage, sensorId, metadata.Manufacturer, timestamp, encryptionKey).ToList();
+        }
+
+        foreach (var reading in readings)
+        {
+            reading.GatewayId = gatewayId;
+            reading.Rssi = rssi;
         }
 
         if (readings.Count == 0)
@@ -284,6 +322,55 @@ public class SensorReadingConsumer(
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    private async Task UpsertGatewayContactAsync(
+        string? gatewayId,
+        string sensorId,
+        int? rssi,
+        DateTimeOffset timestamp,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(gatewayId))
+            return;
+
+        var normalizedGatewayId = gatewayId.Trim();
+        var gateway = await db.Devices.FirstOrDefaultAsync(d => d.UniqueId == normalizedGatewayId, cancellationToken);
+        if (gateway is null)
+        {
+            db.Devices.Add(new Device
+            {
+                Id = Guid.NewGuid(),
+                UniqueId = normalizedGatewayId,
+                Name = normalizedGatewayId,
+                Type = "Gateway",
+                Description = string.Empty,
+                Kind = DeviceKind.Gateway,
+                IsNew = false,
+                IsDeleted = false,
+                LastContact = timestamp,
+                InstallationDate = timestamp,
+            });
+        }
+        else
+        {
+            gateway.Kind = DeviceKind.Gateway;
+            gateway.Type = "Gateway";
+            gateway.LastContact = timestamp;
+            if (string.IsNullOrWhiteSpace(gateway.Name))
+                gateway.Name = normalizedGatewayId;
+        }
+
+        db.GatewayReadings.Add(new GatewayReading
+        {
+            Id = Guid.NewGuid(),
+            GatewayUniqueId = normalizedGatewayId,
+            SensorUniqueId = sensorId,
+            Rssi = rssi,
+            ReceivedAt = timestamp,
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     private async Task PersistReadingsAsync(
         List<SensorReading> readings,
         WMBusMessageMetadata metadata,
@@ -312,6 +399,7 @@ public class SensorReadingConsumer(
                 Type = metadata.DeviceType,
                 Description = string.Empty,
                 Manufacturer = metadata.Manufacturer,
+                Kind = DeviceKind.Sensor,
                 IsNew = true,
                 LastContact = reading.Timestamp,
                 InstallationDate = reading.Timestamp,
@@ -322,6 +410,7 @@ public class SensorReadingConsumer(
 
         device.Type = metadata.DeviceType;
         device.Manufacturer = metadata.Manufacturer;
+        device.Kind = DeviceKind.Sensor;
         device.LastContact = reading.Timestamp;
         await db.SaveChangesAsync(cancellationToken);
     }
@@ -338,6 +427,8 @@ public class SensorReadingConsumer(
                 Manufacturer = metadata.Manufacturer,
                 Timestamp = timestamp,
                 SensorType = metadata.DeviceType,
+                GatewayId = null,
+                Rssi = null,
                 Value = 0
             },
             metadata,

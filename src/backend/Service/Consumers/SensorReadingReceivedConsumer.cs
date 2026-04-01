@@ -23,6 +23,8 @@ public class SensorReadingReceivedConsumer(
                 SensorId = msg.SensorId,
                 SensorType = msg.SensorType,
                 Manufacturer = msg.Manufacturer,
+                GatewayId = msg.GatewayId,
+                Rssi = msg.Rssi,
                 Value = msg.Value,
                 Timestamp = msg.Timestamp,
             };

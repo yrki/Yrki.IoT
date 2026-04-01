@@ -10,7 +10,7 @@ const {
   getDeviceByUniqueId,
   getDevicesByLocation,
   getLocations,
-  createLocation,
+  getSensorGateways,
   updateExistingDevice,
   getEncryptionKeyByDevice,
   updateEncryptionKey,
@@ -21,7 +21,7 @@ const {
   getDeviceByUniqueId: vi.fn(),
   getDevicesByLocation: vi.fn(),
   getLocations: vi.fn(),
-  createLocation: vi.fn(),
+  getSensorGateways: vi.fn(),
   updateExistingDevice: vi.fn(),
   getEncryptionKeyByDevice: vi.fn(),
   updateEncryptionKey: vi.fn(),
@@ -34,7 +34,7 @@ vi.mock('../../api/api', () => ({
   getDeviceByUniqueId,
   getDevicesByLocation,
   getLocations,
-  createLocation,
+  getSensorGateways,
   updateExistingDevice,
   getEncryptionKeyByDevice,
   updateEncryptionKey,
@@ -98,7 +98,14 @@ describe('SensorsView', () => {
     getLocations.mockResolvedValue([
       { id: 'location-1', name: 'HQ', description: 'Office', deviceCount: 1 },
     ]);
-    createLocation.mockResolvedValue(undefined);
+    getSensorGateways.mockResolvedValue([
+      {
+        gatewayId: 'gw-1',
+        readingCount: 3,
+        averageRssi: -77.5,
+        lastSeenAt: '2026-03-30T09:00:00.000Z',
+      },
+    ]);
     updateExistingDevice.mockResolvedValue(undefined);
     getEncryptionKeyByDevice.mockResolvedValue(null);
     updateEncryptionKey.mockResolvedValue(undefined);
@@ -162,6 +169,9 @@ describe('SensorsView', () => {
     render(<SensorsView initialSensorId="sensor-1" />);
 
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Office sensor (sensor-1)' })).toBeInTheDocument());
+    expect(screen.getByText('Gateways')).toBeInTheDocument();
+    expect(screen.getByText('gw-1')).toBeInTheDocument();
+    expect(screen.getByText('Avg RSSI: -77.5')).toBeInTheDocument();
     expect(screen.getByText(/First reading:/)).toBeInTheDocument();
     expect(screen.getByText(/Last reading:/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Open Temperature in fullscreen' }));
@@ -176,16 +186,16 @@ describe('SensorsView', () => {
     expect(within(dialog).getByText('Highest')).toBeInTheDocument();
     expect(within(dialog).getByText('Median')).toBeInTheDocument();
     expect(within(dialog).getByText('Average')).toBeInTheDocument();
-    expect(within(dialog).getByText('18.0 °C')).toBeInTheDocument();
-    expect(within(dialog).getAllByText('22.0 °C')).toHaveLength(2);
+    expect(within(dialog).getByText('18.000 °C')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('22.000 °C')).toHaveLength(2);
 
     await user.click(within(dialog).getByRole('button', { name: '12h' }));
 
     await waitFor(() => {
       expect(useSensorHub).toHaveBeenCalledWith('sensor-1', 12, true);
     });
-    expect(within(dialog).getByText('20.0 °C')).toBeInTheDocument();
-    expect(within(dialog).getAllByText('24.0 °C')).toHaveLength(2);
+    expect(within(dialog).getByText('20.000 °C')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('24.000 °C')).toHaveLength(2);
   });
 
   it('Shall_update_sensor_location_from_live_view', async () => {

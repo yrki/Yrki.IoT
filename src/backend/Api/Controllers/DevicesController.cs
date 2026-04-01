@@ -10,6 +10,7 @@ namespace Api.Controllers;
 [Route("[controller]")]
 public class DevicesController(
     AllSensorsQueryHandler allSensorsQueryHandler,
+    AllGatewaysQueryHandler allGatewaysQueryHandler,
     SensorsByLocationQueryHandler sensorsByLocationQueryHandler,
     SensorsBySensorLocationQueryHandler sensorsBySensorLocationQueryHandler,
     SensorByUniqueIdQueryHandler sensorByUniqueIdQueryHandler,
@@ -21,6 +22,13 @@ public class DevicesController(
     {
         var sensors = await allSensorsQueryHandler.HandleAsync(cancellationToken);
         return Ok(sensors);
+    }
+
+    [HttpGet("gateways")]
+    public async Task<IActionResult> GetGateways(CancellationToken cancellationToken)
+    {
+        var gateways = await allGatewaysQueryHandler.HandleAsync(cancellationToken);
+        return Ok(gateways);
     }
 
     [HttpGet("location/{locationId:guid}")]

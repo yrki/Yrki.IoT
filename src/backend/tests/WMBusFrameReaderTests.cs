@@ -12,21 +12,21 @@ public class WMBusFrameReaderTests
     [TestMethod]
     public void Shall_read_afield_from_raw_wmbus_frame()
     {
-        // Arrange — build a real Lansen frame with known address
-        var frame = LansenFrameBuilder.Build("67000100", 1, 22.0, 50.0, 400, 30);
+        // Arrange — on-wire bytes for this sensor are little-endian BCD
+        var frame = LansenFrameBuilder.Build("17191300", 1, 22.0, 50.0, 400, 30);
 
         // Act
         var aField = WMBusFrameReader.ReadAField(frame);
 
         // Assert
-        Assert.AreEqual("67000100", aField);
+        Assert.AreEqual("00131917", aField);
     }
 
     [TestMethod]
     public void Shall_read_manufacturer_from_raw_wmbus_frame()
     {
         // Arrange — build a real Lansen frame
-        var frame = LansenFrameBuilder.Build("67000100", 1, 22.0, 50.0, 400, 30);
+        var frame = LansenFrameBuilder.Build("17191300", 1, 22.0, 50.0, 400, 30);
 
         // Act
         var manufacturer = WMBusFrameReader.ReadManufacturer(frame);
@@ -61,7 +61,7 @@ public class WMBusFrameReaderTests
         var manufacturer = WMBusFrameReader.ReadManufacturer(frame);
 
         // Assert
-        Assert.AreEqual("27791300", aField);
+        Assert.AreEqual("00137927", aField);
         Assert.AreEqual("AXI", manufacturer);
     }
 

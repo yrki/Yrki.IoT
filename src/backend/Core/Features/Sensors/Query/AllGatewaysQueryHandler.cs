@@ -5,20 +5,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Core.Features.Sensors.Query;
 
-public class SensorsByLocationQueryHandler(DatabaseContext db)
+public class AllGatewaysQueryHandler(DatabaseContext db)
 {
     private static readonly Guid UnknownLocationId = new("00000000-0000-0000-0000-000000000001");
 
-    public async Task<IReadOnlyList<SensorListItemResponse>> HandleAsync(
-        Guid locationId,
-        CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SensorListItemResponse>> HandleAsync(CancellationToken cancellationToken = default)
     {
         return await db.Devices
             .AsNoTracking()
-            .Where(d => !d.IsNew && !d.IsDeleted && d.LocationId == locationId)
+            .Where(d => d.Kind == DeviceKind.Gateway && !d.IsDeleted)
             .Include(d => d.Location)
-            .OrderBy(d => d.Kind)
-            .ThenBy(d => d.Name)
+            .OrderBy(d => d.Name)
             .ThenBy(d => d.UniqueId)
             .Select(d => new SensorListItemResponse(
                 d.Id,

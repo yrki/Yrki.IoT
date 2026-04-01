@@ -6,6 +6,7 @@ public record SensorListItemResponse(
     string? Name,
     string? Manufacturer,
     string Type,
+    string Kind,
     string? LocationName,
     Guid? LocationId,
     DateTimeOffset LastContact,

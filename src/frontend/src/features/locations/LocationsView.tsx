@@ -28,6 +28,8 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import BarChartRoundedIcon from '@mui/icons-material/BarChartRounded';
+import RouterRoundedIcon from '@mui/icons-material/RouterRounded';
+import SensorsRoundedIcon from '@mui/icons-material/SensorsRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
 import {
@@ -35,6 +37,7 @@ import {
   deleteLocation,
   getDevices,
   getDevicesByLocation,
+  getGateways,
   getLocations,
   LocationDto,
   SensorListItemDto,
@@ -72,9 +75,10 @@ function sortSensorsByName(sensors: SensorListItemDto[]): SensorListItemDto[] {
 interface LocationsViewProps {
   onNavigateToLiveView: (locationId: string, locationName: string) => void;
   onNavigateToSensor: (sensorId: string) => void;
+  onNavigateToGateway?: (gatewayId: string) => void;
 }
 
-function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsViewProps) {
+function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToGateway }: LocationsViewProps) {
   const [locations, setLocations] = useState<LocationDto[]>([]);
   const [locationSensors, setLocationSensors] = useState<Record<string, SensorListItemDto[]>>({});
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -126,17 +130,17 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
 
     setLoadingLocationId(locationId);
     try {
-      let sensors = await getDevicesByLocation(locationId);
-      if (sensors.length === 0) {
+      let devices = await getDevicesByLocation(locationId);
+      if (devices.length === 0) {
         const location = locations.find((item) => item.id === locationId);
         if (location && location.deviceCount > 0) {
-          const allDevices = await getDevices();
-          sensors = allDevices.filter((device) => device.locationId === locationId);
+          const [allDevices, allGateways] = await Promise.all([getDevices(), getGateways()]);
+          devices = [...allDevices, ...allGateways].filter((device) => device.locationId === locationId);
         }
       }
-      setLocationSensors((current) => ({ ...current, [locationId]: sortSensorsByName(sensors) }));
+      setLocationSensors((current) => ({ ...current, [locationId]: sortSensorsByName(devices) }));
     } catch (err) {
-      console.error('Failed to fetch sensors for location:', err);
+      console.error('Failed to fetch devices for location:', err);
       setLocationSensors((current) => ({ ...current, [locationId]: [] }));
     } finally {
       setLoadingLocationId((current) => current === locationId ? null : current);
@@ -274,7 +278,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
             </TableCell>
           </TableRow>
 
-          {/* Sensor details row */}
+          {/* Device details row */}
           {(sensorsOpen || (isExpanded && node.children.length === 0 && location.deviceCount > 0)) && (
             <TableRow>
               <TableCell
@@ -288,17 +292,17 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
                 <Collapse in timeout="auto">
                   <Box sx={{ p: 2.5, pl: sensorContentPaddingLeft }}>
                     <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
-                      {`Sensors at ${location.name}`}
+                      {`Devices at ${location.name}`}
                     </Typography>
                     {loadingLocationId === location.id ? (
                       <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        Loading sensors...
+                        Loading devices...
                       </Typography>
                     ) : (locationSensors[location.id] ?? []).length > 0 ? (
                       <Table size="small">
                         <TableHead>
                           <TableRow>
-                            {['Unique ID', 'Name', 'Type', 'Last Received'].map((header) => (
+                            {['Device', 'Unique ID', 'Name', 'Type', 'Last Received'].map((header) => (
                               <TableCell
                                 key={header}
                                 sx={{
@@ -314,11 +318,18 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {locationSensors[location.id].map((sensor) => (
+                          {locationSensors[location.id].map((device) => (
                             <TableRow
-                              key={sensor.id}
+                              key={device.id}
                               hover
-                              onClick={() => onNavigateToSensor(sensor.uniqueId)}
+                              onClick={() => {
+                                if (device.kind === 'Gateway') {
+                                  onNavigateToGateway?.(device.uniqueId);
+                                  return;
+                                }
+
+                                onNavigateToSensor(device.uniqueId);
+                              }}
                               sx={{
                                 cursor: 'pointer',
                                 '& .MuiTableCell-root': {
@@ -328,14 +339,24 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
                                 },
                               }}
                             >
-                              <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem !important' }}>
-                                {sensor.uniqueId}
+                              <TableCell>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                  {device.kind === 'Gateway'
+                                    ? <RouterRoundedIcon fontSize="small" color="primary" />
+                                    : <SensorsRoundedIcon fontSize="small" color="action" />}
+                                  <Typography variant="body2">
+                                    {device.kind === 'Gateway' ? 'Gateway' : 'Sensor'}
+                                  </Typography>
+                                </Stack>
                               </TableCell>
-                              <TableCell>{sensor.name ?? '-'}</TableCell>
-                              <TableCell>{sensor.type}</TableCell>
+                              <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem !important' }}>
+                                {device.uniqueId}
+                              </TableCell>
+                              <TableCell>{device.name ?? '-'}</TableCell>
+                              <TableCell>{device.type}</TableCell>
                               <TableCell sx={{ color: 'text.secondary' }}>
-                                {sensor.lastContact
-                                  ? new Date(sensor.lastContact).toLocaleString()
+                                {device.lastContact
+                                  ? new Date(device.lastContact).toLocaleString()
                                   : '-'}
                               </TableCell>
                             </TableRow>
@@ -344,7 +365,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
                       </Table>
                     ) : (
                       <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        No sensors found for this location.
+                        No devices found for this location.
                       </Typography>
                     )}
                   </Box>
@@ -386,7 +407,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
               Locations
             </Typography>
             <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-              Manage sensor locations. Click "Show data" to view live readings.
+              Manage device locations. Click "Show data" to view live readings.
             </Typography>
           </Box>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
@@ -423,7 +444,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
           <Table>
             <TableHead>
               <TableRow>
-                {['Name', 'Description', 'Sensors'].map((label) => (
+                {['Name', 'Description', 'Devices'].map((label) => (
                   <TableCell
                     key={label}
                     sx={{

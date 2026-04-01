@@ -1,5 +1,6 @@
 using Contracts.Responses;
 using Core.Contexts;
+using Core.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Core.Features.Sensors.Query;
@@ -14,7 +15,7 @@ public class SensorByUniqueIdQueryHandler(DatabaseContext db)
     {
         return await db.Devices
             .AsNoTracking()
-            .Where(d => !d.IsNew && !d.IsDeleted && d.UniqueId == sensorId)
+            .Where(d => d.Kind == DeviceKind.Sensor && !d.IsNew && !d.IsDeleted && d.UniqueId == sensorId)
             .Include(d => d.Location)
             .OrderBy(d => d.Name)
             .ThenBy(d => d.UniqueId)
@@ -24,6 +25,7 @@ public class SensorByUniqueIdQueryHandler(DatabaseContext db)
                 d.Name,
                 d.Manufacturer,
                 d.Type,
+                d.Kind.ToString(),
                 d.LocationId == UnknownLocationId ? null : d.Location != null ? d.Location.Name : null,
                 d.LocationId == UnknownLocationId ? null : d.LocationId,
                 d.LastContact,

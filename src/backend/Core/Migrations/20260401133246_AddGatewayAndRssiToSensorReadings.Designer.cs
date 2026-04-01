@@ -3,6 +3,7 @@ using System;
 using Core.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Core.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260401133246_AddGatewayAndRssiToSensorReadings")]
+    partial class AddGatewayAndRssiToSensorReadings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -68,10 +71,6 @@ namespace Core.Migrations
 
                     b.Property<bool>("IsNew")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("LastContact")
                         .HasColumnType("timestamp with time zone");
@@ -139,41 +138,6 @@ namespace Core.Migrations
                     b.HasIndex("Manufacturer", "DeviceUniqueId");
 
                     b.ToTable("EncryptionKeys", (string)null);
-                });
-
-            modelBuilder.Entity("Core.Models.GatewayReading", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("GatewayUniqueId")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("gateway_unique_id");
-
-                    b.Property<DateTimeOffset>("ReceivedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("received_at");
-
-                    b.Property<int?>("Rssi")
-                        .HasColumnType("integer")
-                        .HasColumnName("rssi");
-
-                    b.Property<string>("SensorUniqueId")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("sensor_unique_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GatewayUniqueId");
-
-                    b.HasIndex("ReceivedAt");
-
-                    b.HasIndex("SensorUniqueId");
-
-                    b.ToTable("gateway_readings", (string)null);
                 });
 
             modelBuilder.Entity("Core.Models.Location", b =>

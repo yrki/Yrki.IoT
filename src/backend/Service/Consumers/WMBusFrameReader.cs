@@ -38,8 +38,8 @@ public static class WMBusFrameReader
         if (frame.Length < MinHeaderLength)
             return "unknown";
 
-        // A-field is bytes 4-7, hex-encoded in order
-        return $"{frame[4]:X2}{frame[5]:X2}{frame[6]:X2}{frame[7]:X2}";
+        // A-field is a 4-byte BCD serial number stored little-endian.
+        return $"{frame[7]:X2}{frame[6]:X2}{frame[5]:X2}{frame[4]:X2}";
     }
 
     public static string ReadManufacturer(byte[] frame)

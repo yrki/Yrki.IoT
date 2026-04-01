@@ -22,6 +22,7 @@ public static class ApiTestData
         string manufacturer = "Acme",
         Guid? locationId = null,
         Location? location = null,
+        DeviceKind kind = DeviceKind.Sensor,
         bool isNew = false,
         bool isDeleted = false,
         DateTimeOffset? lastContact = null,
@@ -35,12 +36,29 @@ public static class ApiTestData
             Type = type,
             Description = description,
             Manufacturer = manufacturer,
+            Kind = kind,
             LocationId = locationId,
             Location = location,
             IsNew = isNew,
             IsDeleted = isDeleted,
             LastContact = lastContact ?? DateTimeOffset.UtcNow.AddMinutes(-5),
             InstallationDate = installationDate ?? DateTimeOffset.UtcNow.AddDays(-30)
+        };
+    }
+
+    public static GatewayReading CreateGatewayReading(
+        string gatewayUniqueId,
+        string sensorUniqueId,
+        DateTimeOffset receivedAt,
+        int? rssi = null)
+    {
+        return new GatewayReading
+        {
+            Id = Guid.NewGuid(),
+            GatewayUniqueId = gatewayUniqueId,
+            SensorUniqueId = sensorUniqueId,
+            ReceivedAt = receivedAt,
+            Rssi = rssi,
         };
     }
 
@@ -67,14 +85,18 @@ public static class ApiTestData
         string sensorId,
         string sensorType,
         decimal value,
-        DateTimeOffset timestamp)
+        DateTimeOffset timestamp,
+        string? gatewayId = null,
+        int? rssi = null)
     {
         return new SensorReading
         {
             SensorId = sensorId,
             SensorType = sensorType,
             Value = value,
-            Timestamp = timestamp
+            Timestamp = timestamp,
+            GatewayId = gatewayId,
+            Rssi = rssi,
         };
     }
 

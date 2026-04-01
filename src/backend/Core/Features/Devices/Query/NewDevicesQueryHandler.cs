@@ -1,5 +1,6 @@
 using Contracts.Responses;
 using Core.Contexts;
+using Core.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Core.Features.Devices.Query;
@@ -10,7 +11,7 @@ public class NewDevicesQueryHandler(DatabaseContext db)
     {
         return await db.Devices
             .AsNoTracking()
-            .Where(d => d.IsNew && !d.IsDeleted)
+            .Where(d => d.Kind == DeviceKind.Sensor && d.IsNew && !d.IsDeleted)
             .OrderByDescending(d => d.LastContact)
             .Select(d => new NewDeviceResponse(
                 d.Id,

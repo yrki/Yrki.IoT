@@ -25,9 +25,21 @@ public static class SensorReadingMapper
         DateTimeOffset timestamp) =>
         Readings(timestamp, sensorId, manufacturer,
             ("Temperature", payload.TemperatureLastMeasuredValue),
+            ("TemperatureAverageLastHour", payload.TemperatureAverageLastHour),
+            ("TemperatureAverageLast24Hours", payload.TemperatureAverageLast24Hours),
             ("Humidity", payload.HumidityLastMeasuredValue),
+            ("HumidityAverageLastHour", payload.HumidityAverageLastHour),
+            ("HumidityAverageLast24Hours", payload.HumidityAverageLast24Hours),
             ("CO2", payload.CO2LastMeasuredValue),
-            ("Sound", payload.SoundLevelLastMeasuredValue));
+            ("CO2AverageLastHour", payload.CO2AverageLastHour),
+            ("CO2AverageLast24Hours", payload.CO2AverageLast24Hours),
+            ("CO2LastUsedCalibrationValue", payload.CO2LastUsedCalibrationValue),
+            ("CO2MinutesToNextCalibration", payload.CO2MinutesToNextCalibration),
+            ("Sound", payload.SoundLevelLastMeasuredValue),
+            ("SoundAverageLastHour", payload.SoundLevelAverageLastHour),
+            ("OnTimeInDays", payload.OnTimeInDays),
+            ("OperatingTimeInDays", payload.OperatingTimeInDays),
+            ("ProductVersion", payload.ProductVersion));
 
     private static List<Core.Models.SensorReading> MapAxiomaWaterMeter(
         string sensorId,

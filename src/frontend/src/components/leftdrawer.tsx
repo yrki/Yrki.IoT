@@ -8,13 +8,15 @@ import {
 import FiberNewRoundedIcon from '@mui/icons-material/FiberNewRounded';
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import SensorsRoundedIcon from '@mui/icons-material/SensorsRounded';
+import RouterRoundedIcon from '@mui/icons-material/RouterRounded';
 import type { SvgIconComponent } from '@mui/icons-material';
 import logo from '../assets/logo.png';
 
-export type NavigationSection = 'Sensors' | 'Locations' | 'New Sensors' | 'Live View';
+export type NavigationSection = 'Sensors' | 'Gateways' | 'Locations' | 'New Sensors' | 'Live View' | 'Gateway View';
 
 const primaryItems: Array<{ label: NavigationSection; icon: SvgIconComponent }> = [
   { label: 'Sensors', icon: SensorsRoundedIcon },
+  { label: 'Gateways', icon: RouterRoundedIcon },
   { label: 'New Sensors', icon: FiberNewRoundedIcon },
   { label: 'Locations', icon: PlaceRoundedIcon },
 ];

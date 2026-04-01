@@ -32,4 +32,22 @@ public class SensorReadingsController(SensorReadingsQueryHandler queryHandler) :
         var readings = await queryHandler.HandleLatestAsync(sensorId, cancellationToken);
         return Ok(readings);
     }
+
+    [HttpGet("{sensorId}/gateways")]
+    public async Task<IActionResult> GetGateways(
+        string sensorId,
+        CancellationToken cancellationToken = default)
+    {
+        var gateways = await queryHandler.GetGatewayStatisticsAsync(sensorId, cancellationToken);
+        return Ok(gateways);
+    }
+
+    [HttpGet("gateway/{gatewayId}/sensors")]
+    public async Task<IActionResult> GetSensorsForGateway(
+        string gatewayId,
+        CancellationToken cancellationToken = default)
+    {
+        var sensors = await queryHandler.GetSensorStatisticsForGatewayAsync(gatewayId, cancellationToken);
+        return Ok(sensors);
+    }
 }

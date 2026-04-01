@@ -1,5 +1,6 @@
 using Contracts.Responses;
 using Core.Contexts;
+using Core.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Core.Features.Sensors.Query;
@@ -14,7 +15,7 @@ public class SensorsBySensorLocationQueryHandler(DatabaseContext db)
     {
         var targetDevice = await db.Devices
             .AsNoTracking()
-            .Where(d => !d.IsNew && !d.IsDeleted && d.UniqueId == sensorId)
+            .Where(d => d.Kind == DeviceKind.Sensor && !d.IsNew && !d.IsDeleted && d.UniqueId == sensorId)
             .Select(d => new
             {
                 d.UniqueId,
@@ -31,7 +32,7 @@ public class SensorsBySensorLocationQueryHandler(DatabaseContext db)
         {
             return await db.Devices
                 .AsNoTracking()
-                .Where(d => !d.IsNew && !d.IsDeleted && d.LocationId == targetLocationId)
+                .Where(d => d.Kind == DeviceKind.Sensor && !d.IsNew && !d.IsDeleted && d.LocationId == targetLocationId)
                 .Include(d => d.Location)
                 .OrderBy(d => d.Name)
                 .ThenBy(d => d.UniqueId)
@@ -41,6 +42,7 @@ public class SensorsBySensorLocationQueryHandler(DatabaseContext db)
                     d.Name,
                     d.Manufacturer,
                     d.Type,
+                    d.Kind.ToString(),
                     d.LocationId == UnknownLocationId ? null : d.Location != null ? d.Location.Name : null,
                     d.LocationId == UnknownLocationId ? null : d.LocationId,
                     d.LastContact,
@@ -50,7 +52,7 @@ public class SensorsBySensorLocationQueryHandler(DatabaseContext db)
 
         return await db.Devices
             .AsNoTracking()
-            .Where(d => !d.IsNew && !d.IsDeleted && d.UniqueId == targetDevice.UniqueId)
+            .Where(d => d.Kind == DeviceKind.Sensor && !d.IsNew && !d.IsDeleted && d.UniqueId == targetDevice.UniqueId)
             .Include(d => d.Location)
             .OrderBy(d => d.Name)
             .ThenBy(d => d.UniqueId)
@@ -60,6 +62,7 @@ public class SensorsBySensorLocationQueryHandler(DatabaseContext db)
                 d.Name,
                 d.Manufacturer,
                 d.Type,
+                d.Kind.ToString(),
                 d.LocationId == UnknownLocationId ? null : d.Location != null ? d.Location.Name : null,
                 d.LocationId == UnknownLocationId ? null : d.LocationId,
                 d.LastContact,

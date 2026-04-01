@@ -1,8 +1,9 @@
-import { useState, useCallback } from 'react';
+import { lazy, Suspense, useCallback, useState } from 'react';
 import {
   AppBar,
   Box,
   Button,
+  CircularProgress,
   Drawer,
   IconButton,
   Stack,
@@ -15,10 +16,13 @@ import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import LeftDrawer, { NavigationSection } from './leftdrawer';
 import { ICurrentUser } from '../api/models/IAuthResponse';
 import LoginDialog from './LoginDialog';
-import SensorListView from '../features/sensors/SensorListView';
-import NewSensorsView from '../features/new-sensors/NewSensorsView';
-import SensorsView from '../features/sensors/SensorsView';
-import LocationsView from '../features/locations/LocationsView';
+
+const SensorListView = lazy(() => import('../features/sensors/SensorListView'));
+const NewSensorsView = lazy(() => import('../features/new-sensors/NewSensorsView'));
+const SensorsView = lazy(() => import('../features/sensors/SensorsView'));
+const LocationsView = lazy(() => import('../features/locations/LocationsView'));
+const GatewayListView = lazy(() => import('../features/gateways/GatewayListView'));
+const GatewayView = lazy(() => import('../features/gateways/GatewayView'));
 
 const drawerWidth = 300;
 
@@ -26,6 +30,10 @@ interface LiveViewParams {
   sensorId?: string;
   locationId?: string;
   locationName?: string;
+}
+
+interface GatewayViewParams {
+  gatewayId?: string;
 }
 
 interface TopmenuProps {
@@ -40,6 +48,7 @@ function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
   const [selectedSection, setSelectedSection] = useState<NavigationSection>('Sensors');
   const [previousSection, setPreviousSection] = useState<NavigationSection>('Sensors');
   const [liveViewParams, setLiveViewParams] = useState<LiveViewParams>({});
+  const [gatewayViewParams, setGatewayViewParams] = useState<GatewayViewParams>({});
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
 
@@ -56,8 +65,19 @@ function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
     if (section !== 'Live View') {
       setLiveViewParams({});
     }
+    if (section !== 'Gateway View') {
+      setGatewayViewParams({});
+    }
     setMobileOpen(false);
   }, []);
+
+  const navigateToGatewayView = useCallback((gatewayId: string) => {
+    if (selectedSection !== 'Gateway View') {
+      setPreviousSection(selectedSection);
+    }
+    setGatewayViewParams({ gatewayId });
+    setSelectedSection('Gateway View');
+  }, [selectedSection]);
 
   const drawer = (
     <LeftDrawer
@@ -66,15 +86,24 @@ function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
     />
   );
 
+  const contentFallback = (
+    <Box sx={{ display: 'grid', placeItems: 'center', minHeight: 320 }}>
+      <CircularProgress />
+    </Box>
+  );
+
   const renderMainContent = () => {
     switch (selectedSection) {
       case 'Sensors':
         return <SensorListView onNavigateToLiveView={(sensorId) => navigateToLiveView({ sensorId })} />;
+      case 'Gateways':
+        return <GatewayListView onNavigateToGateway={navigateToGatewayView} />;
       case 'Locations':
         return (
           <LocationsView
             onNavigateToLiveView={(locationId, locationName) => navigateToLiveView({ locationId, locationName })}
             onNavigateToSensor={(sensorId) => navigateToLiveView({ sensorId })}
+            onNavigateToGateway={navigateToGatewayView}
           />
         );
       case 'New Sensors':
@@ -86,7 +115,18 @@ function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
             locationId={liveViewParams.locationId}
             locationName={liveViewParams.locationName}
             onBack={() => setSelectedSection(previousSection)}
+            onNavigateToGateway={navigateToGatewayView}
           />
+        );
+      case 'Gateway View':
+        return gatewayViewParams.gatewayId ? (
+          <GatewayView
+            gatewayId={gatewayViewParams.gatewayId}
+            onBack={() => setSelectedSection(previousSection)}
+            onNavigateToSensor={(sensorId) => navigateToLiveView({ sensorId })}
+          />
+        ) : (
+          <GatewayListView onNavigateToGateway={navigateToGatewayView} />
         );
       default:
         return <SensorListView onNavigateToLiveView={(sensorId) => navigateToLiveView({ sensorId })} />;
@@ -180,7 +220,9 @@ function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
           pb: 4,
         }}
       >
-        {renderMainContent()}
+        <Suspense fallback={contentFallback}>
+          {renderMainContent()}
+        </Suspense>
       </Box>
 
       <LoginDialog
