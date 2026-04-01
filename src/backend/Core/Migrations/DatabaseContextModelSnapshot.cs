@@ -118,10 +118,17 @@ namespace Core.Migrations
                     b.Property<string>("GroupName")
                         .HasColumnType("text");
 
+                    b.Property<string>("Manufacturer")
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Manufacturer");
+
+                    b.HasIndex("Manufacturer", "DeviceUniqueId");
 
                     b.HasIndex("DeviceUniqueId");
 

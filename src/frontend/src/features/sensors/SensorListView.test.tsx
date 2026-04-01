@@ -9,10 +9,40 @@ const { getDevices, deleteDevice } = vi.hoisted(() => ({
   deleteDevice: vi.fn(),
 }));
 
+const signalRMocks = vi.hoisted(() => {
+  const connection = {
+    on: vi.fn(),
+    start: vi.fn().mockResolvedValue(undefined),
+    stop: vi.fn().mockResolvedValue(undefined),
+    state: 'Connected',
+  };
+
+  const builder = {
+    withUrl: vi.fn().mockReturnThis(),
+    withAutomaticReconnect: vi.fn().mockReturnThis(),
+    configureLogging: vi.fn().mockReturnThis(),
+    build: vi.fn(() => connection),
+  };
+
+  function HubConnectionBuilder() {
+    return builder;
+  }
+
+  return {
+    connection,
+    builder,
+    HubConnectionBuilder,
+    HubConnectionState: { Disconnected: 'Disconnected' },
+    LogLevel: { Warning: 2 },
+  };
+});
+
 vi.mock('../../api/api', () => ({
   getDevices,
   deleteDevice,
 }));
+
+vi.mock('@microsoft/signalr', () => signalRMocks);
 
 vi.mock('@mui/material', async () => {
   const actual = await vi.importActual<typeof import('@mui/material')>('@mui/material');
@@ -70,5 +100,18 @@ describe('SensorListView', () => {
     // Assert
     expect(screen.getByText('CO2-2026-001')).toBeInTheDocument();
     expect(screen.queryByText('WATER_8841_11')).not.toBeInTheDocument();
+  });
+
+  it('Shall_render_sensor_activity_indicator_in_list', async () => {
+    // Arrange
+    const onNavigateToLiveView = vi.fn();
+
+    // Act
+    render(<SensorListView onNavigateToLiveView={onNavigateToLiveView} />);
+
+    // Assert
+    await waitFor(() => expect(screen.getByText('CO2-2026-001')).toBeInTheDocument());
+    expect(screen.getByTestId('sensor-activity-device-1')).toBeInTheDocument();
+    expect(screen.getByTestId('sensor-activity-device-2')).toBeInTheDocument();
   });
 });

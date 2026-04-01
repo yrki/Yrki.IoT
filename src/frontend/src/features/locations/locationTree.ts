@@ -44,3 +44,7 @@ export function flattenTree(nodes: LocationNode[], depth = 0): Array<{ location:
   }
   return result;
 }
+
+export function buildLocationOptions(locations: LocationDto[]) {
+  return flattenTree(buildTree(locations));
+}

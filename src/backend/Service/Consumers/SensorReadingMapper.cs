@@ -7,14 +7,14 @@ namespace service.Consumers;
 public static class SensorReadingMapper
 {
     public static List<Core.Models.SensorReading> Map(
-        WMBusMessage header,
+        string sensorId,
         WMBusMessageMetadata metadata,
         IParsedPayload payload,
         DateTimeOffset timestamp) =>
         payload switch
         {
-            LansenE2_CO2_S co2 => MapLansenCO2(header.AField, metadata.Manufacturer, co2, timestamp),
-            Axioma_Qalcosonic_WaterMeter water => MapAxiomaWaterMeter(header.AField, metadata.Manufacturer, water, timestamp),
+            LansenE2_CO2_S co2 => MapLansenCO2(sensorId, metadata.Manufacturer, co2, timestamp),
+            Axioma_Qalcosonic_WaterMeter water => MapAxiomaWaterMeter(sensorId, metadata.Manufacturer, water, timestamp),
             _ => []
         };
 
@@ -33,12 +33,28 @@ public static class SensorReadingMapper
         string sensorId,
         string manufacturer,
         Axioma_Qalcosonic_WaterMeter payload,
-        DateTimeOffset timestamp) =>
-        Readings(timestamp, sensorId, manufacturer,
-            ("TotalVolume", payload.TotalVolume),
+        DateTimeOffset timestamp)
+    {
+        var totalVolume = payload.TotalVolume
+            ?? payload.PositiveVolume
+            ?? (payload.PositiveVolume.HasValue && payload.NegativeVolume.HasValue
+                ? payload.PositiveVolume.Value - payload.NegativeVolume.Value
+                : null);
+
+        return Readings(timestamp, sensorId, manufacturer,
+            ("TotalVolume", totalVolume),
+            ("PositiveVolume", payload.PositiveVolume),
+            ("NegativeVolume", payload.NegativeVolume),
+            ("LastMonthVolume", payload.LastMonthVolume),
+            ("LastMonthPositiveVolume", payload.LastMonthPositiveVolume),
+            ("LastMonthNegativeVolume", payload.LastMonthNegativeVolume),
             ("Flow", payload.Flow.HasValue ? (double?)payload.Flow.Value : null),
             ("Temperature", payload.Temperature),
-            ("RemainingBattery", payload.RemainingBatteryCapacity.HasValue ? (double?)payload.RemainingBatteryCapacity.Value : null));
+            ("RemainingBattery", payload.RemainingBatteryCapacity.HasValue ? (double?)payload.RemainingBatteryCapacity.Value : null),
+            ("AlarmCode", payload.ErrorCode.HasValue ? (double?)payload.ErrorCode.Value : null),
+            ("HasAlarm", payload.ErrorCode.HasValue ? payload.ErrorCode.Value == 0 ? 0d : 1d : null),
+            ("ErrorFreeTimeSeconds", payload.ErrorFreeTime.HasValue ? (double?)payload.ErrorFreeTime.Value : null));
+    }
 
     private static List<Core.Models.SensorReading> Readings(
         DateTimeOffset timestamp,

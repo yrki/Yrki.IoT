@@ -24,6 +24,7 @@ import {
 } from '@mui/material';
 import FiberNewRoundedIcon from '@mui/icons-material/FiberNewRounded';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import {
   getNewDevices,
   updateDevice,
@@ -34,6 +35,7 @@ import {
   UpdateDeviceRequest,
   LocationDto,
 } from '../../api/api';
+import { buildLocationOptions } from '../locations/locationTree';
 
 function formatTimestamp(iso: string) {
   return new Date(iso).toLocaleString([], {
@@ -116,6 +118,7 @@ function EditDialog({ device, open, locations, onClose, onSave, onAddLocation }:
   const [locationId, setLocationId] = useState('');
   const [encryptionKey, setEncryptionKey] = useState('');
   const [saving, setSaving] = useState(false);
+  const locationOptions = buildLocationOptions(locations);
 
   useEffect(() => {
     if (device) {
@@ -133,9 +136,10 @@ function EditDialog({ device, open, locations, onClose, onSave, onAddLocation }:
       // Save encryption key if provided
       if (encryptionKey.trim()) {
         await createEncryptionKey({
+          manufacturer: device.manufacturer ?? undefined,
           deviceUniqueId: device.uniqueId,
           keyValue: encryptionKey.trim(),
-          description: `Key for ${name || device.uniqueId}`,
+          description: undefined,
         });
       }
 
@@ -206,9 +210,9 @@ function EditDialog({ device, open, locations, onClose, onSave, onAddLocation }:
                 <MenuItem value="">
                   <em>None</em>
                 </MenuItem>
-                {locations.map((loc) => (
-                  <MenuItem key={loc.id} value={loc.id}>
-                    {loc.name}
+                {locationOptions.map(({ location, depth }) => (
+                  <MenuItem key={location.id} value={location.id} sx={{ pl: 2 + depth * 2 }}>
+                    {location.name}
                   </MenuItem>
                 ))}
               </Select>
@@ -225,13 +229,20 @@ function EditDialog({ device, open, locations, onClose, onSave, onAddLocation }:
 
           <TextField
             label="Encryption Key (AES-128 hex)"
+            type="text"
             value={encryptionKey}
             onChange={(e) => setEncryptionKey(e.target.value)}
             fullWidth
             size="small"
             placeholder="e.g. 0102030405060708090A0B0C0D0E0F10"
             helperText="Optional. Leave blank if the sensor is not encrypted."
-            slotProps={{ input: { style: { fontFamily: 'monospace' } } }}
+            slotProps={{
+              htmlInput: {
+                autoComplete: 'off',
+                spellCheck: 'false',
+              },
+              input: { style: { fontFamily: 'monospace' } }
+            }}
           />
         </Stack>
       </DialogContent>
@@ -314,6 +325,15 @@ function NewSensorsView() {
           size="small"
           variant="outlined"
         />
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<RefreshRoundedIcon />}
+          onClick={fetchDevices}
+          disabled={loading}
+        >
+          Refresh
+        </Button>
       </Stack>
 
       {loading ? (

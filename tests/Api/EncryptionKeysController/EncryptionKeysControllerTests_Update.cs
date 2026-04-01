@@ -14,12 +14,12 @@ public sealed class EncryptionKeysControllerTests_Update : IClassFixture<ApiData
     public async Task Shall_update_existing_key_and_return_updated_representation()
     {
         // Arrange
-        var key = ApiTestData.CreateEncryptionKey(deviceUniqueId: "device-1", groupName: "alpha", encryptedKeyValue: "encrypted:old-key");
+        var key = ApiTestData.CreateEncryptionKey(manufacturer: "LAS", deviceUniqueId: "device-1", groupName: "alpha", encryptedKeyValue: "encrypted:old-key");
         _dbContext.EncryptionKeys.Add(key);
         await _dbContext.SaveChangesAsync();
 
         var controller = CreateController();
-        var request = new UpdateEncryptionKeyRequest("device-2", "beta", "new-key", "Updated key");
+        var request = new UpdateEncryptionKeyRequest("AXI", "device-2", "beta", "new-key", "Updated key");
 
         // Act
         var result = await controller.Update(key.Id, request, CancellationToken.None);
@@ -29,6 +29,7 @@ public sealed class EncryptionKeysControllerTests_Update : IClassFixture<ApiData
         var response = Assert.IsType<EncryptionKeyResponse>(okResult.Value);
         var entity = await _dbContext.EncryptionKeys.SingleAsync();
         Assert.Equal(key.Id, response.Id);
+        Assert.Equal("AXI", entity.Manufacturer);
         Assert.Equal("device-2", entity.DeviceUniqueId);
         Assert.Equal("encrypted:new-key", entity.EncryptedKeyValue);
         Assert.NotNull(entity.UpdatedAt);
@@ -39,7 +40,7 @@ public sealed class EncryptionKeysControllerTests_Update : IClassFixture<ApiData
     {
         // Arrange
         var controller = CreateController();
-        var request = new UpdateEncryptionKeyRequest("device-2", "beta", "new-key", "Updated key");
+        var request = new UpdateEncryptionKeyRequest("AXI", "device-2", "beta", "new-key", "Updated key");
 
         // Act
         var result = await controller.Update(Guid.NewGuid(), request, CancellationToken.None);

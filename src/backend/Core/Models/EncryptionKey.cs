@@ -7,6 +7,8 @@ public class EncryptionKey
     [Key]
     public Guid Id { get; set; }
 
+    public string? Manufacturer { get; set; }
+
     public string? DeviceUniqueId { get; set; }
 
     public string? GroupName { get; set; }

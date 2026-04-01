@@ -5,13 +5,27 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SensorsView from './SensorsView';
 
-const { getDevices, getDeviceByUniqueId, getDevicesByLocation, getLocations, createLocation, updateExistingDevice, useSensorHub } = vi.hoisted(() => ({
+const {
+  getDevices,
+  getDeviceByUniqueId,
+  getDevicesByLocation,
+  getLocations,
+  createLocation,
+  updateExistingDevice,
+  getEncryptionKeyByDevice,
+  updateEncryptionKey,
+  createEncryptionKey,
+  useSensorHub,
+} = vi.hoisted(() => ({
   getDevices: vi.fn(),
   getDeviceByUniqueId: vi.fn(),
   getDevicesByLocation: vi.fn(),
   getLocations: vi.fn(),
   createLocation: vi.fn(),
   updateExistingDevice: vi.fn(),
+  getEncryptionKeyByDevice: vi.fn(),
+  updateEncryptionKey: vi.fn(),
+  createEncryptionKey: vi.fn(),
   useSensorHub: vi.fn(),
 }));
 
@@ -22,6 +36,9 @@ vi.mock('../../api/api', () => ({
   getLocations,
   createLocation,
   updateExistingDevice,
+  getEncryptionKeyByDevice,
+  updateEncryptionKey,
+  createEncryptionKey,
 }));
 
 vi.mock('./useSensorHub', () => ({
@@ -83,6 +100,9 @@ describe('SensorsView', () => {
     ]);
     createLocation.mockResolvedValue(undefined);
     updateExistingDevice.mockResolvedValue(undefined);
+    getEncryptionKeyByDevice.mockResolvedValue(null);
+    updateEncryptionKey.mockResolvedValue(undefined);
+    createEncryptionKey.mockResolvedValue(undefined);
 
     getDevicesByLocation.mockClear();
     useSensorHub.mockImplementation((_sensorId: string, hours: number, enabled = true) => {
@@ -141,7 +161,7 @@ describe('SensorsView', () => {
     // Act
     render(<SensorsView initialSensorId="sensor-1" />);
 
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Office sensor' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Office sensor (sensor-1)' })).toBeInTheDocument());
     expect(screen.getByText(/First reading:/)).toBeInTheDocument();
     expect(screen.getByText(/Last reading:/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Open Temperature in fullscreen' }));
@@ -208,6 +228,81 @@ describe('SensorsView', () => {
     expect(await screen.findByText('Lab')).toBeInTheDocument();
   });
 
+  it('Shall_open_sensor_settings_and_update_name_and_encryption_key', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    getLocations.mockResolvedValue([
+      { id: 'location-1', name: 'HQ', description: 'Office', deviceCount: 1 },
+      { id: 'location-2', name: 'Lab', description: 'Lab', deviceCount: 1 },
+    ]);
+    getEncryptionKeyByDevice.mockResolvedValue({
+      id: 'key-1',
+      manufacturer: 'Acme',
+      deviceUniqueId: 'sensor-1',
+      groupName: null,
+      description: 'Old key',
+      keyValue: 'FFEEDDCCBBAA99887766554433221100',
+      createdAt: '2026-03-30T09:00:00.000Z',
+      updatedAt: '2026-03-30T09:05:00.000Z',
+    });
+    updateExistingDevice.mockResolvedValue({
+      id: 'device-1',
+      uniqueId: 'sensor-1',
+      name: 'Updated sensor',
+      manufacturer: 'Acme',
+      type: 'CarbonDioxide',
+      description: 'Tracks CO2',
+      locationId: 'location-2',
+      lastContact: '2026-03-30T09:00:00.000Z',
+      installationDate: '2026-03-28T08:15:00.000Z',
+    });
+    updateEncryptionKey.mockResolvedValue({
+      id: 'key-1',
+      manufacturer: 'Acme',
+      deviceUniqueId: 'sensor-1',
+      groupName: null,
+      description: 'Updated key',
+      keyValue: '00112233445566778899AABBCCDDEEFF',
+      createdAt: '2026-03-30T09:00:00.000Z',
+      updatedAt: '2026-03-30T10:00:00.000Z',
+    });
+
+    // Act
+    render(<SensorsView initialSensorId="sensor-1" />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Edit sensor settings' })).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Edit sensor settings' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Edit Sensor' });
+    await waitFor(() => expect(getEncryptionKeyByDevice).toHaveBeenCalledWith('sensor-1', undefined));
+
+    await user.clear(within(dialog).getByLabelText('Name'));
+    await user.type(within(dialog).getByLabelText('Name'), 'Updated sensor');
+    await user.click(within(dialog).getByRole('combobox'));
+    await user.click(await screen.findByRole('option', { name: 'Lab' }));
+    await user.clear(within(dialog).getByLabelText('Encryption Key (AES-128 hex)'));
+    await user.type(within(dialog).getByLabelText('Encryption Key (AES-128 hex)'), '00112233445566778899AABBCCDDEEFF');
+    await user.clear(within(dialog).getByLabelText('Encryption Key Description'));
+    await user.type(within(dialog).getByLabelText('Encryption Key Description'), 'Updated key');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    // Assert
+    await waitFor(() => {
+      expect(updateExistingDevice).toHaveBeenCalledWith('device-1', {
+        name: 'Updated sensor',
+        description: undefined,
+        locationId: 'location-2',
+      });
+    });
+    expect(updateEncryptionKey).toHaveBeenCalledWith('key-1', {
+      manufacturer: undefined,
+      deviceUniqueId: 'sensor-1',
+      keyValue: '00112233445566778899AABBCCDDEEFF',
+      description: 'Updated key',
+    });
+    expect(await screen.findByRole('heading', { name: 'Updated sensor (sensor-1)' })).toBeInTheDocument();
+  });
+
   it('Shall_only_show_devices_from_same_location_in_device_dropdown', async () => {
     // Arrange
     const user = userEvent.setup();
@@ -215,7 +310,7 @@ describe('SensorsView', () => {
     // Act
     render(<SensorsView initialSensorId="sensor-1" />);
 
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Office sensor' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Office sensor (sensor-1)' })).toBeInTheDocument());
     expect(getDeviceByUniqueId).toHaveBeenCalledWith('sensor-1');
     expect(getDevicesByLocation).toHaveBeenCalledWith('location-1');
     await user.click(screen.getAllByRole('combobox')[0]);
@@ -224,6 +319,60 @@ describe('SensorsView', () => {
     expect(await screen.findByRole('option', { name: 'Office sensor' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Lobby sensor' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Warehouse sensor' })).not.toBeInTheDocument();
+  });
+
+  it('Shall_render_axioma_measurements_with_labels_for_cards_and_graphs', async () => {
+    // Arrange
+    useSensorHub.mockReturnValue({
+      readings: {
+        TotalVolume: {
+          sensorId: 'sensor-1',
+          sensorType: 'TotalVolume',
+          value: 123.4,
+          timestamp: '2026-03-30T09:00:00.000Z',
+        },
+        AlarmCode: {
+          sensorId: 'sensor-1',
+          sensorType: 'AlarmCode',
+          value: 5,
+          timestamp: '2026-03-30T09:00:00.000Z',
+        },
+        HasAlarm: {
+          sensorId: 'sensor-1',
+          sensorType: 'HasAlarm',
+          value: 1,
+          timestamp: '2026-03-30T09:00:00.000Z',
+        },
+      },
+      history: {
+        TotalVolume: [
+          { time: 1, value: 120.1 },
+          { time: 2, value: 123.4 },
+        ],
+        AlarmCode: [
+          { time: 1, value: 0 },
+          { time: 2, value: 5 },
+        ],
+        HasAlarm: [
+          { time: 1, value: 0 },
+          { time: 2, value: 1 },
+        ],
+      },
+      connected: true,
+      loaded: true,
+    });
+
+    // Act
+    render(<SensorsView initialSensorId="sensor-1" />);
+
+    // Assert
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Office sensor (sensor-1)' })).toBeInTheDocument());
+    expect(screen.getByText('Total volume')).toBeInTheDocument();
+    expect(screen.getByText('Alarm code')).toBeInTheDocument();
+    expect(screen.getByText('Alarm active')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Total volume in fullscreen' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Alarm code in fullscreen' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Alarm active in fullscreen' })).toBeInTheDocument();
   });
 
   it('Shall_fallback_to_selected_device_when_same_location_request_returns_empty', async () => {
@@ -236,7 +385,7 @@ describe('SensorsView', () => {
     // Assert
     await waitFor(() => expect(getDeviceByUniqueId).toHaveBeenCalledWith('sensor-1'));
     expect(getDevices).toHaveBeenCalled();
-    expect(await screen.findByRole('heading', { name: 'Office sensor' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Office sensor (sensor-1)' })).toBeInTheDocument();
     expect(screen.getByText('HQ')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit location' })).toBeInTheDocument();
   });

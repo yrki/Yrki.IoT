@@ -30,19 +30,23 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import EditLocationAltRoundedIcon from '@mui/icons-material/EditLocationAltRounded';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { useSensorHub, SensorReading, SensorDataPoint } from './useSensorHub';
 import {
   createLocation,
+  createEncryptionKey,
   getDeviceByUniqueId,
   getDevices,
   getDevicesByLocation,
+  getEncryptionKeyByDevice,
   getLocations,
   LocationDto,
   SensorListItemDto,
+  updateEncryptionKey,
   updateExistingDevice,
 } from '../../api/api';
-import { buildTree, flattenTree } from '../locations/locationTree';
+import { buildLocationOptions } from '../locations/locationTree';
 import { calculateSensorStatistics } from './sensorStats';
 
 interface SensorCardProps {
@@ -68,6 +72,14 @@ function formatDateTime(epoch: number) {
 
 function formatTimestamp(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function formatSensorHeading(name: string | null | undefined, sensorId: string) {
+  if (!name || name === sensorId) {
+    return sensorId || 'Live Sensors';
+  }
+
+  return `${name} (${sensorId})`;
 }
 
 function formatDateLabel(iso: string) {
@@ -324,6 +336,230 @@ interface EditSensorLocationDialogProps {
   onSaved: (updatedDevice: SensorListItemDto) => void;
 }
 
+interface EditSensorSettingsDialogProps {
+  open: boolean;
+  device: SensorListItemDto | null;
+  locations: LocationDto[];
+  onClose: () => void;
+  onAddLocation: () => void;
+  onSaved: (updatedDevice: SensorListItemDto) => void;
+}
+
+function EditSensorSettingsDialog({
+  open,
+  device,
+  locations,
+  onClose,
+  onAddLocation,
+  onSaved,
+}: EditSensorSettingsDialogProps) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [locationId, setLocationId] = useState('');
+  const [encryptionKeyId, setEncryptionKeyId] = useState<string | null>(null);
+  const [encryptionKey, setEncryptionKey] = useState('');
+  const [encryptionKeyDescription, setEncryptionKeyDescription] = useState('');
+  const [loadingKey, setLoadingKey] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const locationOptions = buildLocationOptions(locations);
+
+  useEffect(() => {
+    if (!open || !device) {
+      return;
+    }
+
+    setName(device.name ?? '');
+    setDescription('');
+    setLocationId(device.locationId ?? '');
+    setEncryptionKey('');
+    setEncryptionKeyId(null);
+    setEncryptionKeyDescription('');
+    setError('');
+    setLoadingKey(true);
+
+    getEncryptionKeyByDevice(device.uniqueId, device.manufacturer ?? undefined)
+      .then((key) => {
+        setEncryptionKeyId(key?.id ?? null);
+        setEncryptionKeyDescription(key?.description ?? '');
+        setEncryptionKey(key?.keyValue ?? '');
+      })
+      .catch((err) => {
+        console.error('Failed to fetch encryption key:', err);
+        setError('Failed to load encryption key details.');
+      })
+      .finally(() => setLoadingKey(false));
+  }, [device, open]);
+
+  const handleSave = async () => {
+    if (!device) {
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    try {
+      const updated = await updateExistingDevice(device.id, {
+        name: name.trim() || undefined,
+        description: description.trim() || undefined,
+        locationId: locationId || undefined,
+      });
+
+      const keyDescription = encryptionKeyDescription.trim();
+      if (encryptionKey.trim()) {
+        if (encryptionKeyId) {
+          await updateEncryptionKey(encryptionKeyId, {
+            manufacturer: device.manufacturer ?? undefined,
+            deviceUniqueId: device.uniqueId,
+            keyValue: encryptionKey.trim(),
+            description: keyDescription,
+          });
+        } else {
+          const createdKey = await createEncryptionKey({
+            manufacturer: device.manufacturer ?? undefined,
+            deviceUniqueId: device.uniqueId,
+            keyValue: encryptionKey.trim(),
+            description: keyDescription || undefined,
+          });
+          setEncryptionKeyId(createdKey.id);
+        }
+      } else if (encryptionKeyId) {
+        await updateEncryptionKey(encryptionKeyId, {
+          manufacturer: device.manufacturer ?? undefined,
+          deviceUniqueId: device.uniqueId,
+          description: keyDescription,
+        });
+      }
+
+      const selectedLocation = locations.find((location) => location.id === updated.locationId);
+      onSaved({
+        id: updated.id,
+        uniqueId: updated.uniqueId,
+        name: updated.name,
+        manufacturer: updated.manufacturer,
+        type: updated.type,
+        locationId: updated.locationId,
+        locationName: selectedLocation?.name ?? null,
+        lastContact: updated.lastContact,
+        installationDate: updated.installationDate,
+      });
+      onClose();
+    } catch (err) {
+      console.error('Failed to update sensor settings:', err);
+      setError('Failed to save sensor settings.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Edit Sensor</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <TextField
+            label="Sensor ID"
+            value={device?.uniqueId ?? ''}
+            fullWidth
+            size="small"
+            disabled
+          />
+          <TextField
+            label="Manufacturer"
+            value={device?.manufacturer ?? 'Unknown'}
+            fullWidth
+            size="small"
+            disabled
+          />
+          <TextField
+            label="Type"
+            value={device?.type ?? ''}
+            fullWidth
+            size="small"
+            disabled
+          />
+          <TextField
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            fullWidth
+            size="small"
+          />
+          <TextField
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            fullWidth
+            size="small"
+            multiline
+            rows={2}
+          />
+          <Stack direction="row" spacing={1} alignItems="flex-end">
+            <FormControl fullWidth size="small">
+              <InputLabel>Location</InputLabel>
+              <Select
+                value={locationId}
+                label="Location"
+                onChange={(e) => setLocationId(e.target.value)}
+              >
+                <MenuItem value="">
+                  <em>None</em>
+                </MenuItem>
+                {locationOptions.map(({ location, depth }) => (
+                  <MenuItem key={location.id} value={location.id} sx={{ pl: 2 + depth * 2 }}>
+                    {location.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Button variant="outlined" size="small" onClick={onAddLocation} sx={{ minWidth: 40, px: 1 }}>
+              <AddRoundedIcon fontSize="small" />
+            </Button>
+          </Stack>
+          <TextField
+            label="Encryption Key (AES-128 hex)"
+            type="text"
+            value={encryptionKey}
+            onChange={(e) => setEncryptionKey(e.target.value)}
+            fullWidth
+            size="small"
+            placeholder="Enter key if this sensor is encrypted"
+            helperText={
+              loadingKey
+                ? 'Loading key metadata...'
+                : encryptionKeyId
+                  ? 'Stored key loaded. You can edit it directly.'
+                  : 'No key stored for this sensor yet.'
+            }
+            slotProps={{
+              htmlInput: {
+                autoComplete: 'off',
+                spellCheck: 'false',
+              },
+              input: { style: { fontFamily: 'monospace' } },
+            }}
+          />
+          <TextField
+            label="Encryption Key Description"
+            value={encryptionKeyDescription}
+            onChange={(e) => setEncryptionKeyDescription(e.target.value)}
+            fullWidth
+            size="small"
+            placeholder="Optional note for the stored key"
+          />
+          {error ? <Alert severity="error">{error}</Alert> : null}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" onClick={handleSave} disabled={saving || loadingKey}>
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 function EditSensorLocationDialog({
   open,
   device,
@@ -335,6 +571,7 @@ function EditSensorLocationDialog({
   const [locationId, setLocationId] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const locationOptions = buildLocationOptions(locations);
 
   useEffect(() => {
     if (device) {
@@ -398,7 +635,7 @@ function EditSensorLocationDialog({
                 label="Location"
                 onChange={(e) => setLocationId(e.target.value)}
               >
-                {flattenTree(buildTree(locations)).map(({ location, depth }) => (
+                {locationOptions.map(({ location, depth }) => (
                   <MenuItem key={location.id} value={location.id} sx={{ pl: 2 + depth * 2 }}>
                     {location.name}
                   </MenuItem>
@@ -591,6 +828,16 @@ const sensorTypeConfig: Record<string, { label: string; unit: string; icon: Reac
   Sound: { label: 'Sound level', unit: 'dB', icon: <VolumeUpRoundedIcon />, color: '#f5c451' },
   Flow: { label: 'Flow', unit: 'l/h', icon: <SpeedRoundedIcon />, color: '#a78bfa' },
   Volume: { label: 'Volume', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#34d399' },
+  TotalVolume: { label: 'Total volume', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#34d399' },
+  PositiveVolume: { label: 'Forward volume', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#2dd4bf' },
+  NegativeVolume: { label: 'Reverse volume', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#f97316' },
+  LastMonthVolume: { label: 'Last month volume', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#10b981' },
+  LastMonthPositiveVolume: { label: 'Last month forward', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#14b8a6' },
+  LastMonthNegativeVolume: { label: 'Last month reverse', unit: 'm\u00B3', icon: <WaterRoundedIcon />, color: '#fb7185' },
+  RemainingBattery: { label: 'Battery remaining', unit: '%', icon: <SpeedRoundedIcon />, color: '#f59e0b' },
+  AlarmCode: { label: 'Alarm code', unit: '', icon: <SpeedRoundedIcon />, color: '#ef4444' },
+  HasAlarm: { label: 'Alarm active', unit: '', icon: <SpeedRoundedIcon />, color: '#dc2626' },
+  ErrorFreeTimeSeconds: { label: 'Error-free time', unit: 's', icon: <SpeedRoundedIcon />, color: '#60a5fa' },
 };
 
 const defaultConfig = { label: 'Unknown', unit: '', icon: <SpeedRoundedIcon />, color: '#999' };
@@ -616,6 +863,7 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack }: Sens
   const [hours, setHours] = useState(3);
   const [fullscreenSensorType, setFullscreenSensorType] = useState<string | null>(null);
   const [editLocationOpen, setEditLocationOpen] = useState(false);
+  const [editSettingsOpen, setEditSettingsOpen] = useState(false);
   const [addLocationOpen, setAddLocationOpen] = useState(false);
   const { readings, history, connected } = useSensorHub(selectedSensorId, hours);
 
@@ -710,22 +958,32 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack }: Sens
           ) : null}
           <Box>
             <Typography variant="h4" sx={{ mb: 0.75 }}>
-                {selectedDevice?.name ?? (selectedSensorId || 'Live Sensors')}
+              {formatSensorHeading(selectedDevice?.name, selectedSensorId)}
             </Typography>
             <Stack direction="row" spacing={1} alignItems="center">
               <Typography variant="body1" sx={{ color: 'text.secondary' }}>
                 {selectedDevice?.locationName ?? locationName ?? 'No location set'}
               </Typography>
               {selectedDevice ? (
-                <Button
-                  size="small"
-                  variant="text"
-                  startIcon={<EditLocationAltRoundedIcon fontSize="small" />}
-                  onClick={() => setEditLocationOpen(true)}
-                  sx={{ minWidth: 0, px: 0 }}
-                >
-                  Edit location
-                </Button>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    size="small"
+                    variant="text"
+                    startIcon={<EditLocationAltRoundedIcon fontSize="small" />}
+                    onClick={() => setEditLocationOpen(true)}
+                    sx={{ minWidth: 0, px: 0 }}
+                  >
+                    Edit location
+                  </Button>
+                  <IconButton
+                    aria-label="Edit sensor settings"
+                    onClick={() => setEditSettingsOpen(true)}
+                    size="small"
+                    sx={{ color: 'text.secondary' }}
+                  >
+                    <SettingsRoundedIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
               ) : null}
             </Stack>
             {selectedDevice ? (
@@ -814,6 +1072,15 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack }: Sens
         device={selectedDevice ?? null}
         locations={locations}
         onClose={() => setEditLocationOpen(false)}
+        onAddLocation={() => setAddLocationOpen(true)}
+        onSaved={handleDeviceUpdated}
+      />
+
+      <EditSensorSettingsDialog
+        open={editSettingsOpen}
+        device={selectedDevice ?? null}
+        locations={locations}
+        onClose={() => setEditSettingsOpen(false)}
         onAddLocation={() => setAddLocationOpen(true)}
         onSaved={handleDeviceUpdated}
       />

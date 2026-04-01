@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
 import {
   Box,
   Button,
@@ -35,8 +36,45 @@ interface SensorListViewProps {
   onNavigateToLiveView: (sensorId: string) => void;
 }
 
+const activityFadeDurationMs = 6 * 60 * 60 * 1000;
+const activityBlinkDurationMs = 2500;
+const sensorRefreshIntervalMs = 5 * 60 * 1000;
+const HUB_URL = import.meta.env.VITE_SIGNALR_URL ?? '/hubs/sensors';
+
 function normalizeSearchValue(value: string | null | undefined) {
   return (value ?? '').toLowerCase().replace(/[\s_-]+/g, '');
+}
+
+function getActivityProgress(lastContact: string, now: number) {
+  const ageMs = Math.max(0, now - new Date(lastContact).getTime());
+  return Math.max(0, 1 - ageMs / activityFadeDurationMs);
+}
+
+function getActivityLabel(lastContact: string, now: number) {
+  const ageMs = Math.max(0, now - new Date(lastContact).getTime());
+  if (ageMs < 60_000) {
+    return 'Receiving now';
+  }
+
+  if (ageMs >= activityFadeDurationMs) {
+    return 'No signal in the last 6 hours';
+  }
+
+  const ageMinutes = Math.round(ageMs / 60_000);
+  if (ageMinutes < 60) {
+    return `Seen ${ageMinutes} minute${ageMinutes === 1 ? '' : 's'} ago`;
+  }
+
+  const ageHours = Math.round(ageMinutes / 60);
+  return `Seen ${ageHours} hour${ageHours === 1 ? '' : 's'} ago`;
+}
+
+function buildConnection() {
+  return new HubConnectionBuilder()
+    .withUrl(HUB_URL)
+    .withAutomaticReconnect()
+    .configureLogging(LogLevel.Warning)
+    .build();
 }
 
 function SensorListView({ onNavigateToLiveView }: SensorListViewProps) {
@@ -48,15 +86,112 @@ function SensorListView({ onNavigateToLiveView }: SensorListViewProps) {
   const [filterManufacturer, setFilterManufacturer] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SensorListItemDto | null>(null);
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const [recentlyUpdatedSensors, setRecentlyUpdatedSensors] = useState<Record<string, number>>({});
+  const previousContactsRef = useRef<Record<string, string>>({});
 
   const loadSensors = () => {
     getDevices()
-      .then(setSensors)
+      .then((nextSensors) => {
+        const now = Date.now();
+        const nextContacts: Record<string, string> = {};
+
+        for (const sensor of nextSensors) {
+          nextContacts[sensor.uniqueId] = sensor.lastContact;
+        }
+
+        setRecentlyUpdatedSensors((previous) => {
+          const next = { ...previous };
+
+          for (const sensor of nextSensors) {
+            const previousContact = previousContactsRef.current[sensor.uniqueId];
+            if (previousContact && previousContact !== sensor.lastContact) {
+              next[sensor.uniqueId] = now + activityBlinkDurationMs;
+            }
+          }
+
+          for (const [sensorId, expiresAt] of Object.entries(next)) {
+            if (expiresAt <= now) {
+              delete next[sensorId];
+            }
+          }
+
+          return next;
+        });
+
+        previousContactsRef.current = nextContacts;
+        setSensors(nextSensors);
+      })
       .catch((err) => console.error('Failed to fetch sensors:', err))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadSensors(); }, []);
+  useEffect(() => {
+    loadSensors();
+
+    const refreshInterval = window.setInterval(() => {
+      loadSensors();
+    }, sensorRefreshIntervalMs);
+
+    const clockInterval = window.setInterval(() => {
+      setCurrentTime(Date.now());
+      setRecentlyUpdatedSensors((previous) => {
+        const now = Date.now();
+        const next = { ...previous };
+
+        for (const [sensorId, expiresAt] of Object.entries(next)) {
+          if (expiresAt <= now) {
+            delete next[sensorId];
+          }
+        }
+
+        return next;
+      });
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(refreshInterval);
+      window.clearInterval(clockInterval);
+    };
+  }, []);
+
+  useEffect(() => {
+    const connection = buildConnection();
+
+    connection.on('SensorReadingReceived', (reading: { sensorId: string; timestamp: string }) => {
+      const now = Date.now();
+
+      setSensors((previous) => previous.map((sensor) => {
+        if (sensor.uniqueId !== reading.sensorId) {
+          return sensor;
+        }
+
+        if (new Date(sensor.lastContact).getTime() >= new Date(reading.timestamp).getTime()) {
+          return sensor;
+        }
+
+        return {
+          ...sensor,
+          lastContact: reading.timestamp,
+        };
+      }));
+
+      setCurrentTime(now);
+      setRecentlyUpdatedSensors((previous) => ({
+        ...previous,
+        [reading.sensorId]: now + activityBlinkDurationMs,
+      }));
+      previousContactsRef.current[reading.sensorId] = reading.timestamp;
+    });
+
+    connection.start().catch((err) => console.error('SignalR connect failed:', err));
+
+    return () => {
+      if (connection.state !== HubConnectionState.Disconnected) {
+        connection.stop();
+      }
+    };
+  }, []);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -229,7 +364,51 @@ function SensorListView({ onNavigateToLiveView }: SensorListViewProps) {
                 }}
                 onClick={() => onNavigateToLiveView(sensor.uniqueId)}
               >
-                <TableCell sx={{ fontFamily: 'monospace' }}>{sensor.uniqueId}</TableCell>
+                <TableCell>
+                  <Stack direction="row" spacing={1.25} alignItems="center">
+                    <Tooltip title={getActivityLabel(sensor.lastContact, currentTime)}>
+                      <Box
+                        data-testid={`sensor-activity-${sensor.id}`}
+                        aria-label={getActivityLabel(sensor.lastContact, currentTime)}
+                        sx={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: '999px',
+                          flexShrink: 0,
+                          backgroundColor: (() => {
+                            const progress = getActivityProgress(sensor.lastContact, currentTime);
+                            if (progress <= 0) {
+                              return 'rgba(148, 163, 184, 0.55)';
+                            }
+
+                            const green = Math.round(120 + progress * 90);
+                            const red = Math.round(148 - progress * 88);
+                            return `rgba(${red}, ${green}, 105, ${0.35 + progress * 0.65})`;
+                          })(),
+                          boxShadow: (() => {
+                            const progress = getActivityProgress(sensor.lastContact, currentTime);
+                            if (progress <= 0) {
+                              return '0 0 0 1px rgba(148, 163, 184, 0.2)';
+                            }
+
+                            return `0 0 ${6 + progress * 10}px rgba(34, 197, 94, ${0.2 + progress * 0.5})`;
+                          })(),
+                          animation: recentlyUpdatedSensors[sensor.uniqueId]
+                            ? 'sensorActivityPulse 0.9s ease-in-out 2'
+                            : 'none',
+                          '@keyframes sensorActivityPulse': {
+                            '0%': { transform: 'scale(1)', opacity: 0.75 },
+                            '45%': { transform: 'scale(1.8)', opacity: 1 },
+                            '100%': { transform: 'scale(1)', opacity: 0.8 },
+                          },
+                        }}
+                      />
+                    </Tooltip>
+                    <Typography component="span" sx={{ fontFamily: 'monospace' }}>
+                      {sensor.uniqueId}
+                    </Typography>
+                  </Stack>
+                </TableCell>
                 <TableCell>{sensor.name ?? '-'}</TableCell>
                 <TableCell>{sensor.manufacturer ?? '-'}</TableCell>
                 <TableCell>{sensor.type}</TableCell>

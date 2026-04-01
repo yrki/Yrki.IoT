@@ -69,6 +69,8 @@ public class DatabaseContext : DbContext
             entity.ToTable("EncryptionKeys");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.EncryptedKeyValue).IsRequired();
+            entity.HasIndex(e => new { e.Manufacturer, e.DeviceUniqueId });
+            entity.HasIndex(e => e.Manufacturer);
             entity.HasIndex(e => e.DeviceUniqueId);
             entity.HasIndex(e => e.GroupName);
         });

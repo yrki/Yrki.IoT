@@ -15,7 +15,7 @@ public sealed class EncryptionKeysControllerTests_Create : IClassFixture<ApiData
     {
         // Arrange
         var controller = CreateController();
-        var request = new CreateEncryptionKeyRequest("device-1", "alpha", "plain-key", "For north wing");
+        var request = new CreateEncryptionKeyRequest("AXI", "device-1", "alpha", "plain-key", "For north wing");
 
         // Act
         var result = await controller.Create(request, CancellationToken.None);
@@ -26,6 +26,7 @@ public sealed class EncryptionKeysControllerTests_Create : IClassFixture<ApiData
         var entity = await _dbContext.EncryptionKeys.SingleAsync();
         Assert.Equal($"/encryptionkeys/{response.Id}", createdResult.Location);
         Assert.Equal("encrypted:plain-key", entity.EncryptedKeyValue);
+        Assert.Equal("AXI", entity.Manufacturer);
         Assert.Equal("device-1", entity.DeviceUniqueId);
     }
 

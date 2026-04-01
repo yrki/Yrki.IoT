@@ -2,11 +2,10 @@ using Contracts.Requests;
 using Contracts.Responses;
 using Core.Contexts;
 using Core.Models;
-using Core.Services.Encryption;
 
 namespace Core.Features.EncryptionKeys.Command;
 
-public class CreateEncryptionKeyCommandHandler(DatabaseContext db, IKeyEncryptionService encryptionService)
+public class CreateEncryptionKeyCommandHandler(DatabaseContext db)
 {
     public async Task<EncryptionKeyResponse> HandleAsync(
         CreateEncryptionKeyRequest request,
@@ -15,9 +14,10 @@ public class CreateEncryptionKeyCommandHandler(DatabaseContext db, IKeyEncryptio
         var key = new EncryptionKey
         {
             Id = Guid.NewGuid(),
-            DeviceUniqueId = request.DeviceUniqueId,
+            Manufacturer = EncryptionKeyIdentity.NormalizeManufacturer(request.Manufacturer),
+            DeviceUniqueId = EncryptionKeyIdentity.NormalizeDeviceUniqueId(request.DeviceUniqueId),
             GroupName = request.GroupName,
-            EncryptedKeyValue = encryptionService.Encrypt(request.KeyValue),
+            EncryptedKeyValue = request.KeyValue.Trim().ToUpperInvariant(),
             Description = request.Description,
             CreatedAt = DateTimeOffset.UtcNow,
         };
@@ -26,7 +26,7 @@ public class CreateEncryptionKeyCommandHandler(DatabaseContext db, IKeyEncryptio
         await db.SaveChangesAsync(cancellationToken);
 
         return new EncryptionKeyResponse(
-            key.Id, key.DeviceUniqueId, key.GroupName,
-            key.Description, key.CreatedAt, key.UpdatedAt);
+            key.Id, key.Manufacturer, key.DeviceUniqueId, key.GroupName,
+            key.Description, key.EncryptedKeyValue, key.CreatedAt, key.UpdatedAt);
     }
 }

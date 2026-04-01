@@ -161,9 +161,11 @@ export async function deleteLocation(id: string): Promise<void> {
 
 export interface EncryptionKeyDto {
   id: string;
+  manufacturer: string | null;
   deviceUniqueId: string | null;
   groupName: string | null;
   description: string | null;
+  keyValue: string | null;
   createdAt: string;
   updatedAt: string | null;
 }
@@ -173,7 +175,23 @@ export async function getEncryptionKeys(): Promise<EncryptionKeyDto[]> {
   return response.data;
 }
 
+export async function getEncryptionKeyByDevice(deviceUniqueId: string, manufacturer?: string): Promise<EncryptionKeyDto | null> {
+  try {
+    const response = await api.get<EncryptionKeyDto>(`/encryptionkeys/device/${encodeURIComponent(deviceUniqueId)}`, {
+      params: { manufacturer },
+    });
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
 export async function createEncryptionKey(request: {
+  manufacturer?: string;
   deviceUniqueId?: string;
   groupName?: string;
   keyValue: string;
@@ -184,6 +202,7 @@ export async function createEncryptionKey(request: {
 }
 
 export async function updateEncryptionKey(id: string, request: {
+  manufacturer?: string;
   deviceUniqueId?: string;
   groupName?: string;
   keyValue?: string;

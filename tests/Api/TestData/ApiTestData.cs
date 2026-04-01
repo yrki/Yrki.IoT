@@ -45,6 +45,7 @@ public static class ApiTestData
     }
 
     public static EncryptionKey CreateEncryptionKey(
+        string? manufacturer = "ACME",
         string? deviceUniqueId = "device-1",
         string? groupName = "default",
         string encryptedKeyValue = "encrypted:key",
@@ -53,6 +54,7 @@ public static class ApiTestData
         return new EncryptionKey
         {
             Id = Guid.NewGuid(),
+            Manufacturer = manufacturer,
             DeviceUniqueId = deviceUniqueId,
             GroupName = groupName,
             EncryptedKeyValue = encryptedKeyValue,

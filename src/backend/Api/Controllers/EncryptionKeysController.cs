@@ -21,9 +21,12 @@ public class EncryptionKeysController(
     }
 
     [HttpGet("device/{deviceUniqueId}")]
-    public async Task<IActionResult> GetByDevice(string deviceUniqueId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetByDevice(
+        string deviceUniqueId,
+        [FromQuery] string? manufacturer,
+        CancellationToken cancellationToken)
     {
-        var key = await queryHandler.HandleByDeviceAsync(deviceUniqueId, cancellationToken);
+        var key = await queryHandler.HandleByDeviceAsync(deviceUniqueId, manufacturer, cancellationToken);
         if (key is null)
             return NotFound();
 

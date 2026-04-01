@@ -14,14 +14,14 @@ public sealed class EncryptionKeysControllerTests_GetByDevice : IClassFixture<Ap
     public async Task Shall_return_matching_key_for_device_unique_id()
     {
         // Arrange
-        var key = ApiTestData.CreateEncryptionKey(deviceUniqueId: "device-1");
+        var key = ApiTestData.CreateEncryptionKey(manufacturer: "AXI", deviceUniqueId: "device-1");
         _dbContext.EncryptionKeys.Add(key);
         await _dbContext.SaveChangesAsync();
 
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetByDevice("device-1", CancellationToken.None);
+        var result = await controller.GetByDevice("device-1", "AXI", CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
@@ -36,7 +36,7 @@ public sealed class EncryptionKeysControllerTests_GetByDevice : IClassFixture<Ap
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetByDevice("missing-device", CancellationToken.None);
+        var result = await controller.GetByDevice("missing-device", "AXI", CancellationToken.None);
 
         // Assert
         Assert.IsType<NotFoundResult>(result);

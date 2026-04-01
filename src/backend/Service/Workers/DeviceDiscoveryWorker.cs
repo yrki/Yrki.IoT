@@ -8,7 +8,7 @@ public class DeviceDiscoveryWorker(
     IServiceScopeFactory scopeFactory,
     ILogger<DeviceDiscoveryWorker> logger) : BackgroundService
 {
-    private static readonly TimeSpan Interval = TimeSpan.FromHours(1);
+    private static readonly TimeSpan Interval = TimeSpan.FromMinutes(2);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -64,7 +64,7 @@ public class DeviceDiscoveryWorker(
             {
                 Id = Guid.NewGuid(),
                 UniqueId = sensorId,
-                Name = null,
+                Name = sensorId,
                 Description = string.Empty,
                 Type = "Unknown",
                 Manufacturer = latestReading.Manufacturer,

@@ -85,8 +85,7 @@ public class WMBusSerialWorker(
             if (string.IsNullOrEmpty(trimmed))
                 continue;
 
-            logger.LogInformation("Received serial data ({Length} chars): {Preview}",
-                trimmed.Length, trimmed.Length > 40 ? trimmed[..40] + "..." : trimmed);
+            logger.LogInformation("Received serial data ({Length} chars)", trimmed.Length);
 
             try
             {
@@ -96,7 +95,7 @@ public class WMBusSerialWorker(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to process serial line: {Line}", trimmed);
+                logger.LogWarning(ex, "Failed to process serial line ({Length} chars)", trimmed.Length);
             }
         }
     }

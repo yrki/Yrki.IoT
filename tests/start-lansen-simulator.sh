@@ -23,6 +23,11 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TESTS_DIR="$REPO_ROOT/tests"
 FRONTEND_DIR="$REPO_ROOT/src/frontend"
 
+if [[ -z "${ENCRYPTION_MASTER_KEY:-}" ]]; then
+    echo "ENCRYPTION_MASTER_KEY must be set in the environment."
+    exit 1
+fi
+
 # ── Sjekk avhengigheter ───────────────────────────────────────────────────────
 for cmd in socat python3 dotnet docker npm; do
     command -v "$cmd" >/dev/null 2>&1 || {
@@ -111,7 +116,7 @@ ConnectionStrings__DatabaseConnectionString="Host=localhost;Port=5432;Database=Y
 RabbitMq__Host=localhost \
 RabbitMq__Username=guest \
 RabbitMq__Password=guest \
-Encryption__MasterKey="Ae+/cx56gf9Zg5ECKYl67cOnP4QpiGdQczqrSU7MYbg=" \
+Encryption__MasterKey="$ENCRYPTION_MASTER_KEY" \
     dotnet run --project "$REPO_ROOT/src/backend/Api/Api.csproj" --no-build --no-launch-profile --urls "http://localhost:5180" &
 API_PID=$!
 
@@ -143,7 +148,7 @@ ConnectionStrings__DatabaseConnectionString="Host=localhost;Port=5432;Database=Y
 RabbitMq__Host=localhost \
 RabbitMq__Username=guest \
 RabbitMq__Password=guest \
-Encryption__MasterKey="Ae+/cx56gf9Zg5ECKYl67cOnP4QpiGdQczqrSU7MYbg=" \
+Encryption__MasterKey="$ENCRYPTION_MASTER_KEY" \
 WMBus__SerialPort="$READ_PTY" \
 WMBus__BaudRate=9600 \
     dotnet run --project "$REPO_ROOT/src/backend/Service/Service.csproj" --no-build --no-launch-profile

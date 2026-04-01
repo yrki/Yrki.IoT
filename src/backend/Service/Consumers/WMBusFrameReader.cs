@@ -17,8 +17,24 @@ public static class WMBusFrameReader
 {
     private const int MinHeaderLength = 10;
 
+    public static byte[] NormalizeFrame(byte[] frame)
+    {
+        if (frame.Length == 0)
+            return frame;
+
+        if (HasLengthField(frame))
+            return frame;
+
+        var normalizedFrame = new byte[frame.Length + 1];
+        normalizedFrame[0] = (byte)normalizedFrame.Length;
+        Array.Copy(frame, 0, normalizedFrame, 1, frame.Length);
+        return normalizedFrame;
+    }
+
     public static string ReadAField(byte[] frame)
     {
+        frame = NormalizeFrame(frame);
+
         if (frame.Length < MinHeaderLength)
             return "unknown";
 
@@ -28,6 +44,8 @@ public static class WMBusFrameReader
 
     public static string ReadManufacturer(byte[] frame)
     {
+        frame = NormalizeFrame(frame);
+
         if (frame.Length < MinHeaderLength)
             return "unknown";
 
@@ -38,4 +56,8 @@ public static class WMBusFrameReader
         char c3 = (char)((mField & 0x1F) + 64);
         return $"{c1}{c2}{c3}";
     }
+
+    private static bool HasLengthField(byte[] frame) =>
+        frame.Length > 0 &&
+        (frame[0] == frame.Length || frame[0] == frame.Length - 1);
 }

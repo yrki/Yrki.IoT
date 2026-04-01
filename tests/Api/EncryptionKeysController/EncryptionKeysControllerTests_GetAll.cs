@@ -14,8 +14,8 @@ public sealed class EncryptionKeysControllerTests_GetAll : IClassFixture<ApiData
     public async Task Shall_return_keys_ordered_by_device_and_group()
     {
         // Arrange
-        var firstKey = ApiTestData.CreateEncryptionKey(deviceUniqueId: "device-1", groupName: "alpha");
-        var secondKey = ApiTestData.CreateEncryptionKey(deviceUniqueId: "device-2", groupName: "beta");
+        var firstKey = ApiTestData.CreateEncryptionKey(manufacturer: "AXI", deviceUniqueId: "device-1", groupName: "alpha");
+        var secondKey = ApiTestData.CreateEncryptionKey(manufacturer: "LAS", deviceUniqueId: "device-2", groupName: "beta");
         _dbContext.EncryptionKeys.AddRange(secondKey, firstKey);
         await _dbContext.SaveChangesAsync();
 

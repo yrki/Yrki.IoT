@@ -1,11 +1,14 @@
 using service.Consumers;
 using Simulator;
+using Yrki.IoT.WMBus.Parser;
 
 namespace tests;
 
 [TestClass]
 public class WMBusFrameReaderTests
 {
+    private readonly Parser _parser = new();
+
     [TestMethod]
     public void Shall_read_afield_from_raw_wmbus_frame()
     {
@@ -45,5 +48,36 @@ public class WMBusFrameReaderTests
         // Assert
         Assert.AreEqual("unknown", aField);
         Assert.AreEqual("unknown", manufacturer);
+    }
+
+    [TestMethod]
+    public void Shall_read_axi_header_fields_from_frame_without_lfield()
+    {
+        // Arrange
+        var frame = Convert.FromHexString("4409072779130008167AA700300591717CF32546F5365F28844995E1FE6E1EAC44A26ABC7AFD1AF1189A0551B28EB4BFBA6B831088965D846B2A676BE4E0");
+
+        // Act
+        var aField = WMBusFrameReader.ReadAField(frame);
+        var manufacturer = WMBusFrameReader.ReadManufacturer(frame);
+
+        // Assert
+        Assert.AreEqual("27791300", aField);
+        Assert.AreEqual("AXI", manufacturer);
+    }
+
+    [TestMethod]
+    public void Shall_parse_axi_header_when_frame_without_lfield_is_normalized()
+    {
+        // Arrange
+        var frame = Convert.FromHexString("4409072779130008167AA700300591717CF32546F5365F28844995E1FE6E1EAC44A26ABC7AFD1AF1189A0551B28EB4BFBA6B831088965D846B2A676BE4E0");
+        var normalizedFrame = WMBusFrameReader.NormalizeFrame(frame);
+
+        // Act
+        var header = _parser.ParseHeader(normalizedFrame);
+
+        // Assert
+        Assert.AreEqual(normalizedFrame.Length, normalizedFrame[0]);
+        Assert.AreEqual("00137927", header.AField);
+        Assert.AreEqual("AXI", header.MField);
     }
 }

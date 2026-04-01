@@ -41,7 +41,7 @@ import {
   updateLocation,
 } from '../../api/api';
 
-import { LocationNode, buildTree, accumulatedDeviceCount, flattenTree } from './locationTree';
+import { LocationNode, buildTree, buildLocationOptions, accumulatedDeviceCount } from './locationTree';
 
 
 function filterTree(nodes: LocationNode[], term: string): LocationNode[] {
@@ -359,8 +359,8 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
       );
     });
 
-  const parentOptions = flattenTree(
-    buildTree(locations.filter((l) => l.id !== editingLocation?.id)),
+  const parentOptions = buildLocationOptions(
+    locations.filter((l) => l.id !== editingLocation?.id),
   );
 
   return (
