@@ -2,4 +2,7 @@ namespace Contracts.Readings;
 
 public record SensorPayload(
     string PayloadHex,
-    DateTimeOffset Timestamp);
+    DateTimeOffset Timestamp,
+    string Source = "serial",
+    string? GatewayId = null,
+    int? Rssi = null);

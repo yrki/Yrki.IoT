@@ -25,10 +25,21 @@ public class SensorReadingConsumer(
     {
         var msg = context.Message;
         var rawMessage = msg.PayloadHex.ToByteArray();
-        var header = _parser.ParseHeader(rawMessage);
+
+        WMBusMessage? header;
+        try
+        {
+            header = _parser.ParseHeader(rawMessage);
+        }
+        catch (NotImplementedException ex)
+        {
+            await HandleUnsupportedEncryptionAsync(rawMessage, msg, ex, context.CancellationToken);
+            return;
+        }
+
         var metadata = WMBusMessageMetadataMapper.Map(header);
 
-        var payload = await TryParsePayloadAsync(rawMessage, header, context.CancellationToken);
+        var payload = await TryParsePayloadAsync(rawMessage, header, msg, context.CancellationToken);
         if (payload is null)
             return;
 
@@ -36,12 +47,46 @@ public class SensorReadingConsumer(
         if (readings.Count == 0)
             return;
 
+        await StoreRawPayloadAsync(msg, header.AField, metadata.Manufacturer, null, context.CancellationToken);
         await UpsertDeviceAsync(readings[0], metadata, context.CancellationToken);
         await PersistReadingsAsync(readings, metadata, context.CancellationToken);
         await PublishNotificationsAsync(readings, context.CancellationToken);
     }
 
-    private async Task<IParsedPayload?> TryParsePayloadAsync(byte[] rawMessage, WMBusMessage header, CancellationToken cancellationToken)
+    private async Task HandleUnsupportedEncryptionAsync(
+        byte[] rawMessage,
+        SensorPayload msg,
+        NotImplementedException ex,
+        CancellationToken cancellationToken)
+    {
+        var deviceId = WMBusFrameReader.ReadAField(rawMessage);
+        var manufacturer = WMBusFrameReader.ReadManufacturer(rawMessage);
+
+        logger.LogWarning(
+            "Unsupported encryption method for device {DeviceId} ({Manufacturer}): {Message}. " +
+            "Add an encryption key for this device or update the parser.",
+            deviceId, manufacturer, ex.Message);
+
+        await StoreRawPayloadAsync(msg, deviceId, manufacturer, ex.Message, cancellationToken);
+
+        await UpsertDeviceAsync(
+            new SensorReading
+            {
+                SensorId = deviceId,
+                Manufacturer = manufacturer,
+                Timestamp = msg.Timestamp,
+                SensorType = "Unknown",
+                Value = 0
+            },
+            new WMBusMessageMetadata(manufacturer, "Unknown"),
+            cancellationToken);
+    }
+
+    private async Task<IParsedPayload?> TryParsePayloadAsync(
+        byte[] rawMessage,
+        WMBusMessage header,
+        SensorPayload msg,
+        CancellationToken cancellationToken)
     {
         var encryptionKey = await ResolveEncryptionKeyAsync(header, cancellationToken);
         try
@@ -51,6 +96,8 @@ public class SensorReadingConsumer(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to parse payload for sensor {SensorId} ({Manufacturer})", header.AField, header.MField);
+            var metadata = WMBusMessageMetadataMapper.Map(header);
+            await StoreRawPayloadAsync(msg, header.AField, metadata.Manufacturer, ex.Message, cancellationToken);
             return null;
         }
     }
@@ -82,6 +129,28 @@ public class SensorReadingConsumer(
         if (readings.Count == 0)
             logger.LogWarning("No mappable readings for sensor {SensorId} payload type {Type}", header.AField, payload.GetType().Name);
         return readings;
+    }
+
+    private async Task StoreRawPayloadAsync(
+        SensorPayload msg,
+        string? deviceId,
+        string? manufacturer,
+        string? error,
+        CancellationToken cancellationToken)
+    {
+        db.RawPayloads.Add(new RawPayload
+        {
+            Id = Guid.NewGuid(),
+            ReceivedAt = msg.Timestamp,
+            PayloadHex = msg.PayloadHex,
+            Source = msg.Source,
+            DeviceId = deviceId,
+            Manufacturer = manufacturer,
+            GatewayId = msg.GatewayId,
+            Rssi = msg.Rssi,
+            Error = error,
+        });
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task PersistReadingsAsync(
@@ -116,12 +185,14 @@ public class SensorReadingConsumer(
                 LastContact = reading.Timestamp,
                 InstallationDate = reading.Timestamp,
             });
+            await db.SaveChangesAsync(cancellationToken);
             return;
         }
 
         device.Type = metadata.DeviceType;
         device.Manufacturer = metadata.Manufacturer;
         device.LastContact = reading.Timestamp;
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task PublishNotificationsAsync(List<SensorReading> readings, CancellationToken cancellationToken)

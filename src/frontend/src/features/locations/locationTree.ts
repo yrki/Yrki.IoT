@@ -5,6 +5,10 @@ export interface LocationNode {
   children: LocationNode[];
 }
 
+function compareLocationNames(left: LocationDto, right: LocationDto): number {
+  return left.name.localeCompare(right.name, 'nb-NO', { sensitivity: 'base' });
+}
+
 export function buildTree(locations: LocationDto[]): LocationNode[] {
   const byId = new Map(locations.map((l) => [l.id, { location: l, children: [] as LocationNode[] }]));
   const roots: LocationNode[] = [];
@@ -19,7 +23,7 @@ export function buildTree(locations: LocationDto[]): LocationNode[] {
   }
 
   const sortNodes = (nodes: LocationNode[]) => {
-    nodes.sort((a, b) => a.location.name.localeCompare(b.location.name));
+    nodes.sort((a, b) => compareLocationNames(a.location, b.location));
     nodes.forEach((n) => sortNodes(n.children));
   };
   sortNodes(roots);

@@ -16,6 +16,7 @@ public class DatabaseContext : DbContext
     public DbSet<MagicLinkToken> MagicLinkTokens { get; set; }
     public DbSet<SensorReading> SensorReadings { get; set; }
     public DbSet<EncryptionKey> EncryptionKeys { get; set; }
+    public DbSet<RawPayload> RawPayloads { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -70,6 +71,21 @@ public class DatabaseContext : DbContext
             entity.Property(e => e.EncryptedKeyValue).IsRequired();
             entity.HasIndex(e => e.DeviceUniqueId);
             entity.HasIndex(e => e.GroupName);
+        });
+        modelBuilder.Entity<RawPayload>(entity =>
+        {
+            entity.ToTable("raw_payloads");
+            entity.HasKey(r => r.Id);
+            entity.Property(r => r.ReceivedAt).HasColumnName("received_at");
+            entity.Property(r => r.PayloadHex).HasColumnName("payload_hex").IsRequired();
+            entity.Property(r => r.Source).HasColumnName("source").IsRequired();
+            entity.Property(r => r.DeviceId).HasColumnName("device_id");
+            entity.Property(r => r.Manufacturer).HasColumnName("manufacturer");
+            entity.Property(r => r.GatewayId).HasColumnName("gateway_id");
+            entity.Property(r => r.Rssi).HasColumnName("rssi");
+            entity.Property(r => r.Error).HasColumnName("error");
+            entity.HasIndex(r => r.ReceivedAt);
+            entity.HasIndex(r => r.DeviceId);
         });
         modelBuilder.Entity<SensorReading>(entity =>
         {

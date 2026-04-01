@@ -4,6 +4,7 @@ using service.Consumers;
 using service.Services;
 using Core.Services.Encryption;
 using service.Hardware;
+using service.Mqtt;
 using service.Workers;
 using Serilog;
 using Serilog.Events;
@@ -28,6 +29,7 @@ try
             var config = context.Configuration;
 
             services.Configure<WMBusOptions>(config.GetSection("WMBus"));
+            services.Configure<MqttOptions>(config.GetSection("Mqtt"));
 
             var encryptionMasterKey = config["Encryption:MasterKey"]
                 ?? throw new InvalidOperationException("Encryption:MasterKey must be configured.");
@@ -55,6 +57,7 @@ try
             });
 
             services.AddHostedService<WMBusSerialWorker>();
+            services.AddHostedService<MqttWMBusWorker>();
             services.AddHostedService<DeviceDiscoveryWorker>();
         })
         .Build();

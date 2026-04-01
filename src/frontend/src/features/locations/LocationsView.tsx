@@ -61,6 +61,14 @@ function countNodes(nodes: LocationNode[]): number {
   return nodes.reduce((sum, n) => sum + 1 + countNodes(n.children), 0);
 }
 
+function sortSensorsByName(sensors: SensorListItemDto[]): SensorListItemDto[] {
+  return [...sensors].sort((left, right) => {
+    const leftName = left.name?.trim() || left.uniqueId;
+    const rightName = right.name?.trim() || right.uniqueId;
+    return leftName.localeCompare(rightName, 'nb-NO', { sensitivity: 'base' });
+  });
+}
+
 interface LocationsViewProps {
   onNavigateToLiveView: (locationId: string, locationName: string) => void;
   onNavigateToSensor: (sensorId: string) => void;
@@ -126,7 +134,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
           sensors = allDevices.filter((device) => device.locationId === locationId);
         }
       }
-      setLocationSensors((current) => ({ ...current, [locationId]: sensors }));
+      setLocationSensors((current) => ({ ...current, [locationId]: sortSensorsByName(sensors) }));
     } catch (err) {
       console.error('Failed to fetch sensors for location:', err);
       setLocationSensors((current) => ({ ...current, [locationId]: [] }));
@@ -183,6 +191,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
       const isExpanded = expandedIds.has(location.id);
       const sensorsOpen = sensorExpandedIds.has(location.id);
       const totalDevices = accumulatedDeviceCount(node);
+      const sensorContentPaddingLeft = 7 + depth * 3;
 
       return (
         <Fragment key={location.id}>
@@ -198,7 +207,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
                   size="small"
                   onClick={() => {
                     toggleExpanded(location.id);
-                    if (location.deviceCount > 0 && node.children.length === 0) {
+                    if (location.deviceCount > 0) {
                       toggleSensors(location.id);
                     }
                   }}
@@ -277,9 +286,9 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor }: LocationsVi
                 }}
               >
                 <Collapse in timeout="auto">
-                  <Box sx={{ p: 2.5, pl: 2.5 + depth * 3 }}>
+                  <Box sx={{ p: 2.5, pl: sensorContentPaddingLeft }}>
                     <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
-                      Sensors at this location
+                      {`Sensors at ${location.name}`}
                     </Typography>
                     {loadingLocationId === location.id ? (
                       <Typography variant="body2" sx={{ color: 'text.secondary' }}>

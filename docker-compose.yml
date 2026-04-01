@@ -17,6 +17,20 @@ services:
       timeout: 5s
       retries: 5
 
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./volumes/mosquitto/config:/mosquitto/config
+      - ./volumes/mosquitto/data:/mosquitto/data
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   rabbitmq:
     image: rabbitmq:3-management-alpine
     restart: unless-stopped
@@ -82,12 +96,18 @@ services:
       RabbitMq__Username: guest
       RabbitMq__Password: guest
       WMBus__Enabled: "false"
+      Mqtt__Enabled: "true"
+      Mqtt__Host: mosquitto
+      Mqtt__Port: 1883
+      Mqtt__Topic: wmbus/raw
       Api__BaseUrl: http://api:8080
       Encryption__MasterKey: ${ENCRYPTION_MASTER_KEY:-Ae+/cx56gf9Zg5ECKYl67cOnP4QpiGdQczqrSU7MYbg=}
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      mosquitto:
         condition: service_healthy
       api:
         condition: service_started
