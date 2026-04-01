@@ -28,13 +28,11 @@ import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
 import OpenInFullRoundedIcon from '@mui/icons-material/OpenInFullRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import EditLocationAltRoundedIcon from '@mui/icons-material/EditLocationAltRounded';
-import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { useSensorHub, SensorReading, SensorDataPoint } from './useSensorHub';
 import {
-  createLocation,
   createEncryptionKey,
   getDeviceByUniqueId,
   getDevices,
@@ -267,72 +265,11 @@ function StatisticPanel({ label, value, unit }: { label: string; value: number; 
   );
 }
 
-interface AddLocationDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onCreated: (location: LocationDto) => void;
-}
-
-function AddLocationDialog({ open, onClose, onCreated }: AddLocationDialogProps) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async () => {
-    if (!name.trim()) {
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const location = await createLocation(name.trim(), description.trim() || undefined);
-      onCreated(location);
-      setName('');
-      setDescription('');
-      onClose();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>Add Location</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          <TextField
-            label="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            fullWidth
-            size="small"
-            autoFocus
-          />
-          <TextField
-            label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            fullWidth
-            size="small"
-          />
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving || !name.trim()}>
-          {saving ? 'Creating...' : 'Create'}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
-
 interface EditSensorLocationDialogProps {
   open: boolean;
   device: SensorListItemDto | null;
   locations: LocationDto[];
   onClose: () => void;
-  onAddLocation: () => void;
   onSaved: (updatedDevice: SensorListItemDto) => void;
 }
 
@@ -341,7 +278,6 @@ interface EditSensorSettingsDialogProps {
   device: SensorListItemDto | null;
   locations: LocationDto[];
   onClose: () => void;
-  onAddLocation: () => void;
   onSaved: (updatedDevice: SensorListItemDto) => void;
 }
 
@@ -350,7 +286,6 @@ function EditSensorSettingsDialog({
   device,
   locations,
   onClose,
-  onAddLocation,
   onSaved,
 }: EditSensorSettingsDialogProps) {
   const [name, setName] = useState('');
@@ -358,7 +293,6 @@ function EditSensorSettingsDialog({
   const [locationId, setLocationId] = useState('');
   const [encryptionKeyId, setEncryptionKeyId] = useState<string | null>(null);
   const [encryptionKey, setEncryptionKey] = useState('');
-  const [encryptionKeyDescription, setEncryptionKeyDescription] = useState('');
   const [loadingKey, setLoadingKey] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -374,14 +308,12 @@ function EditSensorSettingsDialog({
     setLocationId(device.locationId ?? '');
     setEncryptionKey('');
     setEncryptionKeyId(null);
-    setEncryptionKeyDescription('');
     setError('');
     setLoadingKey(true);
 
     getEncryptionKeyByDevice(device.uniqueId, device.manufacturer ?? undefined)
       .then((key) => {
         setEncryptionKeyId(key?.id ?? null);
-        setEncryptionKeyDescription(key?.description ?? '');
         setEncryptionKey(key?.keyValue ?? '');
       })
       .catch((err) => {
@@ -405,21 +337,18 @@ function EditSensorSettingsDialog({
         locationId: locationId || undefined,
       });
 
-      const keyDescription = encryptionKeyDescription.trim();
       if (encryptionKey.trim()) {
         if (encryptionKeyId) {
           await updateEncryptionKey(encryptionKeyId, {
             manufacturer: device.manufacturer ?? undefined,
             deviceUniqueId: device.uniqueId,
             keyValue: encryptionKey.trim(),
-            description: keyDescription,
           });
         } else {
           const createdKey = await createEncryptionKey({
             manufacturer: device.manufacturer ?? undefined,
             deviceUniqueId: device.uniqueId,
             keyValue: encryptionKey.trim(),
-            description: keyDescription || undefined,
           });
           setEncryptionKeyId(createdKey.id);
         }
@@ -427,7 +356,6 @@ function EditSensorSettingsDialog({
         await updateEncryptionKey(encryptionKeyId, {
           manufacturer: device.manufacturer ?? undefined,
           deviceUniqueId: device.uniqueId,
-          description: keyDescription,
         });
       }
 
@@ -494,28 +422,23 @@ function EditSensorSettingsDialog({
             multiline
             rows={2}
           />
-          <Stack direction="row" spacing={1} alignItems="flex-end">
-            <FormControl fullWidth size="small">
-              <InputLabel>Location</InputLabel>
-              <Select
-                value={locationId}
-                label="Location"
-                onChange={(e) => setLocationId(e.target.value)}
-              >
-                <MenuItem value="">
-                  <em>None</em>
+          <FormControl fullWidth size="small">
+            <InputLabel>Location</InputLabel>
+            <Select
+              value={locationId}
+              label="Location"
+              onChange={(e) => setLocationId(e.target.value)}
+            >
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
+              {locationOptions.map(({ location, depth }) => (
+                <MenuItem key={location.id} value={location.id} sx={{ pl: 2 + depth * 2 }}>
+                  {location.name}
                 </MenuItem>
-                {locationOptions.map(({ location, depth }) => (
-                  <MenuItem key={location.id} value={location.id} sx={{ pl: 2 + depth * 2 }}>
-                    {location.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <Button variant="outlined" size="small" onClick={onAddLocation} sx={{ minWidth: 40, px: 1 }}>
-              <AddRoundedIcon fontSize="small" />
-            </Button>
-          </Stack>
+              ))}
+            </Select>
+          </FormControl>
           <TextField
             label="Encryption Key (AES-128 hex)"
             type="text"
@@ -539,14 +462,6 @@ function EditSensorSettingsDialog({
               input: { style: { fontFamily: 'monospace' } },
             }}
           />
-          <TextField
-            label="Encryption Key Description"
-            value={encryptionKeyDescription}
-            onChange={(e) => setEncryptionKeyDescription(e.target.value)}
-            fullWidth
-            size="small"
-            placeholder="Optional note for the stored key"
-          />
           {error ? <Alert severity="error">{error}</Alert> : null}
         </Stack>
       </DialogContent>
@@ -565,7 +480,6 @@ function EditSensorLocationDialog({
   device,
   locations,
   onClose,
-  onAddLocation,
   onSaved,
 }: EditSensorLocationDialogProps) {
   const [locationId, setLocationId] = useState('');
@@ -627,25 +541,20 @@ function EditSensorLocationDialog({
             size="small"
             disabled
           />
-          <Stack direction="row" spacing={1} alignItems="flex-end">
-            <FormControl fullWidth size="small">
-              <InputLabel>Location</InputLabel>
-              <Select
-                value={locationId}
-                label="Location"
-                onChange={(e) => setLocationId(e.target.value)}
-              >
-                {locationOptions.map(({ location, depth }) => (
-                  <MenuItem key={location.id} value={location.id} sx={{ pl: 2 + depth * 2 }}>
-                    {location.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <Button variant="outlined" size="small" onClick={onAddLocation} sx={{ minWidth: 40, px: 1 }}>
-              <AddRoundedIcon fontSize="small" />
-            </Button>
-          </Stack>
+          <FormControl fullWidth size="small">
+            <InputLabel>Location</InputLabel>
+            <Select
+              value={locationId}
+              label="Location"
+              onChange={(e) => setLocationId(e.target.value)}
+            >
+              {locationOptions.map(({ location, depth }) => (
+                <MenuItem key={location.id} value={location.id} sx={{ pl: 2 + depth * 2 }}>
+                  {location.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           {error ? <Alert severity="error">{error}</Alert> : null}
         </Stack>
       </DialogContent>
@@ -864,7 +773,6 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack }: Sens
   const [fullscreenSensorType, setFullscreenSensorType] = useState<string | null>(null);
   const [editLocationOpen, setEditLocationOpen] = useState(false);
   const [editSettingsOpen, setEditSettingsOpen] = useState(false);
-  const [addLocationOpen, setAddLocationOpen] = useState(false);
   const { readings, history, connected } = useSensorHub(selectedSensorId, hours);
 
   useEffect(() => {
@@ -930,10 +838,6 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack }: Sens
   const fullscreenConfig = fullscreenSensorType
     ? sensorTypeConfig[fullscreenSensorType] ?? { ...defaultConfig, label: fullscreenSensorType }
     : defaultConfig;
-
-  const handleLocationCreated = (location: LocationDto) => {
-    setLocations((prev) => [...prev, location].sort((left, right) => left.name.localeCompare(right.name)));
-  };
 
   const handleDeviceUpdated = (updatedDevice: SensorListItemDto) => {
     setDevices((prev) => prev.map((device) => device.id === updatedDevice.id ? updatedDevice : device));
@@ -1072,7 +976,6 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack }: Sens
         device={selectedDevice ?? null}
         locations={locations}
         onClose={() => setEditLocationOpen(false)}
-        onAddLocation={() => setAddLocationOpen(true)}
         onSaved={handleDeviceUpdated}
       />
 
@@ -1081,14 +984,7 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack }: Sens
         device={selectedDevice ?? null}
         locations={locations}
         onClose={() => setEditSettingsOpen(false)}
-        onAddLocation={() => setAddLocationOpen(true)}
         onSaved={handleDeviceUpdated}
-      />
-
-      <AddLocationDialog
-        open={addLocationOpen}
-        onClose={() => setAddLocationOpen(false)}
-        onCreated={handleLocationCreated}
       />
     </>
   );

@@ -261,7 +261,7 @@ describe('SensorsView', () => {
       manufacturer: 'Acme',
       deviceUniqueId: 'sensor-1',
       groupName: null,
-      description: 'Updated key',
+      description: 'Old key',
       keyValue: '00112233445566778899AABBCCDDEEFF',
       createdAt: '2026-03-30T09:00:00.000Z',
       updatedAt: '2026-03-30T10:00:00.000Z',
@@ -282,8 +282,6 @@ describe('SensorsView', () => {
     await user.click(await screen.findByRole('option', { name: 'Lab' }));
     await user.clear(within(dialog).getByLabelText('Encryption Key (AES-128 hex)'));
     await user.type(within(dialog).getByLabelText('Encryption Key (AES-128 hex)'), '00112233445566778899AABBCCDDEEFF');
-    await user.clear(within(dialog).getByLabelText('Encryption Key Description'));
-    await user.type(within(dialog).getByLabelText('Encryption Key Description'), 'Updated key');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
 
     // Assert
@@ -298,7 +296,6 @@ describe('SensorsView', () => {
       manufacturer: undefined,
       deviceUniqueId: 'sensor-1',
       keyValue: '00112233445566778899AABBCCDDEEFF',
-      description: 'Updated key',
     });
     expect(await screen.findByRole('heading', { name: 'Updated sensor (sensor-1)' })).toBeInTheDocument();
   });

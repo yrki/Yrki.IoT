@@ -199,12 +199,6 @@ public class SensorReadingConsumer(
         {
             if (LooksLikeHexKey(dbKey.EncryptedKeyValue))
             {
-                logger.LogWarning(
-                    "Encryption key for device {DeviceId} ({Manufacturer}) appears to be stored as plain hex instead of encrypted data. Using it as-is. Raw payload: {PayloadHex}",
-                    deviceId,
-                    manufacturer,
-                    payloadHex);
-
                 return dbKey.EncryptedKeyValue.Trim().ToUpperInvariant();
             }
 

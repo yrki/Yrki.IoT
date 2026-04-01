@@ -23,13 +23,11 @@ import {
   Typography,
 } from '@mui/material';
 import FiberNewRoundedIcon from '@mui/icons-material/FiberNewRounded';
-import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import {
   getNewDevices,
   updateDevice,
   getLocations,
-  createLocation,
   createEncryptionKey,
   NewDeviceDto,
   UpdateDeviceRequest,
@@ -46,73 +44,15 @@ function formatTimestamp(iso: string) {
   });
 }
 
-interface AddLocationDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onCreated: (location: LocationDto) => void;
-}
-
-function AddLocationDialog({ open, onClose, onCreated }: AddLocationDialogProps) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async () => {
-    if (!name.trim()) return;
-    setSaving(true);
-    try {
-      const location = await createLocation(name, description || undefined);
-      onCreated(location);
-      setName('');
-      setDescription('');
-      onClose();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>Add Location</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          <TextField
-            label="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            fullWidth
-            size="small"
-            autoFocus
-          />
-          <TextField
-            label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            fullWidth
-            size="small"
-          />
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" onClick={handleSave} disabled={saving || !name.trim()}>
-          {saving ? 'Creating...' : 'Create'}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
-
 interface EditDialogProps {
   device: NewDeviceDto | null;
   open: boolean;
   locations: LocationDto[];
   onClose: () => void;
   onSave: (id: string, request: UpdateDeviceRequest) => Promise<void>;
-  onAddLocation: () => void;
 }
 
-function EditDialog({ device, open, locations, onClose, onSave, onAddLocation }: EditDialogProps) {
+function EditDialog({ device, open, locations, onClose, onSave }: EditDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [locationId, setLocationId] = useState('');
@@ -199,33 +139,23 @@ function EditDialog({ device, open, locations, onClose, onSave, onAddLocation }:
             placeholder="Where is this sensor located? What does it measure?"
           />
 
-          <Stack direction="row" spacing={1} alignItems="flex-end">
-            <FormControl fullWidth size="small">
-              <InputLabel>Location</InputLabel>
-              <Select
-                value={locationId}
-                label="Location"
-                onChange={(e) => setLocationId(e.target.value)}
-              >
-                <MenuItem value="">
-                  <em>None</em>
-                </MenuItem>
-                {locationOptions.map(({ location, depth }) => (
-                  <MenuItem key={location.id} value={location.id} sx={{ pl: 2 + depth * 2 }}>
-                    {location.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={onAddLocation}
-              sx={{ minWidth: 40, px: 1 }}
+          <FormControl fullWidth size="small">
+            <InputLabel>Location</InputLabel>
+            <Select
+              value={locationId}
+              label="Location"
+              onChange={(e) => setLocationId(e.target.value)}
             >
-              <AddRoundedIcon fontSize="small" />
-            </Button>
-          </Stack>
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
+              {locationOptions.map(({ location, depth }) => (
+                <MenuItem key={location.id} value={location.id} sx={{ pl: 2 + depth * 2 }}>
+                  {location.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           <TextField
             label="Encryption Key (AES-128 hex)"
@@ -261,7 +191,6 @@ function NewSensorsView() {
   const [locations, setLocations] = useState<LocationDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [editDevice, setEditDevice] = useState<NewDeviceDto | null>(null);
-  const [addLocationOpen, setAddLocationOpen] = useState(false);
 
   const fetchDevices = async () => {
     setLoading(true);
@@ -292,10 +221,6 @@ function NewSensorsView() {
   const handleSave = async (id: string, request: UpdateDeviceRequest) => {
     await updateDevice(id, request);
     await fetchDevices();
-  };
-
-  const handleLocationCreated = (location: LocationDto) => {
-    setLocations((prev) => [...prev, location].sort((a, b) => a.name.localeCompare(b.name)));
   };
 
   return (
@@ -391,13 +316,6 @@ function NewSensorsView() {
         locations={locations}
         onClose={() => setEditDevice(null)}
         onSave={handleSave}
-        onAddLocation={() => setAddLocationOpen(true)}
-      />
-
-      <AddLocationDialog
-        open={addLocationOpen}
-        onClose={() => setAddLocationOpen(false)}
-        onCreated={handleLocationCreated}
       />
     </Paper>
   );
