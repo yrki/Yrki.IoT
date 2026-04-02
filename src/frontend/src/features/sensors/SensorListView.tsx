@@ -45,6 +45,18 @@ function normalizeSearchValue(value: string | null | undefined) {
   return (value ?? '').toLowerCase().replace(/[\s_-]+/g, '');
 }
 
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString([], {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+}
+
 function getActivityProgress(lastContact: string, now: number) {
   const ageMs = Math.max(0, now - new Date(lastContact).getTime());
   return Math.max(0, 1 - ageMs / activityFadeDurationMs);
@@ -413,7 +425,7 @@ function SensorListView({ onNavigateToLiveView }: SensorListViewProps) {
                 <TableCell>{sensor.manufacturer ?? '-'}</TableCell>
                 <TableCell>{sensor.type}</TableCell>
                 <TableCell>{sensor.locationName ?? '-'}</TableCell>
-                <TableCell>{new Date(sensor.lastContact).toLocaleString()}</TableCell>
+                <TableCell>{formatDateTime(sensor.lastContact)}</TableCell>
                 <TableCell>
                   <Stack direction="row" spacing={0.5}>
                     <Tooltip title="View live data">

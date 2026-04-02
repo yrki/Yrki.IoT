@@ -29,6 +29,18 @@ function normalizeSearchValue(value: string | null | undefined) {
   return (value ?? '').toLowerCase().replace(/[\s_-]+/g, '');
 }
 
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString([], {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+}
+
 function GatewayListView({ onNavigateToGateway }: GatewayListViewProps) {
   const [gateways, setGateways] = useState<SensorListItemDto[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -177,7 +189,7 @@ function GatewayListView({ onNavigateToGateway }: GatewayListViewProps) {
                 <TableCell sx={{ fontFamily: 'monospace' }}>{gateway.uniqueId}</TableCell>
                 <TableCell>{gateway.name ?? '-'}</TableCell>
                 <TableCell>{gateway.locationName ?? '-'}</TableCell>
-                <TableCell>{new Date(gateway.lastContact).toLocaleString()}</TableCell>
+                <TableCell>{formatDateTime(gateway.lastContact)}</TableCell>
               </TableRow>
             ))}
             {filteredGateways.length === 0 && (

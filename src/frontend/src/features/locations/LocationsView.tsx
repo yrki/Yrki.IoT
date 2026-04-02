@@ -72,6 +72,18 @@ function sortSensorsByName(sensors: SensorListItemDto[]): SensorListItemDto[] {
   });
 }
 
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString([], {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+}
+
 interface LocationsViewProps {
   onNavigateToLiveView: (locationId: string, locationName: string) => void;
   onNavigateToSensor: (sensorId: string) => void;
@@ -356,7 +368,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
                               <TableCell>{device.type}</TableCell>
                               <TableCell sx={{ color: 'text.secondary' }}>
                                 {device.lastContact
-                                  ? new Date(device.lastContact).toLocaleString()
+                                  ? formatDateTime(device.lastContact)
                                   : '-'}
                               </TableCell>
                             </TableRow>

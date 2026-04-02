@@ -63,16 +63,16 @@ interface SensorCardProps {
 }
 
 function formatTime(epoch: number) {
-  return new Date(epoch).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date(epoch).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 function formatDateTime(epoch: number) {
   return new Date(epoch).toLocaleDateString([], { day: 'numeric', month: 'short' })
-    + ' ' + new Date(epoch).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    + ' ' + new Date(epoch).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 function formatTimestamp(iso: string) {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 }
 
 function formatSensorHeading(name: string | null | undefined, sensorId: string) {
@@ -89,6 +89,7 @@ function formatDateLabel(iso: string) {
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
 }
 
@@ -96,11 +97,46 @@ function formatValue(value: number, decimals: number) {
   return value.toFixed(decimals);
 }
 
+function formatUtcDateTimeFromUnixSeconds(value: number) {
+  return `${new Date(value * 1000).toLocaleString([], {
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })} UTC`;
+}
+
+function formatUtcTimeFromUnixSeconds(value: number) {
+  return `${new Date(value * 1000).toLocaleTimeString([], {
+    timeZone: 'UTC',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })} UTC`;
+}
+
+function formatSensorValue(sensorType: string, value: number, decimals: number) {
+  if (sensorType === 'OnDate') {
+    return formatUtcDateTimeFromUnixSeconds(value);
+  }
+
+  return formatValue(value, decimals);
+}
+
+function isDateTimeSensorType(sensorType: string) {
+  return sensorType === 'OnDate';
+}
+
 function formatAverageRssi(value: number) {
   return value.toFixed(1);
 }
 
 function SensorHistoryChart({
+  sensorType,
   label,
   unit,
   decimals,
@@ -109,6 +145,7 @@ function SensorHistoryChart({
   hours,
   height,
 }: {
+  sensorType: string;
   label: string;
   unit: string;
   decimals: number;
@@ -120,7 +157,7 @@ function SensorHistoryChart({
   const showDate = hours > 24;
   const tickFormatter = showDate ? formatDateTime : formatTime;
   const gradientId = useId();
-  const yAxisWidth = decimals >= 3 ? 64 : decimals >= 2 ? 56 : 48;
+  const yAxisWidth = sensorType === 'OnDate' ? 88 : decimals >= 3 ? 64 : decimals >= 2 ? 56 : 48;
 
   return (
     <Box sx={{ width: '100%', height }}>
@@ -149,7 +186,9 @@ function SensorHistoryChart({
               axisLine={false}
               tickLine={false}
               width={yAxisWidth}
-              tickFormatter={(v: number) => v.toFixed(decimals)}
+              tickFormatter={(v: number) => sensorType === 'OnDate'
+                ? formatUtcTimeFromUnixSeconds(v)
+                : v.toFixed(decimals)}
             />
             <Tooltip
               contentStyle={{
@@ -159,7 +198,9 @@ function SensorHistoryChart({
                 fontSize: 12,
               }}
               labelFormatter={(v) => new Date(v as number).toLocaleString()}
-              formatter={(v) => [`${formatValue(v as number, decimals)} ${unit}`, label]}
+              formatter={(v) => [sensorType === 'OnDate'
+                ? formatSensorValue(sensorType, v as number, decimals)
+                : `${formatSensorValue(sensorType, v as number, decimals)} ${unit}`, label]}
             />
             <Area
               type="monotone"
@@ -184,6 +225,8 @@ function SensorHistoryChart({
 }
 
 function SensorCard({ sensorType, label, unit, decimals, icon, reading, history, color, hours, onOpenFullscreen }: SensorCardProps) {
+  const isDateTimeValue = isDateTimeSensorType(sensorType);
+
   return (
     <Paper
       sx={{
@@ -225,14 +268,22 @@ function SensorCard({ sensorType, label, unit, decimals, icon, reading, history,
 
       {reading ? (
         <>
-          <Typography variant="h3" sx={{ fontWeight: 800, mb: 0.5 }}>
-            {formatValue(reading.value, decimals)}
-            <Box component="span" sx={{ color: 'text.secondary', ml: 0.5, fontSize: '1.5rem', fontWeight: 500 }}>
-              {unit}
-            </Box>
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
-            {formatTimestamp(reading.timestamp)}
+          <Typography
+            variant={isDateTimeValue ? 'h5' : 'h3'}
+            sx={{
+              fontWeight: 800,
+              mb: 0.5,
+              lineHeight: isDateTimeValue ? 1.25 : undefined,
+              fontSize: isDateTimeValue ? { xs: '1.1rem', md: '1.25rem' } : undefined,
+              wordBreak: isDateTimeValue ? 'break-word' : undefined,
+            }}
+          >
+            {formatSensorValue(sensorType, reading.value, decimals)}
+            {unit ? (
+              <Box component="span" sx={{ color: 'text.secondary', ml: 0.5, fontSize: '1.5rem', fontWeight: 500 }}>
+                {unit}
+              </Box>
+            ) : null}
           </Typography>
         </>
       ) : (
@@ -242,6 +293,7 @@ function SensorCard({ sensorType, label, unit, decimals, icon, reading, history,
       )}
 
       <SensorHistoryChart
+        sensorType={sensorType}
         label={label}
         unit={unit}
         decimals={decimals}
@@ -254,7 +306,7 @@ function SensorCard({ sensorType, label, unit, decimals, icon, reading, history,
   );
 }
 
-function StatisticPanel({ label, value, unit, decimals }: { label: string; value: number; unit: string; decimals: number }) {
+function StatisticPanel({ sensorType, label, value, unit, decimals }: { sensorType: string; label: string; value: number; unit: string; decimals: number }) {
   return (
     <Paper
       variant="outlined"
@@ -269,7 +321,7 @@ function StatisticPanel({ label, value, unit, decimals }: { label: string; value
         {label}
       </Typography>
       <Typography variant="h5" sx={{ fontWeight: 700 }}>
-        {formatValue(value, decimals)} {unit}
+        {formatSensorValue(sensorType, value, decimals)}{unit ? ` ${unit}` : ''}
       </Typography>
     </Paper>
   );
@@ -626,6 +678,7 @@ function SensorFullscreenDialog({
   const sensorHistory = history[sensorType] ?? [];
   const statistics = calculateSensorStatistics(sensorHistory);
   const subtitle = sensorLocation ? `${label} - ${sensorLocation}` : label;
+  const isDateTimeValue = isDateTimeSensorType(sensorType);
 
   return (
     <Dialog fullScreen open={open} onClose={onClose}>
@@ -667,11 +720,22 @@ function SensorFullscreenDialog({
             <Box>
               {reading ? (
                 <>
-                  <Typography variant="h2" sx={{ fontWeight: 800, mb: 0.5 }}>
-                    {formatValue(reading.value, decimals)}
-                    <Box component="span" sx={{ color: 'text.secondary', ml: 1, fontSize: '2.125rem', fontWeight: 500 }}>
-                      {unit}
-                    </Box>
+                  <Typography
+                    variant={isDateTimeValue ? 'h4' : 'h2'}
+                    sx={{
+                      fontWeight: 800,
+                      mb: 0.5,
+                      lineHeight: isDateTimeValue ? 1.25 : undefined,
+                      fontSize: isDateTimeValue ? { xs: '1.5rem', md: '1.9rem' } : undefined,
+                      wordBreak: isDateTimeValue ? 'break-word' : undefined,
+                    }}
+                  >
+                    {formatSensorValue(sensorType, reading.value, decimals)}
+                    {unit ? (
+                      <Box component="span" sx={{ color: 'text.secondary', ml: 1, fontSize: '2.125rem', fontWeight: 500 }}>
+                        {unit}
+                      </Box>
+                    ) : null}
                   </Typography>
                   <Typography variant="body1" sx={{ color: 'text.secondary' }}>
                     Latest reading: {new Date(reading.timestamp).toLocaleString()}
@@ -705,10 +769,10 @@ function SensorFullscreenDialog({
           <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
             {statistics ? (
               <>
-                <StatisticPanel label="Lowest" value={statistics.min} unit={unit} decimals={decimals} />
-                <StatisticPanel label="Highest" value={statistics.max} unit={unit} decimals={decimals} />
-                <StatisticPanel label="Median" value={statistics.median} unit={unit} decimals={decimals} />
-                <StatisticPanel label="Average" value={statistics.average} unit={unit} decimals={decimals} />
+                <StatisticPanel sensorType={sensorType} label="Lowest" value={statistics.min} unit={unit} decimals={decimals} />
+                <StatisticPanel sensorType={sensorType} label="Highest" value={statistics.max} unit={unit} decimals={decimals} />
+                <StatisticPanel sensorType={sensorType} label="Median" value={statistics.median} unit={unit} decimals={decimals} />
+                <StatisticPanel sensorType={sensorType} label="Average" value={statistics.average} unit={unit} decimals={decimals} />
               </>
             ) : (
               <Typography variant="body1" sx={{ color: 'text.secondary' }}>
@@ -728,6 +792,7 @@ function SensorFullscreenDialog({
             }}
           >
             <SensorHistoryChart
+              sensorType={sensorType}
               label={label}
               unit={unit}
               decimals={decimals}
@@ -768,6 +833,8 @@ const sensorTypeConfig: Record<string, { label: string; unit: string; decimals: 
   LastMonthVolume: { label: 'Last month volume', unit: 'm\u00B3', decimals: 3, icon: <WaterRoundedIcon />, color: '#10b981' },
   LastMonthPositiveVolume: { label: 'Last month forward', unit: 'm\u00B3', decimals: 3, icon: <WaterRoundedIcon />, color: '#14b8a6' },
   LastMonthNegativeVolume: { label: 'Last month reverse', unit: 'm\u00B3', decimals: 3, icon: <WaterRoundedIcon />, color: '#fb7185' },
+  OnDate: { label: 'Sensor time', unit: '', decimals: 0, icon: <SpeedRoundedIcon />, color: '#818cf8' },
+  OnTime: { label: 'On time', unit: '', decimals: 0, icon: <SpeedRoundedIcon />, color: '#6366f1' },
   RemainingBattery: { label: 'Battery remaining', unit: '%', decimals: 0, icon: <SpeedRoundedIcon />, color: '#f59e0b' },
   AlarmCode: { label: 'Alarm code', unit: '', decimals: 0, icon: <SpeedRoundedIcon />, color: '#ef4444' },
   HasAlarm: { label: 'Alarm active', unit: '', decimals: 0, icon: <SpeedRoundedIcon />, color: '#dc2626' },
@@ -800,6 +867,7 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack, onNavi
   const [fullscreenSensorType, setFullscreenSensorType] = useState<string | null>(null);
   const [editLocationOpen, setEditLocationOpen] = useState(false);
   const [editSettingsOpen, setEditSettingsOpen] = useState(false);
+  const [lastReadingHighlightUntil, setLastReadingHighlightUntil] = useState(0);
   const { readings, history, connected } = useSensorHub(selectedSensorId, hours);
 
   useEffect(() => {
@@ -876,6 +944,16 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack, onNavi
   const deviceSelectValue = devices.some((device) => device.uniqueId === selectedSensorId)
     ? selectedSensorId
     : '';
+  const latestReadingTimestamp = Object.values(readings).reduce<string | null>((latest, reading) => {
+    if (!latest) {
+      return reading.timestamp;
+    }
+
+    return new Date(reading.timestamp).getTime() > new Date(latest).getTime()
+      ? reading.timestamp
+      : latest;
+  }, null);
+  const displayedLastReading = latestReadingTimestamp ?? selectedDevice?.lastContact ?? null;
   const fullscreenConfig = fullscreenSensorType
     ? sensorTypeConfig[fullscreenSensorType] ?? { ...defaultConfig, label: fullscreenSensorType }
     : defaultConfig;
@@ -883,6 +961,43 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack, onNavi
   const handleDeviceUpdated = (updatedDevice: SensorListItemDto) => {
     setDevices((prev) => prev.map((device) => device.id === updatedDevice.id ? updatedDevice : device));
   };
+
+  useEffect(() => {
+    if (!selectedSensorId || !latestReadingTimestamp) {
+      return;
+    }
+
+    setDevices((previous) => previous.map((device) => {
+      if (device.uniqueId !== selectedSensorId) {
+        return device;
+      }
+
+      if (new Date(device.lastContact).getTime() >= new Date(latestReadingTimestamp).getTime()) {
+        return device;
+      }
+
+      return {
+        ...device,
+        lastContact: latestReadingTimestamp,
+      };
+    }));
+
+    if (selectedDevice && new Date(latestReadingTimestamp).getTime() > new Date(selectedDevice.lastContact).getTime()) {
+      setLastReadingHighlightUntil(Date.now() + 2500);
+    }
+  }, [latestReadingTimestamp, selectedDevice, selectedSensorId]);
+
+  useEffect(() => {
+    if (lastReadingHighlightUntil <= Date.now()) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setLastReadingHighlightUntil(0);
+    }, Math.max(0, lastReadingHighlightUntil - Date.now()));
+
+    return () => window.clearTimeout(timeout);
+  }, [lastReadingHighlightUntil]);
 
   return (
     <>
@@ -932,13 +1047,29 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack, onNavi
               ) : null}
             </Stack>
             {selectedDevice ? (
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 1 }}>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  First reading: {formatDateLabel(selectedDevice.installationDate)}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Last reading: {formatDateLabel(selectedDevice.lastContact)}
-                </Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 1 }}>
+                <Chip
+                  label={`First reading: ${formatDateLabel(selectedDevice.installationDate)}`}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    color: 'text.secondary',
+                    borderColor: 'rgba(255,255,255,0.12)',
+                    backgroundColor: 'rgba(255,255,255,0.03)',
+                  }}
+                />
+                <Chip
+                  label={`Last reading: ${displayedLastReading ? formatDateLabel(displayedLastReading) : '-'}`}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    color: Date.now() < lastReadingHighlightUntil ? 'primary.light' : 'text.secondary',
+                    borderColor: Date.now() < lastReadingHighlightUntil ? 'rgba(92, 141, 255, 0.45)' : 'rgba(255,255,255,0.12)',
+                    backgroundColor: Date.now() < lastReadingHighlightUntil ? 'rgba(92, 141, 255, 0.12)' : 'rgba(255,255,255,0.03)',
+                    boxShadow: Date.now() < lastReadingHighlightUntil ? '0 0 12px rgba(92, 141, 255, 0.25)' : 'none',
+                    transition: 'color 200ms ease, background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease',
+                  }}
+                />
               </Stack>
             ) : null}
           </Box>
