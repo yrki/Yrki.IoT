@@ -495,3 +495,5 @@ $RECYCLE.BIN/
 
 # Claude Code settings (may contain secrets)
 .claude/settings.json
+
+.codex-tmp/
