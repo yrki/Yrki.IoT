@@ -5,10 +5,8 @@ using Core.Models;
 using Core.Services.Encryption;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Npgsql;
 using System.Security.Cryptography;
-using service.Configuration;
 using service.Services;
 using Yrki.IoT.WMBus.Parser;
 using Yrki.IoT.WMBus.Parser.Extensions;
@@ -19,7 +17,6 @@ public class SensorReadingConsumer(
     DatabaseContext db,
     ISensorHubNotifier hubNotifier,
     IKeyEncryptionService keyEncryptionService,
-    IOptions<WMBusOptions> wmBusOptions,
     ILogger<SensorReadingConsumer> logger) : IConsumer<SensorPayload>
 {
     private readonly Parser _parser = new();
@@ -203,13 +200,6 @@ public class SensorReadingConsumer(
             var resolvedDatabaseKey = TryResolveDatabaseEncryptionKey(dbKey, deviceId, manufacturer, payloadHex);
             if (!string.IsNullOrWhiteSpace(resolvedDatabaseKey))
                 return resolvedDatabaseKey;
-        }
-
-        if (deviceId is not null)
-        {
-            var configKey = wmBusOptions.Value.DeviceKeys.GetValueOrDefault(deviceId, string.Empty);
-            if (!string.IsNullOrWhiteSpace(configKey))
-                return configKey;
         }
 
         return string.Empty;

@@ -164,7 +164,6 @@ Relevant defaults from `docker-compose.yml`:
 - Host maps API to `http://localhost:8081`
 - Frontend container serves on `http://localhost:8080`
 - MQTT topic defaults to `wmbus/raw`
-- WMBus serial ingestion is currently disabled in compose with `WMBus__Enabled=false`
 
 ### Encryption master key
 

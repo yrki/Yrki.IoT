@@ -3,7 +3,6 @@ using service.Configuration;
 using service.Consumers;
 using service.Services;
 using Core.Services.Encryption;
-using service.Hardware;
 using service.Mqtt;
 using service.Workers;
 using Serilog;
@@ -29,7 +28,6 @@ try
         {
             var config = context.Configuration;
 
-            services.Configure<WMBusOptions>(config.GetSection("WMBus"));
             services.Configure<MqttOptions>(config.GetSection("Mqtt"));
 
             var encryptionMasterKey = config["Encryption:MasterKey"]
@@ -57,7 +55,6 @@ try
                 });
             });
 
-            services.AddHostedService<WMBusSerialWorker>();
             services.AddHostedService<MqttWMBusWorker>();
             services.AddHostedService<DeviceDiscoveryWorker>();
         })

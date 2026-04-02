@@ -95,7 +95,6 @@ services:
       RabbitMq__Port: 5672
       RabbitMq__Username: guest
       RabbitMq__Password: guest
-      WMBus__Enabled: "false"
       Mqtt__Enabled: "true"
       Mqtt__Host: mosquitto
       Mqtt__Port: 1883
