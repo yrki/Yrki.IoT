@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AppBar,
   Box,
@@ -13,6 +13,7 @@ import {
   useTheme,
 } from '@mui/material';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
+import { matchPath, useLocation, useNavigate } from 'react-router-dom';
 import LeftDrawer, { NavigationSection } from './leftdrawer';
 import { ICurrentUser } from '../api/models/IAuthResponse';
 import LoginDialog from './LoginDialog';
@@ -26,58 +27,101 @@ const GatewayView = lazy(() => import('../features/gateways/GatewayView'));
 
 const drawerWidth = 300;
 
-interface LiveViewParams {
-  sensorId?: string;
-  locationId?: string;
-  locationName?: string;
-}
-
-interface GatewayViewParams {
-  gatewayId?: string;
-}
-
 interface TopmenuProps {
   currentUser: ICurrentUser | null;
   onRequestMagicLink: (email: string) => Promise<void>;
   onLogout: () => void;
 }
 
+function getSectionFromPath(pathname: string): NavigationSection {
+  if (matchPath('/sensors/:sensorId', pathname) || matchPath('/locations/:locationId', pathname)) {
+    return 'Live View';
+  }
+
+  if (matchPath('/gateways/:gatewayId', pathname)) {
+    return 'Gateway View';
+  }
+
+  if (pathname.startsWith('/gateways')) {
+    return 'Gateways';
+  }
+
+  if (pathname.startsWith('/locations')) {
+    return 'Locations';
+  }
+
+  if (pathname.startsWith('/new-sensors')) {
+    return 'New Sensors';
+  }
+
+  return 'Sensors';
+}
+
+function getPrimaryPath(section: NavigationSection) {
+  switch (section) {
+    case 'Gateways':
+      return '/gateways';
+    case 'Locations':
+      return '/locations';
+    case 'New Sensors':
+      return '/new-sensors';
+    case 'Sensors':
+    default:
+      return '/sensors';
+  }
+}
+
 function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
   const [loginOpen, setLoginOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [selectedSection, setSelectedSection] = useState<NavigationSection>('Sensors');
-  const [previousSection, setPreviousSection] = useState<NavigationSection>('Sensors');
-  const [liveViewParams, setLiveViewParams] = useState<LiveViewParams>({});
-  const [gatewayViewParams, setGatewayViewParams] = useState<GatewayViewParams>({});
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const navigateToLiveView = useCallback((params: LiveViewParams) => {
-    if (selectedSection !== 'Live View') {
-      setPreviousSection(selectedSection);
-    }
-    setLiveViewParams(params);
-    setSelectedSection('Live View');
-  }, [selectedSection]);
+  const selectedSection = useMemo(
+    () => getSectionFromPath(location.pathname),
+    [location.pathname],
+  );
 
-  const handleSelectSection = useCallback((section: NavigationSection) => {
-    setSelectedSection(section);
-    if (section !== 'Live View') {
-      setLiveViewParams({});
+  useEffect(() => {
+    const isKnownRoute = [
+      '/sensors',
+      '/gateways',
+      '/locations',
+      '/new-sensors',
+    ].some((path) => location.pathname === path)
+      || matchPath('/sensors/:sensorId', location.pathname)
+      || matchPath('/locations/:locationId', location.pathname)
+      || matchPath('/gateways/:gatewayId', location.pathname);
+
+    if (!isKnownRoute) {
+      navigate('/sensors', { replace: true });
     }
-    if (section !== 'Gateway View') {
-      setGatewayViewParams({});
-    }
-    setMobileOpen(false);
-  }, []);
+  }, [location.pathname, navigate]);
+
+  const navigateToSensorView = useCallback((sensorId: string) => {
+    navigate(`/sensors/${encodeURIComponent(sensorId)}`, {
+      state: { from: location.pathname },
+    });
+  }, [location.pathname, navigate]);
+
+  const navigateToLocationView = useCallback((locationId: string) => {
+    navigate(`/locations/${encodeURIComponent(locationId)}`, {
+      state: { from: location.pathname },
+    });
+  }, [location.pathname, navigate]);
 
   const navigateToGatewayView = useCallback((gatewayId: string) => {
-    if (selectedSection !== 'Gateway View') {
-      setPreviousSection(selectedSection);
-    }
-    setGatewayViewParams({ gatewayId });
-    setSelectedSection('Gateway View');
-  }, [selectedSection]);
+    navigate(`/gateways/${encodeURIComponent(gatewayId)}`, {
+      state: { from: location.pathname },
+    });
+  }, [location.pathname, navigate]);
+
+  const handleSelectSection = useCallback((section: NavigationSection) => {
+    navigate(getPrimaryPath(section));
+    setMobileOpen(false);
+  }, [navigate]);
 
   const drawer = (
     <LeftDrawer
@@ -93,43 +137,59 @@ function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
   );
 
   const renderMainContent = () => {
+    const sensorMatch = matchPath('/sensors/:sensorId', location.pathname);
+    const locationMatch = matchPath('/locations/:locationId', location.pathname);
+    const gatewayMatch = matchPath('/gateways/:gatewayId', location.pathname);
+    const fromPath = typeof location.state === 'object' && location.state && 'from' in location.state
+      ? String(location.state.from)
+      : null;
+
+    if (sensorMatch?.params.sensorId) {
+      return (
+        <SensorsView
+          initialSensorId={decodeURIComponent(sensorMatch.params.sensorId)}
+          onBack={() => navigate(fromPath || '/sensors')}
+          onNavigateToGateway={navigateToGatewayView}
+        />
+      );
+    }
+
+    if (locationMatch?.params.locationId) {
+      return (
+        <SensorsView
+          locationId={decodeURIComponent(locationMatch.params.locationId)}
+          onBack={() => navigate(fromPath || '/locations')}
+          onNavigateToGateway={navigateToGatewayView}
+        />
+      );
+    }
+
+    if (gatewayMatch?.params.gatewayId) {
+      return (
+        <GatewayView
+          gatewayId={decodeURIComponent(gatewayMatch.params.gatewayId)}
+          onBack={() => navigate(fromPath || '/gateways')}
+          onNavigateToSensor={navigateToSensorView}
+        />
+      );
+    }
+
     switch (selectedSection) {
-      case 'Sensors':
-        return <SensorListView onNavigateToLiveView={(sensorId) => navigateToLiveView({ sensorId })} />;
       case 'Gateways':
         return <GatewayListView onNavigateToGateway={navigateToGatewayView} />;
       case 'Locations':
         return (
           <LocationsView
-            onNavigateToLiveView={(locationId, locationName) => navigateToLiveView({ locationId, locationName })}
-            onNavigateToSensor={(sensorId) => navigateToLiveView({ sensorId })}
+            onNavigateToLiveView={(locationId) => navigateToLocationView(locationId)}
+            onNavigateToSensor={navigateToSensorView}
             onNavigateToGateway={navigateToGatewayView}
           />
         );
       case 'New Sensors':
         return <NewSensorsView />;
-      case 'Live View':
-        return (
-          <SensorsView
-            initialSensorId={liveViewParams.sensorId}
-            locationId={liveViewParams.locationId}
-            locationName={liveViewParams.locationName}
-            onBack={() => setSelectedSection(previousSection)}
-            onNavigateToGateway={navigateToGatewayView}
-          />
-        );
-      case 'Gateway View':
-        return gatewayViewParams.gatewayId ? (
-          <GatewayView
-            gatewayId={gatewayViewParams.gatewayId}
-            onBack={() => setSelectedSection(previousSection)}
-            onNavigateToSensor={(sensorId) => navigateToLiveView({ sensorId })}
-          />
-        ) : (
-          <GatewayListView onNavigateToGateway={navigateToGatewayView} />
-        );
+      case 'Sensors':
       default:
-        return <SensorListView onNavigateToLiveView={(sensorId) => navigateToLiveView({ sensorId })} />;
+        return <SensorListView onNavigateToLiveView={navigateToSensorView} />;
     }
   };
 

@@ -1,6 +1,7 @@
 import './App.css';
 import { Alert, Box, CircularProgress, ThemeProvider } from '@mui/material';
 import { useEffect, useState } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import Topmenu from './components/topmenu';
 import theme from './styles/styles';
 import { getCurrentUser, requestMagicLink, setAccessToken } from './api/api';
@@ -48,14 +49,6 @@ function App() {
     setCurrentUser(null);
   };
 
-  if (window.location.pathname === '/auth/callback') {
-    return (
-      <ThemeProvider theme={theme}>
-        <AuthCallback onAuthenticated={handleAuthenticated} />
-      </ThemeProvider>
-    );
-  }
-
   if (!authReady) {
     return (
       <ThemeProvider theme={theme}>
@@ -68,18 +61,27 @@ function App() {
 
   return (
     <ThemeProvider theme={theme}>
-      <Box className="app-shell">
-        {!currentUser && (
-          <Alert severity="info" className="app-shell__notice">
-            Sign in with your email to access the API-backed features.
-          </Alert>
-        )}
-        <Topmenu
-          currentUser={currentUser}
-          onRequestMagicLink={handleRequestMagicLink}
-          onLogout={handleLogout}
+      <Routes>
+        <Route path="/auth/callback" element={<AuthCallback onAuthenticated={handleAuthenticated} />} />
+        <Route
+          path="*"
+          element={(
+            <Box className="app-shell">
+              {!currentUser && (
+                <Alert severity="info" className="app-shell__notice">
+                  Sign in with your email to access the API-backed features.
+                </Alert>
+              )}
+              <Topmenu
+                currentUser={currentUser}
+                onRequestMagicLink={handleRequestMagicLink}
+                onLogout={handleLogout}
+              />
+            </Box>
+          )}
         />
-      </Box>
+        <Route path="/" element={<Navigate to="/sensors" replace />} />
+      </Routes>
     </ThemeProvider>
   );
 }
