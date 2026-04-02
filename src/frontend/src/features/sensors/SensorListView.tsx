@@ -23,7 +23,9 @@ import {
   TextField,
   Tooltip,
   Typography,
+  Link,
 } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
@@ -31,10 +33,6 @@ import { deleteDevice, getDevices, SensorListItemDto } from '../../api/api';
 
 type SortableField = 'uniqueId' | 'name' | 'manufacturer' | 'type' | 'locationName' | 'lastContact';
 type SortDirection = 'asc' | 'desc';
-
-interface SensorListViewProps {
-  onNavigateToLiveView: (sensorId: string) => void;
-}
 
 const activityFadeDurationMs = 6 * 60 * 60 * 1000;
 const activityBlinkDurationMs = 2500;
@@ -89,7 +87,11 @@ function buildConnection() {
     .build();
 }
 
-function SensorListView({ onNavigateToLiveView }: SensorListViewProps) {
+function buildSensorHref(sensorId: string) {
+  return `/sensors/${encodeURIComponent(sensorId)}`;
+}
+
+function SensorListView() {
   const [sensors, setSensors] = useState<SensorListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -370,11 +372,9 @@ function SensorListView({ onNavigateToLiveView }: SensorListViewProps) {
                 key={sensor.id}
                 hover
                 sx={{
-                  cursor: 'pointer',
                   '&:last-child td': { borderBottom: 0 },
                   '& .MuiTableCell-root': { borderBottomColor: 'rgba(255,255,255,0.06)' },
                 }}
-                onClick={() => onNavigateToLiveView(sensor.uniqueId)}
               >
                 <TableCell>
                   <Stack direction="row" spacing={1.25} alignItems="center">
@@ -416,12 +416,27 @@ function SensorListView({ onNavigateToLiveView }: SensorListViewProps) {
                         }}
                       />
                     </Tooltip>
-                    <Typography component="span" sx={{ fontFamily: 'monospace' }}>
+                    <Link
+                      component={RouterLink}
+                      to={buildSensorHref(sensor.uniqueId)}
+                      underline="hover"
+                      color="inherit"
+                      sx={{ fontFamily: 'monospace' }}
+                    >
                       {sensor.uniqueId}
-                    </Typography>
+                    </Link>
                   </Stack>
                 </TableCell>
-                <TableCell>{sensor.name ?? '-'}</TableCell>
+                <TableCell>
+                  <Link
+                    component={RouterLink}
+                    to={buildSensorHref(sensor.uniqueId)}
+                    underline="hover"
+                    color="inherit"
+                  >
+                    {sensor.name ?? '-'}
+                  </Link>
+                </TableCell>
                 <TableCell>{sensor.manufacturer ?? '-'}</TableCell>
                 <TableCell>{sensor.type}</TableCell>
                 <TableCell>{sensor.locationName ?? '-'}</TableCell>
@@ -433,8 +448,9 @@ function SensorListView({ onNavigateToLiveView }: SensorListViewProps) {
                         size="small"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onNavigateToLiveView(sensor.uniqueId);
                         }}
+                        component={RouterLink}
+                        to={buildSensorHref(sensor.uniqueId)}
                       >
                         <OpenInNewRoundedIcon fontSize="small" />
                       </IconButton>

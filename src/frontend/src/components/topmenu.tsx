@@ -189,7 +189,7 @@ function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
         return <NewSensorsView />;
       case 'Sensors':
       default:
-        return <SensorListView onNavigateToLiveView={navigateToSensorView} />;
+        return <SensorListView />;
     }
   };
 

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import SensorListView from './SensorListView';
 
 const { getDevices, deleteDevice } = vi.hoisted(() => ({
@@ -59,6 +60,7 @@ vi.mock('recharts', () => {
 
 describe('SensorListView', () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     getDevices.mockResolvedValue([
       {
         id: 'device-1',
@@ -89,10 +91,13 @@ describe('SensorListView', () => {
   it('Shall_search_sensors_by_unique_id', async () => {
     // Arrange
     const user = userEvent.setup();
-    const onNavigateToLiveView = vi.fn();
 
     // Act
-    render(<SensorListView onNavigateToLiveView={onNavigateToLiveView} />);
+    render(
+      <MemoryRouter>
+        <SensorListView />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => expect(screen.getByText('CO2-2026-001')).toBeInTheDocument());
     await user.type(screen.getByPlaceholderText('Search sensors by name, uniqueId or location'), 'co22026001');
@@ -104,14 +109,30 @@ describe('SensorListView', () => {
 
   it('Shall_render_sensor_activity_indicator_in_list', async () => {
     // Arrange
-    const onNavigateToLiveView = vi.fn();
-
     // Act
-    render(<SensorListView onNavigateToLiveView={onNavigateToLiveView} />);
+    render(
+      <MemoryRouter>
+        <SensorListView />
+      </MemoryRouter>,
+    );
 
     // Assert
     await waitFor(() => expect(screen.getByText('CO2-2026-001')).toBeInTheDocument());
     expect(screen.getByTestId('sensor-activity-device-1')).toBeInTheDocument();
     expect(screen.getByTestId('sensor-activity-device-2')).toBeInTheDocument();
+  });
+
+  it('Shall_render_sensor_links_with_sensor_routes', async () => {
+    // Act
+    render(
+      <MemoryRouter>
+        <SensorListView />
+      </MemoryRouter>,
+    );
+
+    // Assert
+    await waitFor(() => expect(screen.getByText('CO2-2026-001')).toBeInTheDocument());
+    expect(screen.getByRole('link', { name: 'CO2-2026-001' })).toHaveAttribute('href', '/sensors/CO2-2026-001');
+    expect(screen.getByRole('link', { name: 'Office sensor' })).toHaveAttribute('href', '/sensors/CO2-2026-001');
   });
 });
