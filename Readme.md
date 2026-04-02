@@ -233,16 +233,32 @@ dotnet test src/backend/tests/tests.csproj
 
 ## Data flow
 
-The typical runtime flow is:
+```mermaid
+flowchart LR
+    gateway[Gateway or MQTT publisher]
+    mqtt[MQTT topic: wmbus/raw]
+    service[Backend Service]
+    raw[(raw_payloads)]
+    parser[WMBus parser]
+    readings[(sensor_readings)]
+    gatewayReadings[(gateway_readings)]
+    api[Backend API]
+    signalr[SignalR hub]
+    ui[React frontend]
 
-1. A gateway publishes raw WMBus payloads to MQTT.
-2. `src/backend/Service` receives the payload.
-3. Raw payloads are stored in the database.
-4. Supported payloads are parsed into sensor readings.
-5. Readings are stored in `sensor_readings`.
-6. Gateway contact is stored and aggregated for sensor/gateway views.
-7. The API exposes readings and metadata.
-8. The frontend loads historical data and subscribes to live SignalR updates.
+    gateway --> mqtt
+    mqtt --> service
+    service --> raw
+    service --> parser
+    parser --> readings
+    service --> gatewayReadings
+    api --> ui
+    readings --> api
+    gatewayReadings --> api
+    raw --> api
+    signalr --> ui
+    service --> signalr
+```
 
 ## Notes
 
