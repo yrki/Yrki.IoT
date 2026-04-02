@@ -17,6 +17,8 @@ public class SensorReadingMapperTests
             NegativeVolume = 0.12,
             Flow = 456,
             Temperature = 12.3,
+            OnDate = 861545491,
+            OnTime = 1337,
             RemainingBatteryCapacity = 87,
             ErrorCode = 0,
             ErrorFreeTime = 3600,
@@ -32,13 +34,15 @@ public class SensorReadingMapperTests
             timestamp);
 
         // Assert
-        Assert.AreEqual(10, readings.Count);
+        Assert.AreEqual(12, readings.Count);
         AssertReading(readings, "TotalVolume", 123.45m);
         AssertReading(readings, "PositiveVolume", 123.45m);
         AssertReading(readings, "NegativeVolume", 0.12m);
         AssertReading(readings, "LastMonthVolume", 120m);
         AssertReading(readings, "Flow", 456m);
         AssertReading(readings, "Temperature", 12.3m);
+        AssertReading(readings, "OnDate", 861545491m);
+        AssertReading(readings, "OnTime", 1337m);
         AssertReading(readings, "RemainingBattery", 87m);
         AssertReading(readings, "AlarmCode", 0m);
         AssertReading(readings, "HasAlarm", 0m);

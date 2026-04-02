@@ -62,6 +62,8 @@ public static class SensorReadingMapper
             ("LastMonthNegativeVolume", payload.LastMonthNegativeVolume),
             ("Flow", payload.Flow.HasValue ? (double?)payload.Flow.Value : null),
             ("Temperature", payload.Temperature),
+            ("OnDate", payload.OnDate.HasValue ? (double?)payload.OnDate.Value : null),
+            ("OnTime", payload.OnTime.HasValue ? (double?)payload.OnTime.Value : null),
             ("RemainingBattery", payload.RemainingBatteryCapacity.HasValue ? (double?)payload.RemainingBatteryCapacity.Value : null),
             ("AlarmCode", payload.ErrorCode.HasValue ? (double?)payload.ErrorCode.Value : null),
             ("HasAlarm", payload.ErrorCode.HasValue ? payload.ErrorCode.Value == 0 ? 0d : 1d : null),
