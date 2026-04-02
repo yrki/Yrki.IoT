@@ -21,6 +21,8 @@ export interface SensorDataPoint {
 export type SensorValues = Record<string, SensorReading>;
 export type SensorHistory = Record<string, SensorDataPoint[]>;
 
+const rssiSensorType = 'RSSI';
+
 function toDataPoint(r: SensorReadingDto): SensorDataPoint {
   return { time: new Date(r.timestamp).getTime(), value: r.value };
 }
@@ -38,16 +40,37 @@ export function useSensorHub(sensorId: string, hours: number, enabled = true) {
     const time = new Date(reading.timestamp).getTime();
     const cutoff = Date.now() - hours * 60 * 60 * 1000;
 
-    setReadings((prev) => ({
-      ...prev,
-      [reading.sensorType]: reading,
-    }));
+    setReadings((prev) => {
+      const next = {
+        ...prev,
+        [reading.sensorType]: reading,
+      };
+
+      if (reading.rssi !== null && reading.rssi !== undefined) {
+        next[rssiSensorType] = {
+          sensorId: reading.sensorId,
+          sensorType: rssiSensorType,
+          value: reading.rssi,
+          timestamp: reading.timestamp,
+          gatewayId: reading.gatewayId,
+          rssi: reading.rssi,
+        };
+      }
+
+      return next;
+    });
 
     setHistory((prev) => {
       const existing = prev[reading.sensorType] ?? [];
-      const updated = [...existing, { time, value: reading.value }]
-        .filter((p) => p.time >= cutoff);
-      return { ...prev, [reading.sensorType]: updated };
+      const updated = [...existing, { time, value: reading.value }].filter((p) => p.time >= cutoff);
+      const next = { ...prev, [reading.sensorType]: updated };
+
+      if (reading.rssi !== null && reading.rssi !== undefined) {
+        const existingRssi = prev[rssiSensorType] ?? [];
+        next[rssiSensorType] = [...existingRssi, { time, value: reading.rssi }].filter((p) => p.time >= cutoff);
+      }
+
+      return next;
     });
   }, [sensorId, hours]);
 
@@ -74,6 +97,12 @@ export function useSensorHub(sensorId: string, hours: number, enabled = true) {
           const arr = historyMap[r.sensorType] ?? [];
           arr.push(toDataPoint(r));
           historyMap[r.sensorType] = arr;
+
+          if (r.rssi !== null && r.rssi !== undefined) {
+            const rssiHistory = historyMap[rssiSensorType] ?? [];
+            rssiHistory.push({ time: new Date(r.timestamp).getTime(), value: r.rssi });
+            historyMap[rssiSensorType] = rssiHistory;
+          }
         }
         setHistory(historyMap);
       } else {
@@ -91,6 +120,17 @@ export function useSensorHub(sensorId: string, hours: number, enabled = true) {
             gatewayId: r.gatewayId,
             rssi: r.rssi,
           };
+
+          if (r.rssi !== null && r.rssi !== undefined) {
+            latestMap[rssiSensorType] = {
+              sensorId: r.sensorId,
+              sensorType: rssiSensorType,
+              value: r.rssi,
+              timestamp: r.timestamp,
+              gatewayId: r.gatewayId,
+              rssi: r.rssi,
+            };
+          }
         }
         setReadings(latestMap);
       } else {

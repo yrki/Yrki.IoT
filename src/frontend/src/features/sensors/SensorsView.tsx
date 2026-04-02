@@ -30,6 +30,7 @@ import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import EditLocationAltRoundedIcon from '@mui/icons-material/EditLocationAltRounded';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
+import RouterRoundedIcon from '@mui/icons-material/RouterRounded';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { useSensorHub, SensorReading, SensorDataPoint } from './useSensorHub';
 import {
@@ -826,6 +827,7 @@ const sensorTypeConfig: Record<string, { label: string; unit: string; decimals: 
   OperatingTimeInDays: { label: 'Operating time', unit: 'days', decimals: 0, icon: <SpeedRoundedIcon />, color: '#38bdf8' },
   ProductVersion: { label: 'Product version', unit: '', decimals: 0, icon: <SpeedRoundedIcon />, color: '#94a3b8' },
   Flow: { label: 'Flow', unit: 'l/h', decimals: 0, icon: <SpeedRoundedIcon />, color: '#a78bfa' },
+  RSSI: { label: 'Signal strength', unit: 'dBm', decimals: 0, icon: <RouterRoundedIcon />, color: '#22c55e' },
   Volume: { label: 'Volume', unit: 'm\u00B3', decimals: 3, icon: <WaterRoundedIcon />, color: '#34d399' },
   TotalVolume: { label: 'Total volume', unit: 'm\u00B3', decimals: 3, icon: <WaterRoundedIcon />, color: '#34d399' },
   PositiveVolume: { label: 'Forward volume', unit: 'm\u00B3', decimals: 3, icon: <WaterRoundedIcon />, color: '#2dd4bf' },

@@ -147,12 +147,23 @@ describe('SensorsView', () => {
             value: 22.4,
             timestamp: '2026-03-30T09:00:00.000Z',
           },
+          RSSI: {
+            sensorId: 'sensor-1',
+            sensorType: 'RSSI',
+            value: -72,
+            timestamp: '2026-03-30T09:00:00.000Z',
+          },
         },
         history: {
           Temperature: [
             { time: 1, value: 18 },
             { time: 2, value: 22 },
             { time: 3, value: 26 },
+          ],
+          RSSI: [
+            { time: 1, value: -75 },
+            { time: 2, value: -73 },
+            { time: 3, value: -72 },
           ],
         },
         connected: true,
@@ -172,6 +183,8 @@ describe('SensorsView', () => {
     expect(screen.getByText('Gateways')).toBeInTheDocument();
     expect(screen.getByText('gw-1')).toBeInTheDocument();
     expect(screen.getByText('Avg RSSI: -77.5')).toBeInTheDocument();
+    expect(screen.getByText('Signal strength')).toBeInTheDocument();
+    expect(screen.getByText('-72')).toBeInTheDocument();
     expect(screen.getByText(/First reading:/)).toBeInTheDocument();
     expect(screen.getByText(/Last reading:/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Open Temperature in fullscreen' }));
