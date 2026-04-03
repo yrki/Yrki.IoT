@@ -9,6 +9,7 @@ using Serilog;
 using Serilog.Events;
 using Microsoft.EntityFrameworkCore;
 using EasyNetQ;
+using EasyNetQ.Serialization.SystemTextJson;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
@@ -43,7 +44,8 @@ try
             var rabbitHost = config["RabbitMq:Host"] ?? "localhost";
             var rabbitUser = config["RabbitMq:Username"] ?? "guest";
             var rabbitPassword = config["RabbitMq:Password"] ?? "guest";
-            services.RegisterEasyNetQ($"host={rabbitHost};username={rabbitUser};password={rabbitPassword}");
+            services.RegisterEasyNetQ($"host={rabbitHost};username={rabbitUser};password={rabbitPassword}")
+                .UseSystemTextJson();
 
             services.AddScoped<SensorReadingConsumer>();
             services.AddScoped<SensorReadingReceivedConsumer>();
