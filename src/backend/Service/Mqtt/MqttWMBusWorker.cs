@@ -1,7 +1,7 @@
 using System.Buffers;
 using System.Text.Json;
 using Contracts.Readings;
-using MassTransit;
+using EasyNetQ;
 using Microsoft.Extensions.Options;
 using MQTTnet;
 using service.Configuration;
@@ -104,7 +104,7 @@ public class MqttWMBusWorker(
                 message.Rssi,
                 message.PayloadHex.Length);
 
-            await bus.Publish(
+            await bus.PubSub.PublishAsync(
                 new SensorPayload(message.PayloadHex, timestamp, "mqtt", message.GatewayId, message.Rssi),
                 stoppingToken);
         }

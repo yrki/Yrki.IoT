@@ -1,5 +1,5 @@
 using Contracts.Readings;
-using MassTransit;
+using EasyNetQ;
 
 namespace Simulator;
 
@@ -26,7 +26,7 @@ public class LansenCO2SimulatorWorker(IBus bus, ILogger<LansenCO2SimulatorWorker
             var frame = LansenFrameBuilder.Build(addressHex, seq, temp, humidity, co2, soundDb: 40);
             var payload = new SensorPayload(Convert.ToHexString(frame), DateTimeOffset.UtcNow);
 
-            await bus.Publish(payload, stoppingToken);
+            await bus.PubSub.PublishAsync(payload, stoppingToken);
 
             logger.LogInformation("seq={Seq:D3}  CO2={CO2:D4} ppm  Temp={Temp:F1}C  Hum={Hum:F1}%",
                 seq, co2, temp, humidity);

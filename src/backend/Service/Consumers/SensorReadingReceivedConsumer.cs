@@ -1,7 +1,6 @@
 using Contracts.Readings;
 using Core.Contexts;
 using Core.Models;
-using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using service.Services;
 
@@ -10,12 +9,10 @@ namespace service.Consumers;
 public class SensorReadingReceivedConsumer(
     DatabaseContext db,
     ISensorHubNotifier hubNotifier,
-    ILogger<SensorReadingReceivedConsumer> logger) : IConsumer<SensorReadingReceived>
+    ILogger<SensorReadingReceivedConsumer> logger)
 {
-    public async Task Consume(ConsumeContext<SensorReadingReceived> context)
+    public async Task HandleAsync(SensorReadingReceived msg, CancellationToken cancellationToken)
     {
-        var msg = context.Message;
-
         try
         {
             var reading = new SensorReading
@@ -30,7 +27,7 @@ public class SensorReadingReceivedConsumer(
             };
 
             db.SensorReadings.Add(reading);
-            await db.SaveChangesAsync(context.CancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "23505" })
         {
@@ -39,6 +36,6 @@ public class SensorReadingReceivedConsumer(
         }
 
         await hubNotifier.NotifyReadingAsync(
-            msg.SensorId, msg.SensorType, msg.Value, msg.Timestamp, context.CancellationToken);
+            msg.SensorId, msg.SensorType, msg.Value, msg.Timestamp, cancellationToken);
     }
 }

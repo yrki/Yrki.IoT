@@ -1,4 +1,4 @@
-using MassTransit;
+using EasyNetQ;
 using Simulator;
 
 var host = Host.CreateDefaultBuilder(args)
@@ -6,11 +6,10 @@ var host = Host.CreateDefaultBuilder(args)
     {
         var config = context.Configuration;
 
-        services.AddMassTransit(x => x.UsingRabbitMq((_, cfg) => cfg.Host(config["RabbitMq:Host"] ?? "localhost", "/", h =>
-                {
-                    h.Username(config["RabbitMq:Username"] ?? "guest");
-                    h.Password(config["RabbitMq:Password"] ?? "guest");
-                })));
+        var rabbitHost = config["RabbitMq:Host"] ?? "localhost";
+        var rabbitUser = config["RabbitMq:Username"] ?? "guest";
+        var rabbitPassword = config["RabbitMq:Password"] ?? "guest";
+        services.RegisterEasyNetQ($"host={rabbitHost};username={rabbitUser};password={rabbitPassword}");
 
         services.AddHostedService<MultiDeviceSimulatorWorker>();
     })

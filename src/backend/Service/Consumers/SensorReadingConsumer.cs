@@ -3,7 +3,6 @@ using Core.Contexts;
 using Core.Features.EncryptionKeys;
 using Core.Models;
 using Core.Services.Encryption;
-using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.Security.Cryptography;
@@ -17,13 +16,12 @@ public class SensorReadingConsumer(
     DatabaseContext db,
     ISensorHubNotifier hubNotifier,
     IKeyEncryptionService keyEncryptionService,
-    ILogger<SensorReadingConsumer> logger) : IConsumer<SensorPayload>
+    ILogger<SensorReadingConsumer> logger)
 {
     private readonly Parser _parser = new();
 
-    public async Task Consume(ConsumeContext<SensorPayload> context)
+    public async Task HandleAsync(SensorPayload msg, CancellationToken cancellationToken)
     {
-        var msg = context.Message;
         var payloadHex = msg.PayloadHex;
         var rawMessage = WMBusFrameReader.NormalizeFrame(msg.PayloadHex.ToByteArray());
 
@@ -34,25 +32,25 @@ public class SensorReadingConsumer(
         }
         catch (NotImplementedException ex)
         {
-            await HandleUnsupportedEncryptionAsync(rawMessage, msg, ex, context.CancellationToken);
+            await HandleUnsupportedEncryptionAsync(rawMessage, msg, ex, cancellationToken);
             return;
         }
 
         var metadata = WMBusMessageMetadataMapper.Map(header);
         var sensorId = header.AField;
-        await UpsertGatewayContactAsync(msg.GatewayId, sensorId, msg.Rssi, msg.Timestamp, context.CancellationToken);
-        var encryptionKey = await ResolveEncryptionKeyAsync(header, rawMessage, payloadHex, context.CancellationToken);
+        await UpsertGatewayContactAsync(msg.GatewayId, sensorId, msg.Rssi, msg.Timestamp, cancellationToken);
+        var encryptionKey = await ResolveEncryptionKeyAsync(header, rawMessage, payloadHex, cancellationToken);
 
         if (header.EncryptionMethod != EncryptionMethod.None && string.IsNullOrWhiteSpace(encryptionKey))
         {
-            await HandleMissingEncryptionKeyAsync(msg, sensorId, metadata, context.CancellationToken);
+            await HandleMissingEncryptionKeyAsync(msg, sensorId, metadata, cancellationToken);
             return;
         }
 
-        var payload = await TryParsePayloadAsync(rawMessage, header, encryptionKey, msg, context.CancellationToken);
+        var payload = await TryParsePayloadAsync(rawMessage, header, encryptionKey, msg, cancellationToken);
         if (payload is null)
         {
-            await UpsertUnknownDeviceAsync(sensorId, metadata, msg.Timestamp, context.CancellationToken);
+            await UpsertUnknownDeviceAsync(sensorId, metadata, msg.Timestamp, cancellationToken);
             return;
         }
 
@@ -70,10 +68,10 @@ public class SensorReadingConsumer(
         if (readings.Count == 0)
             return;
 
-        await StoreRawPayloadAsync(msg, sensorId, metadata.Manufacturer, null, context.CancellationToken);
-        await UpsertDeviceAsync(readings[0], metadata, context.CancellationToken);
-        await PersistReadingsAsync(readings, metadata, context.CancellationToken);
-        await PublishNotificationsAsync(readings, context.CancellationToken);
+        await StoreRawPayloadAsync(msg, sensorId, metadata.Manufacturer, null, cancellationToken);
+        await UpsertDeviceAsync(readings[0], metadata, cancellationToken);
+        await PersistReadingsAsync(readings, metadata, cancellationToken);
+        await PublishNotificationsAsync(readings, cancellationToken);
     }
 
     private async Task HandleMissingEncryptionKeyAsync(

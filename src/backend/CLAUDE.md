@@ -42,7 +42,7 @@ backend/
 - .NET 10, C# — target runtime
 - ASP.NET Core — Web API host
 - Entity Framework Core — PostgreSQL via Npgsql
-- MassTransit — RabbitMQ messaging
+- EasyNetQ — RabbitMQ messaging
 - Azure Communication Services — email delivery
 - xUnit / NSubstitute — unit tests
 

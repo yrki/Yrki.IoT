@@ -1,5 +1,5 @@
 using Contracts.Readings;
-using MassTransit;
+using EasyNetQ;
 
 namespace Simulator;
 
@@ -38,7 +38,7 @@ public class MultiDeviceSimulatorWorker(IBus bus, ILogger<MultiDeviceSimulatorWo
                     soundDb: (int)Math.Round(SineValue(step, CycleSteps, device.SoundMin, device.SoundMax, device.SoundPhase)));
 
                 var payload = new SensorPayload(Convert.ToHexString(frame), DateTimeOffset.UtcNow);
-                await bus.Publish(payload, stoppingToken);
+                await bus.PubSub.PublishAsync(payload, stoppingToken);
 
                 logger.LogInformation("Published WMBus payload for {AddressHex}", device.AddressHex);
             }

@@ -8,12 +8,12 @@ using service.Workers;
 using Serilog;
 using Serilog.Events;
 using Microsoft.EntityFrameworkCore;
-using MassTransit;
+using EasyNetQ;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
-    .MinimumLevel.Override("MassTransit", LogEventLevel.Information)
+    .MinimumLevel.Override("EasyNetQ", LogEventLevel.Information)
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
     .WriteTo.Console()
     .CreateLogger();
@@ -40,21 +40,14 @@ try
             services.Configure<ApiOptions>(config.GetSection("Api"));
             services.AddSingleton<ISensorHubNotifier, SensorHubNotifier>();
 
-            services.AddMassTransit(x =>
-            {
-                x.AddConsumer<SensorReadingConsumer>();
-                x.AddConsumer<SensorReadingReceivedConsumer>();
-                x.UsingRabbitMq((ctx, cfg) =>
-                {
-                    cfg.Host(config["RabbitMq:Host"], "/", h =>
-                    {
-                        h.Username(config["RabbitMq:Username"] ?? "guest");
-                        h.Password(config["RabbitMq:Password"] ?? "guest");
-                    });
-                    cfg.ConfigureEndpoints(ctx);
-                });
-            });
+            var rabbitHost = config["RabbitMq:Host"] ?? "localhost";
+            var rabbitUser = config["RabbitMq:Username"] ?? "guest";
+            var rabbitPassword = config["RabbitMq:Password"] ?? "guest";
+            services.RegisterEasyNetQ($"host={rabbitHost};username={rabbitUser};password={rabbitPassword}");
 
+            services.AddScoped<SensorReadingConsumer>();
+            services.AddScoped<SensorReadingReceivedConsumer>();
+            services.AddHostedService<RabbitMqSubscriptionWorker>();
             services.AddHostedService<MqttWMBusWorker>();
             services.AddHostedService<DeviceDiscoveryWorker>();
         })
