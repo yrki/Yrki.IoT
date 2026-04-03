@@ -37,16 +37,7 @@ public class MagicLinkService : IMagicLinkService
             .FirstOrDefaultAsync(candidate => candidate.NormalizedEmail == normalizedEmail, cancellationToken);
 
         if (user is null)
-        {
-            user = new AppUser
-            {
-                Id = Guid.NewGuid(),
-                Email = email.Trim(),
-                NormalizedEmail = normalizedEmail,
-                CreatedAtUtc = DateTime.UtcNow
-            };
-            _databaseContext.Users.Add(user);
-        }
+            return;
 
         var activeTokens = await _databaseContext.MagicLinkTokens
             .Where(token => token.UserId == user.Id && token.UsedAtUtc == null && token.ExpiresAtUtc > DateTime.UtcNow)

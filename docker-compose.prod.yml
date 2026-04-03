@@ -31,6 +31,7 @@ services:
       Encryption__MasterKey: ${ENCRYPTION_MASTER_KEY}
       Email__ConnectionString: ${EMAIL_CONNECTION_STRING}
       Email__SenderAddress: ${EMAIL_SENDER_ADDRESS}
+      Admin__Email: ${ADMIN_EMAIL}
     depends_on:
       postgres:
         condition: service_healthy

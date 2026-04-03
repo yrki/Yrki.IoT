@@ -104,6 +104,24 @@ using (var scope = app.Services.CreateScope())
 {
     var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
     databaseContext.Database.Migrate();
+
+    var adminEmail = app.Configuration["Admin:Email"];
+    if (!string.IsNullOrWhiteSpace(adminEmail))
+    {
+        var normalizedEmail = adminEmail.Trim().ToUpperInvariant();
+        var exists = await databaseContext.Users.AnyAsync(u => u.NormalizedEmail == normalizedEmail);
+        if (!exists)
+        {
+            databaseContext.Users.Add(new Core.Models.AppUser
+            {
+                Id = Guid.NewGuid(),
+                Email = adminEmail.Trim(),
+                NormalizedEmail = normalizedEmail,
+                CreatedAtUtc = DateTime.UtcNow,
+            });
+            await databaseContext.SaveChangesAsync();
+        }
+    }
 }
 
 if (app.Environment.IsDevelopment())

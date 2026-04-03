@@ -70,6 +70,7 @@ services:
       Encryption__MasterKey: ${ENCRYPTION_MASTER_KEY:-Ae+/cx56gf9Zg5ECKYl67cOnP4QpiGdQczqrSU7MYbg=}
       Email__ConnectionString: ${EMAIL_CONNECTION_STRING:-}
       Email__SenderAddress: ${EMAIL_SENDER_ADDRESS:-donotreply@yrki.net}
+      Admin__Email: ${ADMIN_EMAIL:-thomas@yrki.no}
     ports:
       - "8081:8080"
     depends_on:
