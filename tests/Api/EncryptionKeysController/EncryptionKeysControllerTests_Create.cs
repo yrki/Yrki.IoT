@@ -25,17 +25,17 @@ public sealed class EncryptionKeysControllerTests_Create : IClassFixture<ApiData
         var response = Assert.IsType<EncryptionKeyResponse>(createdResult.Value);
         var entity = await _dbContext.EncryptionKeys.SingleAsync();
         Assert.Equal($"/encryptionkeys/{response.Id}", createdResult.Location);
-        Assert.Equal("encrypted:plain-key", entity.EncryptedKeyValue);
+        Assert.Equal("PLAIN-KEY", entity.EncryptedKeyValue);
         Assert.Equal("AXI", entity.Manufacturer);
-        Assert.Equal("device-1", entity.DeviceUniqueId);
+        Assert.Equal("DEVICE-1", entity.DeviceUniqueId);
     }
 
     private EncryptionKeysController CreateController()
     {
         return new EncryptionKeysController(
-            new EncryptionKeysQueryHandler(_dbContext),
-            new CreateEncryptionKeyCommandHandler(_dbContext, _encryptionService),
-            new UpdateEncryptionKeyCommandHandler(_dbContext, _encryptionService),
+            new EncryptionKeysQueryHandler(_dbContext, _encryptionService),
+            new CreateEncryptionKeyCommandHandler(_dbContext),
+            new UpdateEncryptionKeyCommandHandler(_dbContext),
             new DeleteEncryptionKeyCommandHandler(_dbContext));
     }
 

@@ -72,8 +72,8 @@ public static class ApiTestData
         return new EncryptionKey
         {
             Id = Guid.NewGuid(),
-            Manufacturer = manufacturer,
-            DeviceUniqueId = deviceUniqueId,
+            Manufacturer = EncryptionKeyIdentity.NormalizeManufacturer(manufacturer),
+            DeviceUniqueId = EncryptionKeyIdentity.NormalizeDeviceUniqueId(deviceUniqueId),
             GroupName = groupName,
             EncryptedKeyValue = encryptedKeyValue,
             Description = description,

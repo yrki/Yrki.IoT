@@ -13,6 +13,8 @@ using Core.Features.Locations.Query;
 using Core.Features.SensorData.Query;
 using Core.Features.Sensors.Command;
 using Core.Features.Sensors.Query;
+using Core.Features.Users.Command;
+using Core.Features.Users.Query;
 using Core.Services.Email;
 using Core.Services.Encryption;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -49,6 +51,10 @@ builder.Services.AddScoped<EncryptionKeysQueryHandler>();
 builder.Services.AddScoped<CreateEncryptionKeyCommandHandler>();
 builder.Services.AddScoped<UpdateEncryptionKeyCommandHandler>();
 builder.Services.AddScoped<DeleteEncryptionKeyCommandHandler>();
+builder.Services.AddScoped<UsersQueryHandler>();
+builder.Services.AddScoped<CreateUserCommandHandler>();
+builder.Services.AddScoped<UpdateUserCommandHandler>();
+builder.Services.AddScoped<DeleteUserCommandHandler>();
 
 var encryptionMasterKey = builder.Configuration["Encryption:MasterKey"]
     ?? throw new InvalidOperationException("Encryption:MasterKey must be configured.");

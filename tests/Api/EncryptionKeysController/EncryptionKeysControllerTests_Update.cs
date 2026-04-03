@@ -30,8 +30,8 @@ public sealed class EncryptionKeysControllerTests_Update : IClassFixture<ApiData
         var entity = await _dbContext.EncryptionKeys.SingleAsync();
         Assert.Equal(key.Id, response.Id);
         Assert.Equal("AXI", entity.Manufacturer);
-        Assert.Equal("device-2", entity.DeviceUniqueId);
-        Assert.Equal("encrypted:new-key", entity.EncryptedKeyValue);
+        Assert.Equal("DEVICE-2", entity.DeviceUniqueId);
+        Assert.Equal("NEW-KEY", entity.EncryptedKeyValue);
         Assert.NotNull(entity.UpdatedAt);
     }
 
@@ -52,9 +52,9 @@ public sealed class EncryptionKeysControllerTests_Update : IClassFixture<ApiData
     private EncryptionKeysController CreateController()
     {
         return new EncryptionKeysController(
-            new EncryptionKeysQueryHandler(_dbContext),
-            new CreateEncryptionKeyCommandHandler(_dbContext, _encryptionService),
-            new UpdateEncryptionKeyCommandHandler(_dbContext, _encryptionService),
+            new EncryptionKeysQueryHandler(_dbContext, _encryptionService),
+            new CreateEncryptionKeyCommandHandler(_dbContext),
+            new UpdateEncryptionKeyCommandHandler(_dbContext),
             new DeleteEncryptionKeyCommandHandler(_dbContext));
     }
 

@@ -33,9 +33,9 @@ public sealed class EncryptionKeysControllerTests_GetAll : IClassFixture<ApiData
     private EncryptionKeysController CreateController()
     {
         return new EncryptionKeysController(
-            new EncryptionKeysQueryHandler(_dbContext),
-            new CreateEncryptionKeyCommandHandler(_dbContext, _encryptionService),
-            new UpdateEncryptionKeyCommandHandler(_dbContext, _encryptionService),
+            new EncryptionKeysQueryHandler(_dbContext, _encryptionService),
+            new CreateEncryptionKeyCommandHandler(_dbContext),
+            new UpdateEncryptionKeyCommandHandler(_dbContext),
             new DeleteEncryptionKeyCommandHandler(_dbContext));
     }
 

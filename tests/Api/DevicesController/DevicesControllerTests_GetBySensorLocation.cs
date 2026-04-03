@@ -25,6 +25,7 @@ public sealed class DevicesControllerTests_GetBySensorLocation : IClassFixture<A
 
         var controller = new DevicesController(
             new AllSensorsQueryHandler(_dbContext),
+            new AllGatewaysQueryHandler(_dbContext),
             new SensorsByLocationQueryHandler(_dbContext),
             new SensorsBySensorLocationQueryHandler(_dbContext),
             new SensorByUniqueIdQueryHandler(_dbContext),
@@ -55,6 +56,7 @@ public sealed class DevicesControllerTests_GetBySensorLocation : IClassFixture<A
 
         var controller = new DevicesController(
             new AllSensorsQueryHandler(_dbContext),
+            new AllGatewaysQueryHandler(_dbContext),
             new SensorsByLocationQueryHandler(_dbContext),
             new SensorsBySensorLocationQueryHandler(_dbContext),
             new SensorByUniqueIdQueryHandler(_dbContext),

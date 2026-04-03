@@ -39,6 +39,32 @@ export async function getCurrentUser(): Promise<ICurrentUser> {
   return response.data;
 }
 
+export interface UserDto {
+  id: string;
+  email: string;
+  createdAtUtc: string;
+  lastLoginAtUtc: string | null;
+}
+
+export async function getUsers(): Promise<UserDto[]> {
+  const response = await api.get<UserDto[]>('/users');
+  return response.data;
+}
+
+export async function createUser(email: string): Promise<UserDto> {
+  const response = await api.post<UserDto>('/users', { email });
+  return response.data;
+}
+
+export async function updateUser(id: string, email: string): Promise<UserDto> {
+  const response = await api.put<UserDto>(`/users/${id}`, { email });
+  return response.data;
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  await api.delete(`/users/${id}`);
+}
+
 export interface SensorReadingDto {
   sensorId: string;
   sensorType: string;
