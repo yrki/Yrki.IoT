@@ -498,5 +498,6 @@ $RECYCLE.BIN/
 
 .codex-tmp/
 
-# Production environment secrets
+# Environment secrets
+.env
 .env.prod

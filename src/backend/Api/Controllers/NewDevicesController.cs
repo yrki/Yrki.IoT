@@ -1,10 +1,12 @@
 using Contracts.Requests;
 using Core.Features.Devices.Command;
 using Core.Features.Devices.Query;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
 public class NewDevicesController(

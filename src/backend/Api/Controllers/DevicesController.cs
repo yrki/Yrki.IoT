@@ -2,10 +2,12 @@ using Contracts.Requests;
 using Core.Features.Devices.Command;
 using Core.Features.Sensors.Command;
 using Core.Features.Sensors.Query;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
 public class DevicesController(

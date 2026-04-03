@@ -16,7 +16,6 @@ import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import { matchPath, useLocation, useNavigate } from 'react-router-dom';
 import LeftDrawer, { NavigationSection } from './leftdrawer';
 import { ICurrentUser } from '../api/models/IAuthResponse';
-import LoginDialog from './LoginDialog';
 
 const SensorListView = lazy(() => import('../features/sensors/SensorListView'));
 const NewSensorsView = lazy(() => import('../features/new-sensors/NewSensorsView'));
@@ -28,8 +27,7 @@ const GatewayView = lazy(() => import('../features/gateways/GatewayView'));
 const drawerWidth = 300;
 
 interface TopmenuProps {
-  currentUser: ICurrentUser | null;
-  onRequestMagicLink: (email: string) => Promise<void>;
+  currentUser: ICurrentUser;
   onLogout: () => void;
 }
 
@@ -71,8 +69,7 @@ function getPrimaryPath(section: NavigationSection) {
   }
 }
 
-function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
-  const [loginOpen, setLoginOpen] = useState(false);
+function Topmenu({ currentUser, onLogout }: TopmenuProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
@@ -221,20 +218,14 @@ function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
             <MenuRoundedIcon />
           </IconButton>
           <Box sx={{ flexGrow: 1 }} />
-          {currentUser ? (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                {currentUser.email}
-              </Typography>
-              <Button color="inherit" size="small" onClick={onLogout}>
-                Logout
-              </Button>
-            </Stack>
-          ) : (
-            <Button variant="contained" size="small" onClick={() => setLoginOpen(true)}>
-              Sign in
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              {currentUser.email}
+            </Typography>
+            <Button color="inherit" size="small" onClick={onLogout}>
+              Logout
             </Button>
-          )}
+          </Stack>
         </Toolbar>
       </AppBar>
 
@@ -285,11 +276,6 @@ function Topmenu({ currentUser, onRequestMagicLink, onLogout }: TopmenuProps) {
         </Suspense>
       </Box>
 
-      <LoginDialog
-        open={loginOpen}
-        onClose={() => setLoginOpen(false)}
-        onSubmit={onRequestMagicLink}
-      />
     </Box>
   );
 }

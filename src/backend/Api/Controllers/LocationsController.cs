@@ -1,10 +1,12 @@
 using Contracts.Requests;
 using Core.Features.Locations.Command;
 using Core.Features.Locations.Query;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
 public class LocationsController(

@@ -1,10 +1,12 @@
 using Contracts.Requests;
 using Core.Features.EncryptionKeys.Command;
 using Core.Features.EncryptionKeys.Query;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("[controller]")]
 public class EncryptionKeysController(

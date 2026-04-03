@@ -68,6 +68,8 @@ services:
       ConnectionStrings__DatabaseConnectionString: Host=postgres;Port=5432;Database=YrkiIoT;Username=postgres;Password=postgres
       MagicLink__FrontendBaseUrl: ${MAGIC_LINK_FRONTEND_BASE_URL:-http://localhost:8080}
       Encryption__MasterKey: ${ENCRYPTION_MASTER_KEY:-Ae+/cx56gf9Zg5ECKYl67cOnP4QpiGdQczqrSU7MYbg=}
+      Email__ConnectionString: ${EMAIL_CONNECTION_STRING:-}
+      Email__SenderAddress: ${EMAIL_SENDER_ADDRESS:-donotreply@yrki.net}
     ports:
       - "8081:8080"
     depends_on:
