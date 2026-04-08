@@ -95,8 +95,8 @@ function SensorListView() {
   const [sensors, setSensors] = useState<SensorListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<SortableField>('uniqueId');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortBy, setSortBy] = useState<SortableField>('lastContact');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [filterManufacturer, setFilterManufacturer] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SensorListItemDto | null>(null);
