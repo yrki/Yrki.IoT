@@ -198,7 +198,7 @@ function SensorHistoryChart({
                 borderRadius: 6,
                 fontSize: 12,
               }}
-              labelFormatter={(v) => new Date(v as number).toLocaleString()}
+              labelFormatter={(v) => new Date(v as number).toLocaleString([], { hour12: false })}
               formatter={(v) => [sensorType === 'OnDate'
                 ? formatSensorValue(sensorType, v as number, decimals)
                 : `${formatSensorValue(sensorType, v as number, decimals)} ${unit}`, label]}
