@@ -56,6 +56,8 @@ function EditDialog({ device, open, locations, onClose, onSave }: EditDialogProp
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [locationId, setLocationId] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
   const [encryptionKey, setEncryptionKey] = useState('');
   const [saving, setSaving] = useState(false);
   const locationOptions = buildLocationOptions(locations);
@@ -65,6 +67,8 @@ function EditDialog({ device, open, locations, onClose, onSave }: EditDialogProp
       setName(device.name ?? '');
       setDescription(device.description ?? '');
       setLocationId(device.locationId ?? '');
+      setLatitude(device.latitude != null ? String(device.latitude) : '');
+      setLongitude(device.longitude != null ? String(device.longitude) : '');
       setEncryptionKey('');
     }
   }, [device]);
@@ -87,6 +91,8 @@ function EditDialog({ device, open, locations, onClose, onSave }: EditDialogProp
         name: name || undefined,
         description: description || undefined,
         locationId: locationId || undefined,
+        latitude: latitude.trim() ? Number(latitude) : null,
+        longitude: longitude.trim() ? Number(longitude) : null,
       });
       onClose();
     } finally {
@@ -156,6 +162,27 @@ function EditDialog({ device, open, locations, onClose, onSave }: EditDialogProp
               ))}
             </Select>
           </FormControl>
+
+          <Stack direction="row" spacing={2}>
+            <TextField
+              label="Latitude"
+              value={latitude}
+              onChange={(e) => setLatitude(e.target.value)}
+              type="number"
+              inputProps={{ step: 'any' }}
+              fullWidth
+              size="small"
+            />
+            <TextField
+              label="Longitude"
+              value={longitude}
+              onChange={(e) => setLongitude(e.target.value)}
+              type="number"
+              inputProps={{ step: 'any' }}
+              fullWidth
+              size="small"
+            />
+          </Stack>
 
           <TextField
             label="Encryption Key (AES-128 hex)"

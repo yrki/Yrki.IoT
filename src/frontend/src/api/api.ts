@@ -125,12 +125,16 @@ export interface NewDeviceDto {
   locationId: string | null;
   lastContact: string;
   installationDate: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface UpdateDeviceRequest {
   name?: string;
   description?: string;
   locationId?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export async function getNewDevices(): Promise<NewDeviceDto[]> {
@@ -159,6 +163,8 @@ export interface SensorListItemDto {
   locationId: string | null;
   lastContact: string;
   installationDate: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export async function getDevices(): Promise<SensorListItemDto[]> {
@@ -196,6 +202,8 @@ export interface LocationDto {
   description: string;
   deviceCount: number;
   parentLocationId: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export async function getLocations(): Promise<LocationDto[]> {
@@ -203,12 +211,12 @@ export async function getLocations(): Promise<LocationDto[]> {
   return response.data;
 }
 
-export async function createLocation(name: string, description?: string, parentLocationId?: string): Promise<LocationDto> {
-  const response = await api.post<LocationDto>('/locations', { name, description, parentLocationId });
+export async function createLocation(name: string, description?: string, parentLocationId?: string, latitude?: number, longitude?: number): Promise<LocationDto> {
+  const response = await api.post<LocationDto>('/locations', { name, description, parentLocationId, latitude, longitude });
   return response.data;
 }
 
-export async function updateLocation(id: string, request: { name?: string; description?: string; parentLocationId?: string | null }): Promise<LocationDto> {
+export async function updateLocation(id: string, request: { name?: string; description?: string; parentLocationId?: string | null; latitude?: number | null; longitude?: number | null }): Promise<LocationDto> {
   const response = await api.put<LocationDto>(`/locations/${id}`, request);
   return response.data;
 }

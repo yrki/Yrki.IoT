@@ -18,6 +18,9 @@ public class Device
     public bool IsNew { get; set; }
     public bool IsDeleted { get; set; }
 
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+
     public Guid? LocationId { get; set; }
     public Location? Location { get; set; }
     public DateTimeOffset LastContact { get; set; }

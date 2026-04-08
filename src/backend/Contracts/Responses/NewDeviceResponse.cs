@@ -9,4 +9,6 @@ public record NewDeviceResponse(
     string Description,
     Guid? LocationId,
     DateTimeOffset LastContact,
-    DateTimeOffset InstallationDate);
+    DateTimeOffset InstallationDate,
+    double? Latitude,
+    double? Longitude);

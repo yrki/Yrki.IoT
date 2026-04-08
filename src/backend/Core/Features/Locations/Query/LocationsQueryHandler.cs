@@ -16,7 +16,9 @@ public class LocationsQueryHandler(DatabaseContext db)
                 l.Name,
                 l.Description,
                 l.Devices.Count(d => !d.IsNew && !d.IsDeleted),
-                l.ParentLocationId))
+                l.ParentLocationId,
+                l.Latitude,
+                l.Longitude))
             .ToListAsync(cancellationToken);
     }
 }

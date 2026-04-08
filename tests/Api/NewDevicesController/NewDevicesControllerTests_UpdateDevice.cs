@@ -22,7 +22,7 @@ public sealed class NewDevicesControllerTests_UpdateDevice : IClassFixture<ApiDa
         var controller = new NewDevicesController(
             new NewDevicesQueryHandler(_dbContext),
             new UpdateDeviceCommandHandler(_dbContext));
-        var request = new UpdateDeviceRequest("Installed sensor", "Installed in lobby", location.Id);
+        var request = new UpdateDeviceRequest("Installed sensor", "Installed in lobby", location.Id, null, null);
 
         // Act
         var result = await controller.UpdateDevice(device.Id, request, CancellationToken.None);
@@ -44,7 +44,7 @@ public sealed class NewDevicesControllerTests_UpdateDevice : IClassFixture<ApiDa
         var controller = new NewDevicesController(
             new NewDevicesQueryHandler(_dbContext),
             new UpdateDeviceCommandHandler(_dbContext));
-        var request = new UpdateDeviceRequest("Installed sensor", "Installed in lobby", Guid.NewGuid());
+        var request = new UpdateDeviceRequest("Installed sensor", "Installed in lobby", Guid.NewGuid(), null, null);
 
         // Act
         var result = await controller.UpdateDevice(Guid.NewGuid(), request, CancellationToken.None);

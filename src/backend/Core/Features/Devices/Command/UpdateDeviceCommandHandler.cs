@@ -21,6 +21,12 @@ public class UpdateDeviceCommandHandler(DatabaseContext db)
         device.LocationId = request.LocationId ?? device.LocationId;
         device.IsNew = false;
 
+        if (request.Latitude is not null)
+            device.Latitude = request.Latitude;
+
+        if (request.Longitude is not null)
+            device.Longitude = request.Longitude;
+
         await db.SaveChangesAsync(cancellationToken);
 
         return new NewDeviceResponse(
@@ -32,6 +38,8 @@ public class UpdateDeviceCommandHandler(DatabaseContext db)
             device.Description,
             device.LocationId,
             device.LastContact,
-            device.InstallationDate);
+            device.InstallationDate,
+            device.Latitude,
+            device.Longitude);
     }
 }

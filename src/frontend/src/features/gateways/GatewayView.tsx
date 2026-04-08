@@ -66,12 +66,16 @@ interface EditGatewayDialogProps {
 function EditGatewayDialog({ gateway, locations, open, onClose, onSaved }: EditGatewayDialogProps) {
   const [name, setName] = useState('');
   const [locationId, setLocationId] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
   const [saving, setSaving] = useState(false);
   const locationOptions = buildLocationOptions(locations);
 
   useEffect(() => {
     setName(gateway?.name ?? '');
     setLocationId(gateway?.locationId ?? '');
+    setLatitude(gateway?.latitude != null ? String(gateway.latitude) : '');
+    setLongitude(gateway?.longitude != null ? String(gateway.longitude) : '');
   }, [gateway]);
 
   const handleSave = async () => {
@@ -84,6 +88,8 @@ function EditGatewayDialog({ gateway, locations, open, onClose, onSaved }: EditG
       await updateExistingDevice(gateway.id, {
         name: name.trim() || undefined,
         locationId: locationId || undefined,
+        latitude: latitude.trim() ? Number(latitude) : null,
+        longitude: longitude.trim() ? Number(longitude) : null,
       });
 
       const selectedLocation = locations.find((location) => location.id === locationId);
@@ -106,6 +112,26 @@ function EditGatewayDialog({ gateway, locations, open, onClose, onSaved }: EditG
         <Stack spacing={2}>
           <TextField label="Gateway ID" value={gateway?.uniqueId ?? ''} disabled size="small" fullWidth />
           <TextField label="Name" value={name} onChange={(event) => setName(event.target.value)} size="small" fullWidth />
+          <Stack direction="row" spacing={2}>
+            <TextField
+              label="Latitude"
+              value={latitude}
+              onChange={(e) => setLatitude(e.target.value)}
+              type="number"
+              inputProps={{ step: 'any' }}
+              fullWidth
+              size="small"
+            />
+            <TextField
+              label="Longitude"
+              value={longitude}
+              onChange={(e) => setLongitude(e.target.value)}
+              type="number"
+              inputProps={{ step: 'any' }}
+              fullWidth
+              size="small"
+            />
+          </Stack>
           <FormControl fullWidth size="small">
             <InputLabel>Location</InputLabel>
             <Select value={locationId} label="Location" onChange={(event) => setLocationId(event.target.value)}>

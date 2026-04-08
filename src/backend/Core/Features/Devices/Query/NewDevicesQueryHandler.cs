@@ -22,7 +22,9 @@ public class NewDevicesQueryHandler(DatabaseContext db)
                 d.Description,
                 d.LocationId,
                 d.LastContact,
-                d.InstallationDate))
+                d.InstallationDate,
+                d.Latitude,
+                d.Longitude))
             .ToListAsync(cancellationToken);
     }
 }

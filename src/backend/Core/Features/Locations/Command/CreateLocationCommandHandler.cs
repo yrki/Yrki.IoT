@@ -17,11 +17,13 @@ public class CreateLocationCommandHandler(DatabaseContext db)
             Name = request.Name,
             Description = request.Description ?? string.Empty,
             ParentLocationId = request.ParentLocationId,
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
         };
 
         db.Locations.Add(location);
         await db.SaveChangesAsync(cancellationToken);
 
-        return new LocationResponse(location.Id, location.Name, location.Description, 0, location.ParentLocationId);
+        return new LocationResponse(location.Id, location.Name, location.Description, 0, location.ParentLocationId, location.Latitude, location.Longitude);
     }
 }

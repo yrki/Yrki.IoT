@@ -29,7 +29,7 @@ public sealed class DevicesControllerTests_Update : IClassFixture<ApiDatabaseFix
             new UpdateDeviceCommandHandler(_dbContext),
             new DeleteSensorCommandHandler(_dbContext));
 
-        var request = new UpdateDeviceRequest(device.Name, device.Description, location.Id);
+        var request = new UpdateDeviceRequest(device.Name, device.Description, location.Id, null, null);
 
         // Act
         var result = await controller.Update(device.Id, request, CancellationToken.None);

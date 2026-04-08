@@ -10,6 +10,9 @@ public class Location
     public required string Name { get; set; }
     public required string Description { get; set; }
 
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+
     public Guid? ParentLocationId { get; set; }
     public Location? ParentLocation { get; set; }
 

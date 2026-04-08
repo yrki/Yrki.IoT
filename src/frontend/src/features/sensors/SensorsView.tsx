@@ -354,6 +354,8 @@ function EditSensorSettingsDialog({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [locationId, setLocationId] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
   const [encryptionKeyId, setEncryptionKeyId] = useState<string | null>(null);
   const [encryptionKey, setEncryptionKey] = useState('');
   const [loadingKey, setLoadingKey] = useState(false);
@@ -369,6 +371,8 @@ function EditSensorSettingsDialog({
     setName(device.name ?? '');
     setDescription('');
     setLocationId(device.locationId ?? '');
+    setLatitude(device.latitude != null ? String(device.latitude) : '');
+    setLongitude(device.longitude != null ? String(device.longitude) : '');
     setEncryptionKey('');
     setEncryptionKeyId(null);
     setError('');
@@ -398,6 +402,8 @@ function EditSensorSettingsDialog({
         name: name.trim() || undefined,
         description: description.trim() || undefined,
         locationId: locationId || undefined,
+        latitude: latitude.trim() ? Number(latitude) : null,
+        longitude: longitude.trim() ? Number(longitude) : null,
       });
 
       if (encryptionKey.trim()) {
@@ -502,6 +508,26 @@ function EditSensorSettingsDialog({
               ))}
             </Select>
           </FormControl>
+          <Stack direction="row" spacing={2}>
+            <TextField
+              label="Latitude"
+              value={latitude}
+              onChange={(e) => setLatitude(e.target.value)}
+              type="number"
+              inputProps={{ step: 'any' }}
+              fullWidth
+              size="small"
+            />
+            <TextField
+              label="Longitude"
+              value={longitude}
+              onChange={(e) => setLongitude(e.target.value)}
+              type="number"
+              inputProps={{ step: 'any' }}
+              fullWidth
+              size="small"
+            />
+          </Stack>
           <TextField
             label="Encryption Key (AES-128 hex)"
             type="text"

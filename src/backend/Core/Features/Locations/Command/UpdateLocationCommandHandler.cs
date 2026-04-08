@@ -25,6 +25,12 @@ public class UpdateLocationCommandHandler(DatabaseContext db)
         if (request.ParentLocationId is not null)
             location.ParentLocationId = request.ParentLocationId == Guid.Empty ? null : request.ParentLocationId;
 
+        if (request.Latitude is not null)
+            location.Latitude = request.Latitude;
+
+        if (request.Longitude is not null)
+            location.Longitude = request.Longitude;
+
         await db.SaveChangesAsync(cancellationToken);
 
         return new LocationResponse(
@@ -32,6 +38,8 @@ public class UpdateLocationCommandHandler(DatabaseContext db)
             location.Name,
             location.Description,
             location.Devices.Count(d => !d.IsNew),
-            location.ParentLocationId);
+            location.ParentLocationId,
+            location.Latitude,
+            location.Longitude);
     }
 }

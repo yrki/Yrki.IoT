@@ -10,4 +10,6 @@ public record SensorListItemResponse(
     string? LocationName,
     Guid? LocationId,
     DateTimeOffset LastContact,
-    DateTimeOffset InstallationDate);
+    DateTimeOffset InstallationDate,
+    double? Latitude,
+    double? Longitude);

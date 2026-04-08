@@ -5,4 +5,6 @@ public record LocationResponse(
     string Name,
     string Description,
     int DeviceCount,
-    Guid? ParentLocationId);
+    Guid? ParentLocationId,
+    double? Latitude,
+    double? Longitude);

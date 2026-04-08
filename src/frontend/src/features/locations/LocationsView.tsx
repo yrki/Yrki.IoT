@@ -103,6 +103,9 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formParentId, setFormParentId] = useState<string>('');
+  const [formLatitude, setFormLatitude] = useState<string>('');
+  const [formLongitude, setFormLongitude] = useState<string>('');
+
 
   const loadLocations = () => {
     getLocations()
@@ -164,6 +167,8 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
     setFormName('');
     setFormDescription('');
     setFormParentId(parentId ?? '');
+    setFormLatitude('');
+    setFormLongitude('');
     setDialogOpen(true);
   };
 
@@ -172,21 +177,27 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
     setFormName(location.name);
     setFormDescription(location.description);
     setFormParentId(location.parentLocationId ?? '');
+    setFormLatitude(location.latitude != null ? String(location.latitude) : '');
+    setFormLongitude(location.longitude != null ? String(location.longitude) : '');
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     if (!formName.trim()) return;
     const parentId = formParentId || undefined;
+    const latitude = formLatitude.trim() ? Number(formLatitude) : undefined;
+    const longitude = formLongitude.trim() ? Number(formLongitude) : undefined;
 
     if (editingLocation) {
       await updateLocation(editingLocation.id, {
         name: formName.trim(),
         description: formDescription.trim(),
         parentLocationId: formParentId || null,
+        latitude: latitude ?? null,
+        longitude: longitude ?? null,
       });
     } else {
-      await createLocation(formName.trim(), formDescription.trim() || undefined, parentId);
+      await createLocation(formName.trim(), formDescription.trim() || undefined, parentId, latitude, longitude);
     }
 
     setDialogOpen(false);
@@ -511,6 +522,24 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
             multiline
             rows={2}
           />
+          <Stack direction="row" spacing={2}>
+            <TextField
+              label="Latitude"
+              value={formLatitude}
+              onChange={(e) => setFormLatitude(e.target.value)}
+              type="number"
+              inputProps={{ step: 'any' }}
+              fullWidth
+            />
+            <TextField
+              label="Longitude"
+              value={formLongitude}
+              onChange={(e) => setFormLongitude(e.target.value)}
+              type="number"
+              inputProps={{ step: 'any' }}
+              fullWidth
+            />
+          </Stack>
           <TextField
             label="Parent location"
             select

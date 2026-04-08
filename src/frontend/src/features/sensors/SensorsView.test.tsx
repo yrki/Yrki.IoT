@@ -278,6 +278,8 @@ describe('SensorsView', () => {
       locationId: 'location-2',
       lastContact: '2026-03-30T09:00:00.000Z',
       installationDate: '2026-03-28T08:15:00.000Z',
+      latitude: null,
+      longitude: null,
     });
     updateEncryptionKey.mockResolvedValue({
       id: 'key-1',
@@ -313,6 +315,8 @@ describe('SensorsView', () => {
         name: 'Updated sensor',
         description: undefined,
         locationId: 'location-2',
+        latitude: null,
+        longitude: null,
       });
     });
     expect(updateEncryptionKey).toHaveBeenCalledWith('key-1', {

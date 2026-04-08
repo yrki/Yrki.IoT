@@ -30,7 +30,9 @@ public class SensorsByLocationQueryHandler(DatabaseContext db)
                 d.LocationId == UnknownLocationId ? null : d.Location != null ? d.Location.Name : null,
                 d.LocationId == UnknownLocationId ? null : d.LocationId,
                 d.LastContact,
-                d.InstallationDate))
+                d.InstallationDate,
+                d.Latitude,
+                d.Longitude))
             .ToListAsync(cancellationToken);
     }
 }
