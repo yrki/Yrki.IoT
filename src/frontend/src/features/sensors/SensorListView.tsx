@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
 import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -37,6 +38,8 @@ type SortDirection = 'asc' | 'desc';
 const activityFadeDurationMs = 6 * 60 * 60 * 1000;
 const activityBlinkDurationMs = 2500;
 const sensorRefreshIntervalMs = 5 * 60 * 1000;
+const initialVisibleSensorCount = 100;
+const visibleSensorBatchSize = 100;
 const HUB_URL = import.meta.env.VITE_SIGNALR_URL ?? '/hubs/sensors';
 
 function normalizeSearchValue(value: string | null | undefined) {
@@ -103,6 +106,9 @@ function SensorListView() {
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [recentlyUpdatedSensors, setRecentlyUpdatedSensors] = useState<Record<string, number>>({});
   const previousContactsRef = useRef<Record<string, string>>({});
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [visibleCount, setVisibleCount] = useState(initialVisibleSensorCount);
+  const deferredSearchTerm = useDeferredValue(searchTerm);
 
   const loadSensors = () => {
     getDevices()
@@ -218,8 +224,8 @@ function SensorListView() {
   const types = useMemo(() => [...new Set(sensors.map((s) => s.type).filter(Boolean))] as string[], [sensors]);
 
   const filteredSensors = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    const normalizedTerm = normalizeSearchValue(searchTerm.trim());
+    const term = deferredSearchTerm.trim().toLowerCase();
+    const normalizedTerm = normalizeSearchValue(deferredSearchTerm.trim());
 
     return [...sensors]
       .filter((s) => {
@@ -241,7 +247,37 @@ function SensorListView() {
         const bv = String(b[sortBy] ?? '');
         return sortDirection === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
       });
-  }, [sensors, searchTerm, sortBy, sortDirection, filterManufacturer, filterType]);
+  }, [sensors, deferredSearchTerm, sortBy, sortDirection, filterManufacturer, filterType]);
+
+  const visibleSensors = useMemo(
+    () => filteredSensors.slice(0, visibleCount),
+    [filteredSensors, visibleCount],
+  );
+  const hasMoreSensors = visibleSensors.length < filteredSensors.length;
+
+  useEffect(() => {
+    setVisibleCount(initialVisibleSensorCount);
+  }, [deferredSearchTerm, sortBy, sortDirection, filterManufacturer, filterType]);
+
+  useEffect(() => {
+    if (!hasMoreSensors || !loadMoreRef.current || typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      const [entry] = entries;
+      if (!entry?.isIntersecting) {
+        return;
+      }
+
+      setVisibleCount((current) => Math.min(current + visibleSensorBatchSize, filteredSensors.length));
+    }, {
+      rootMargin: '0px 0px 320px 0px',
+    });
+
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [filteredSensors.length, hasMoreSensors]);
 
   const handleSort = (column: SortableField) => {
     if (sortBy === column) {
@@ -364,7 +400,7 @@ function SensorListView() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredSensors.map((sensor) => (
+            {visibleSensors.map((sensor) => (
               <TableRow
                 key={sensor.id}
                 hover
@@ -472,6 +508,34 @@ function SensorListView() {
               <TableRow>
                 <TableCell colSpan={columns.length + 1} sx={{ py: 6, textAlign: 'center', color: 'text.secondary' }}>
                   {sensors.length === 0 ? 'No sensors registered yet.' : 'No sensors match the search.'}
+                </TableCell>
+              </TableRow>
+            )}
+            {!loading && filteredSensors.length > 0 && (
+              <TableRow>
+                <TableCell colSpan={columns.length + 1} sx={{ py: 2.5, borderBottom: 0 }}>
+                  <Stack spacing={1.5} alignItems="center">
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      Showing {visibleSensors.length} of {filteredSensors.length} sensor{filteredSensors.length === 1 ? '' : 's'}
+                    </Typography>
+                    {hasMoreSensors && (
+                      <>
+                        <Box
+                          ref={loadMoreRef}
+                          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 24 }}
+                        >
+                          <CircularProgress size={18} thickness={5} />
+                        </Box>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => setVisibleCount((current) => Math.min(current + visibleSensorBatchSize, filteredSensors.length))}
+                        >
+                          Load more
+                        </Button>
+                      </>
+                    )}
+                  </Stack>
                 </TableCell>
               </TableRow>
             )}
