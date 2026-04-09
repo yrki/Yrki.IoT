@@ -37,6 +37,7 @@ import {
   updateExistingDevice,
 } from '../../api/api';
 import { buildLocationOptions } from '../locations/locationTree';
+import { handleCoordinatePaste } from '../map/coordinatePaste';
 
 interface GatewayViewProps {
   gatewayId: string;
@@ -117,6 +118,7 @@ function EditGatewayDialog({ gateway, locations, open, onClose, onSaved }: EditG
               label="Latitude"
               value={latitude}
               onChange={(e) => setLatitude(e.target.value)}
+              onPaste={(e) => handleCoordinatePaste(e, setLatitude, setLongitude)}
               type="number"
               inputProps={{ step: 'any' }}
               fullWidth
@@ -126,6 +128,7 @@ function EditGatewayDialog({ gateway, locations, open, onClose, onSaved }: EditG
               label="Longitude"
               value={longitude}
               onChange={(e) => setLongitude(e.target.value)}
+              onPaste={(e) => handleCoordinatePaste(e, setLatitude, setLongitude)}
               type="number"
               inputProps={{ step: 'any' }}
               fullWidth

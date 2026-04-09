@@ -34,6 +34,7 @@ import {
   LocationDto,
 } from '../../api/api';
 import { buildLocationOptions } from '../locations/locationTree';
+import { handleCoordinatePaste } from '../map/coordinatePaste';
 
 function formatTimestamp(iso: string) {
   return new Date(iso).toLocaleString([], {
@@ -168,6 +169,7 @@ function EditDialog({ device, open, locations, onClose, onSave }: EditDialogProp
               label="Latitude"
               value={latitude}
               onChange={(e) => setLatitude(e.target.value)}
+              onPaste={(e) => handleCoordinatePaste(e, setLatitude, setLongitude)}
               type="number"
               inputProps={{ step: 'any' }}
               fullWidth
@@ -177,6 +179,7 @@ function EditDialog({ device, open, locations, onClose, onSave }: EditDialogProp
               label="Longitude"
               value={longitude}
               onChange={(e) => setLongitude(e.target.value)}
+              onPaste={(e) => handleCoordinatePaste(e, setLatitude, setLongitude)}
               type="number"
               inputProps={{ step: 'any' }}
               fullWidth

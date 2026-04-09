@@ -10,16 +10,18 @@ import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import SensorsRoundedIcon from '@mui/icons-material/SensorsRounded';
 import RouterRoundedIcon from '@mui/icons-material/RouterRounded';
 import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
+import MapRoundedIcon from '@mui/icons-material/MapRounded';
 import type { SvgIconComponent } from '@mui/icons-material';
 import logo from '../assets/logo.png';
 
-export type NavigationSection = 'Sensors' | 'Gateways' | 'Locations' | 'New Sensors' | 'Users' | 'Live View' | 'Gateway View';
+export type NavigationSection = 'Sensors' | 'Gateways' | 'New Sensors' | 'Locations' | 'Map' | 'Users' | 'Live View' | 'Gateway View';
 
 const primaryItems: Array<{ label: NavigationSection; icon: SvgIconComponent }> = [
   { label: 'Sensors', icon: SensorsRoundedIcon },
   { label: 'Gateways', icon: RouterRoundedIcon },
   { label: 'New Sensors', icon: FiberNewRoundedIcon },
   { label: 'Locations', icon: PlaceRoundedIcon },
+  { label: 'Map', icon: MapRoundedIcon },
   { label: 'Users', icon: PeopleRoundedIcon },
 ];
 

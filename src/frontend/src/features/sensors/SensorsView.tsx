@@ -48,6 +48,7 @@ import {
   updateExistingDevice,
 } from '../../api/api';
 import { buildLocationOptions } from '../locations/locationTree';
+import { handleCoordinatePaste } from '../map/coordinatePaste';
 import { calculateSensorStatistics } from './sensorStats';
 
 interface SensorCardProps {
@@ -513,6 +514,7 @@ function EditSensorSettingsDialog({
               label="Latitude"
               value={latitude}
               onChange={(e) => setLatitude(e.target.value)}
+              onPaste={(e) => handleCoordinatePaste(e, setLatitude, setLongitude)}
               type="number"
               inputProps={{ step: 'any' }}
               fullWidth
@@ -522,6 +524,7 @@ function EditSensorSettingsDialog({
               label="Longitude"
               value={longitude}
               onChange={(e) => setLongitude(e.target.value)}
+              onPaste={(e) => handleCoordinatePaste(e, setLatitude, setLongitude)}
               type="number"
               inputProps={{ step: 'any' }}
               fullWidth

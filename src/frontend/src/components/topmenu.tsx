@@ -24,6 +24,7 @@ const LocationsView = lazy(() => import('../features/locations/LocationsView'));
 const GatewayListView = lazy(() => import('../features/gateways/GatewayListView'));
 const GatewayView = lazy(() => import('../features/gateways/GatewayView'));
 const UsersView = lazy(() => import('../features/users/UsersView'));
+const MapView = lazy(() => import('../features/map/MapView'));
 
 const drawerWidth = 300;
 
@@ -49,6 +50,10 @@ function getSectionFromPath(pathname: string): NavigationSection {
     return 'Locations';
   }
 
+  if (pathname.startsWith('/map')) {
+    return 'Map';
+  }
+
   if (pathname.startsWith('/users')) {
     return 'Users';
   }
@@ -68,6 +73,8 @@ function getPrimaryPath(section: NavigationSection) {
       return '/locations';
     case 'New Sensors':
       return '/new-sensors';
+    case 'Map':
+      return '/map';
     case 'Users':
       return '/users';
     case 'Sensors':
@@ -95,6 +102,7 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
       '/locations',
       '/users',
       '/new-sensors',
+      '/map',
     ].some((path) => location.pathname === path)
       || matchPath('/sensors/:sensorId', location.pathname)
       || matchPath('/locations/:locationId', location.pathname)
@@ -192,6 +200,13 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
         );
       case 'New Sensors':
         return <NewSensorsView />;
+      case 'Map':
+        return (
+          <MapView
+            onNavigateToSensor={navigateToSensorView}
+            onNavigateToGateway={navigateToGatewayView}
+          />
+        );
       case 'Users':
         return <UsersView />;
       case 'Sensors':

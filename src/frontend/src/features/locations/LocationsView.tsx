@@ -45,6 +45,7 @@ import {
 } from '../../api/api';
 
 import { LocationNode, buildTree, buildLocationOptions, accumulatedDeviceCount } from './locationTree';
+import { handleCoordinatePaste } from '../map/coordinatePaste';
 
 
 function filterTree(nodes: LocationNode[], term: string): LocationNode[] {
@@ -527,6 +528,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
               label="Latitude"
               value={formLatitude}
               onChange={(e) => setFormLatitude(e.target.value)}
+              onPaste={(e) => handleCoordinatePaste(e, setFormLatitude, setFormLongitude)}
               type="number"
               inputProps={{ step: 'any' }}
               fullWidth
@@ -535,6 +537,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
               label="Longitude"
               value={formLongitude}
               onChange={(e) => setFormLongitude(e.target.value)}
+              onPaste={(e) => handleCoordinatePaste(e, setFormLatitude, setFormLongitude)}
               type="number"
               inputProps={{ step: 'any' }}
               fullWidth
