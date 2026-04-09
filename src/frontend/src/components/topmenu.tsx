@@ -26,7 +26,7 @@ const GatewayView = lazy(() => import('../features/gateways/GatewayView'));
 const UsersView = lazy(() => import('../features/users/UsersView'));
 const MapView = lazy(() => import('../features/map/MapView'));
 
-const drawerWidth = 300;
+const drawerWidth = 220;
 
 interface TopmenuProps {
   currentUser: ICurrentUser;
@@ -221,14 +221,14 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
         position="fixed"
         elevation={0}
         sx={{
-          width: { lg: `calc(100% - ${drawerWidth}px)` },
-          ml: { lg: `${drawerWidth}px` },
+          width: '100%',
           backgroundColor: 'rgba(32, 36, 44, 0.92)',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
           backdropFilter: 'blur(14px)',
+          zIndex: (t) => t.zIndex.drawer + 1,
         }}
       >
-        <Toolbar sx={{ px: { xs: 2, sm: 3, md: 4 } }}>
+        <Toolbar variant="dense" sx={{ px: { xs: 2, sm: 3, md: 4 }, minHeight: 48 }}>
           <IconButton
             onClick={() => setMobileOpen(true)}
             color="inherit"
@@ -242,6 +242,19 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
           >
             <MenuRoundedIcon />
           </IconButton>
+          <pre
+            style={{
+              fontFamily: 'monospace',
+              fontSize: '0.5rem',
+              lineHeight: 1.1,
+              color: 'white',
+              margin: 0,
+              marginRight: 16,
+            }}
+          >{` __ __     _   _
+|  |  |___| |_|_|
+|_   _|  _| '_| |
+  |_| |_| |_,_|_|`}</pre>
           <Box sx={{ flexGrow: 1 }} />
           <Stack direction="row" spacing={1} alignItems="center">
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
@@ -280,6 +293,7 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
               width: drawerWidth,
               boxSizing: 'border-box',
               borderRight: '1px solid rgba(255,255,255,0.08)',
+              mt: '48px',
             },
           }}
         >

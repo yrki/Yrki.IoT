@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  InputAdornment,
   Paper,
   Stack,
   Table,
@@ -16,12 +17,14 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   TextField,
   Typography,
 } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import { AxiosError } from 'axios';
 import { createUser, deleteUser, getUsers, updateUser, UserDto } from '../../api/api';
 
@@ -40,6 +43,9 @@ function formatDateTime(value: string | null): string {
   });
 }
 
+type SortableField = 'email' | 'createdAtUtc' | 'lastLoginAtUtc';
+type SortDirection = 'asc' | 'desc';
+
 function UsersView() {
   const [users, setUsers] = useState<UserDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,11 +54,29 @@ function UsersView() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<SortableField>('email');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  const sortedUsers = useMemo(
-    () => [...users].sort((left, right) => left.email.localeCompare(right.email, 'nb-NO', { sensitivity: 'base' })),
-    [users],
-  );
+  const filteredUsers = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    return [...users]
+      .filter((u) => !term || u.email.toLowerCase().includes(term))
+      .sort((a, b) => {
+        const av = String(a[sortBy] ?? '');
+        const bv = String(b[sortBy] ?? '');
+        return sortDirection === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+      });
+  }, [users, searchTerm, sortBy, sortDirection]);
+
+  const handleSort = (column: SortableField) => {
+    if (sortBy === column) {
+      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(column);
+      setSortDirection('asc');
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -134,70 +158,139 @@ function UsersView() {
     }
   };
 
+  const columns: Array<{ id: SortableField; label: string }> = [
+    { id: 'email', label: 'Email' },
+    { id: 'createdAtUtc', label: 'Created' },
+    { id: 'lastLoginAtUtc', label: 'Last login' },
+  ];
+
   return (
-    <Box sx={{ width: '100%', px: { xs: 2, sm: 3, md: 4 }, py: { xs: 12, md: 14 } }}>
-      <Stack spacing={3}>
-        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 800 }}>
-              Users
-            </Typography>
-            <Typography variant="body1" sx={{ color: 'text.secondary', mt: 1 }}>
-              Manage access to the Yrki.IoT workspace.
-            </Typography>
-          </Box>
+    <Paper
+      sx={{
+        p: { xs: 2.5, md: 3.5 },
+        borderRadius: '6px',
+        backgroundColor: 'rgba(36, 42, 51, 0.82)',
+        border: '1px solid rgba(255,255,255,0.06)',
+        boxShadow: '0 28px 80px rgba(0, 0, 0, 0.24)',
+      }}
+    >
+      <Stack
+        direction={{ xs: 'column', lg: 'row' }}
+        spacing={2}
+        alignItems={{ xs: 'stretch', lg: 'center' }}
+        justifyContent="space-between"
+        sx={{ mb: 3 }}
+      >
+        <Box>
+          <Typography variant="h4" sx={{ mb: 0.75 }}>
+            Users
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <TextField
+            placeholder="Search users"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{ minWidth: { sm: 260 } }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRoundedIcon sx={{ color: 'text.secondary' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
           <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={openCreateDialog}>
             Add user
           </Button>
         </Stack>
-
-        {error && (
-          <Alert severity="error" onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
-
-        <TableContainer component={Paper} sx={{ backgroundColor: 'background.paper' }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Email</TableCell>
-                <TableCell>Created</TableCell>
-                <TableCell>Last login</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {sortedUsers.map((user) => (
-                <TableRow key={user.id} hover>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{formatDateTime(user.createdAtUtc)}</TableCell>
-                  <TableCell>{formatDateTime(user.lastLoginAtUtc)}</TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <IconButton aria-label={`Edit ${user.email}`} onClick={() => openEditDialog(user)}>
-                        <EditRoundedIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton aria-label={`Delete ${user.email}`} onClick={() => void handleDelete(user)}>
-                        <DeleteRoundedIcon fontSize="small" />
-                      </IconButton>
-                    </Stack>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!loading && sortedUsers.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4}>
-                    <Typography sx={{ color: 'text.secondary' }}>
-                      No users created yet.
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
       </Stack>
+
+      {error && (
+        <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <TableContainer
+        sx={{
+          borderRadius: '6px',
+          border: '1px solid rgba(255,255,255,0.06)',
+          backgroundColor: 'rgba(23, 26, 32, 0.44)',
+        }}
+      >
+        <Table>
+          <TableHead>
+            <TableRow>
+              {columns.map((col) => (
+                <TableCell
+                  key={col.id}
+                  sx={{
+                    backgroundColor: 'rgba(255,255,255,0.02)',
+                    borderBottomColor: 'rgba(255,255,255,0.06)',
+                  }}
+                >
+                  <TableSortLabel
+                    active={sortBy === col.id}
+                    direction={sortBy === col.id ? sortDirection : 'asc'}
+                    onClick={() => handleSort(col.id)}
+                    sx={{
+                      color: 'text.primary',
+                      '&.Mui-active': { color: 'text.primary' },
+                      '& .MuiTableSortLabel-icon': { color: 'text.secondary !important' },
+                    }}
+                  >
+                    {col.label}
+                  </TableSortLabel>
+                </TableCell>
+              ))}
+              <TableCell
+                align="right"
+                sx={{
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                  borderBottomColor: 'rgba(255,255,255,0.06)',
+                  width: 100,
+                }}
+              >
+                Actions
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredUsers.map((user) => (
+              <TableRow
+                key={user.id}
+                hover
+                sx={{
+                  '&:last-child td': { borderBottom: 0 },
+                  '& .MuiTableCell-root': { borderBottomColor: 'rgba(255,255,255,0.06)' },
+                }}
+              >
+                <TableCell>{user.email}</TableCell>
+                <TableCell>{formatDateTime(user.createdAtUtc)}</TableCell>
+                <TableCell>{formatDateTime(user.lastLoginAtUtc)}</TableCell>
+                <TableCell align="right">
+                  <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                    <IconButton size="small" aria-label={`Edit ${user.email}`} onClick={() => openEditDialog(user)}>
+                      <EditRoundedIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" aria-label={`Delete ${user.email}`} onClick={() => void handleDelete(user)}>
+                      <DeleteRoundedIcon fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            ))}
+            {!loading && filteredUsers.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={4} sx={{ py: 6, textAlign: 'center', color: 'text.secondary' }}>
+                  {users.length === 0 ? 'No users created yet.' : 'No users match the search.'}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       <Dialog open={dialogOpen} onClose={handleCloseDialog} fullWidth maxWidth="sm">
         <DialogTitle>{editingUser ? 'Edit user' : 'Add user'}</DialogTitle>
@@ -221,7 +314,7 @@ function UsersView() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Paper>
   );
 }
 

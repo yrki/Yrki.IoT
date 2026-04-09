@@ -12,7 +12,6 @@ import RouterRoundedIcon from '@mui/icons-material/RouterRounded';
 import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
 import MapRoundedIcon from '@mui/icons-material/MapRounded';
 import type { SvgIconComponent } from '@mui/icons-material';
-import logo from '../assets/logo.png';
 
 export type NavigationSection = 'Sensors' | 'Gateways' | 'New Sensors' | 'Locations' | 'Map' | 'Users' | 'Live View' | 'Gateway View';
 
@@ -34,7 +33,7 @@ function LeftDrawer({ selectedSection, onSelectSection }: LeftDrawerProps) {
   return (
     <Box
       sx={{
-        width: { xs: 280, md: 300 },
+        width: { xs: 220, md: 220 },
         height: '100%',
         px: 2,
         py: 3,
@@ -42,16 +41,6 @@ function LeftDrawer({ selectedSection, onSelectSection }: LeftDrawerProps) {
       }}
       role="presentation"
     >
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-        <img
-          src={logo}
-          alt="Yrki.IoT"
-          style={{
-            height: 110,
-            filter: 'brightness(0) invert(1)',
-          }}
-        />
-      </Box>
       <List sx={{ display: 'grid', gap: 0.5 }}>
         {primaryItems.map(({ label, icon: Icon }) => {
           const active = selectedSection === label;

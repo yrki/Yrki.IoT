@@ -5,6 +5,22 @@ const apiTarget = process.env.VITE_API_TARGET ?? 'http://localhost:8081';
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    chunkSizeWarningLimit: 1100,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            { name: 'vendor-maplibre', test: /node_modules\/@maplibre|node_modules\/maplibre-gl/ },
+            { name: 'vendor-mui', test: /node_modules\/@mui/ },
+            { name: 'vendor-react', test: /node_modules\/react/ },
+            { name: 'vendor-signalr', test: /node_modules\/@microsoft/ },
+            { name: 'vendor', test: /node_modules/ },
+          ],
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       '/api': {

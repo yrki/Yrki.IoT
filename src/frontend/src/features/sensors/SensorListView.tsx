@@ -282,9 +282,6 @@ function SensorListView() {
           <Typography variant="h4" sx={{ mb: 0.75 }}>
             Sensors
           </Typography>
-          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-            Registered sensors. Click a sensor to view live data.
-          </Typography>
         </Box>
         <TextField
           placeholder="Search sensors by name, uniqueId or location"
