@@ -17,6 +17,7 @@ public class DevicesController(
     SensorsBySensorLocationQueryHandler sensorsBySensorLocationQueryHandler,
     SensorByUniqueIdQueryHandler sensorByUniqueIdQueryHandler,
     UpdateDeviceCommandHandler updateHandler,
+    AssignDevicesToLocationCommandHandler assignDevicesToLocationHandler,
     DeleteSensorCommandHandler deleteHandler) : ControllerBase
 {
     [HttpGet]
@@ -68,6 +69,18 @@ public class DevicesController(
             return NotFound();
 
         return Ok(result);
+    }
+
+    [HttpPost("assign-to-location")]
+    public async Task<IActionResult> AssignToLocation(
+        [FromBody] AssignDevicesToLocationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var affected = await assignDevicesToLocationHandler.HandleAsync(request, cancellationToken);
+        if (affected < 0)
+            return NotFound();
+
+        return Ok(new { affected });
     }
 
     [HttpDelete("{id:guid}")]
