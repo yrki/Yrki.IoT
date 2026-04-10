@@ -7,4 +7,6 @@ public record LocationResponse(
     int DeviceCount,
     Guid? ParentLocationId,
     double? Latitude,
-    double? Longitude);
+    double? Longitude,
+    double[][]? Boundary,
+    string? Color);

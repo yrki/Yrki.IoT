@@ -106,6 +106,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
   const [formParentId, setFormParentId] = useState<string>('');
   const [formLatitude, setFormLatitude] = useState<string>('');
   const [formLongitude, setFormLongitude] = useState<string>('');
+  const [formColor, setFormColor] = useState<string>('');
 
 
   const loadLocations = () => {
@@ -170,6 +171,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
     setFormParentId(parentId ?? '');
     setFormLatitude('');
     setFormLongitude('');
+    setFormColor('');
     setDialogOpen(true);
   };
 
@@ -180,6 +182,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
     setFormParentId(location.parentLocationId ?? '');
     setFormLatitude(location.latitude != null ? String(location.latitude) : '');
     setFormLongitude(location.longitude != null ? String(location.longitude) : '');
+    setFormColor(location.color ?? '');
     setDialogOpen(true);
   };
 
@@ -188,6 +191,7 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
     const parentId = formParentId || undefined;
     const latitude = formLatitude.trim() ? Number(formLatitude) : undefined;
     const longitude = formLongitude.trim() ? Number(formLongitude) : undefined;
+    const color = formColor.trim() ? formColor.trim() : null;
 
     if (editingLocation) {
       await updateLocation(editingLocation.id, {
@@ -196,9 +200,18 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
         parentLocationId: formParentId || null,
         latitude: latitude ?? null,
         longitude: longitude ?? null,
+        color,
       });
     } else {
-      await createLocation(formName.trim(), formDescription.trim() || undefined, parentId, latitude, longitude);
+      await createLocation(
+        formName.trim(),
+        formDescription.trim() || undefined,
+        parentId,
+        latitude,
+        longitude,
+        undefined,
+        color,
+      );
     }
 
     setDialogOpen(false);
@@ -246,6 +259,18 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
                     ? <KeyboardArrowUpRoundedIcon fontSize="small" />
                     : <KeyboardArrowDownRoundedIcon fontSize="small" />}
                 </IconButton>
+                {location.color && (
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      background: location.color,
+                      border: '1px solid rgba(15, 23, 42, 0.25)',
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
                 <Typography>{location.name}</Typography>
               </Stack>
             </TableCell>
@@ -556,6 +581,39 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
               </MenuItem>
             ))}
           </TextField>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <TextField
+              label="Color"
+              type="color"
+              value={formColor || '#3b82f6'}
+              onChange={(e) => setFormColor(e.target.value)}
+              sx={{ width: 120, '& input[type=color]': { p: 0.5, height: 36, cursor: 'pointer' } }}
+              InputLabelProps={{ shrink: true }}
+            />
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1 }}>
+              <Box
+                sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  border: '1px solid rgba(148, 163, 184, 0.45)',
+                  background: formColor || 'transparent',
+                  backgroundImage: formColor
+                    ? 'none'
+                    : 'repeating-conic-gradient(rgba(148,163,184,0.35) 0% 25%, transparent 0% 50%)',
+                  backgroundSize: '10px 10px',
+                }}
+              />
+              <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+                {formColor ? formColor : 'Auto color from location id'}
+              </Typography>
+              {formColor && (
+                <Button size="small" onClick={() => setFormColor('')}>
+                  Clear
+                </Button>
+              )}
+            </Stack>
+          </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancel</Button>

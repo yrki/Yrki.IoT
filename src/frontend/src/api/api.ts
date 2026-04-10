@@ -196,6 +196,8 @@ export async function getDeviceByUniqueId(sensorId: string): Promise<SensorListI
   return response.data;
 }
 
+export type LocationBoundary = number[][];
+
 export interface LocationDto {
   id: string;
   name: string;
@@ -204,6 +206,8 @@ export interface LocationDto {
   parentLocationId: string | null;
   latitude: number | null;
   longitude: number | null;
+  boundary: LocationBoundary | null;
+  color: string | null;
 }
 
 export async function getLocations(): Promise<LocationDto[]> {
@@ -211,12 +215,39 @@ export async function getLocations(): Promise<LocationDto[]> {
   return response.data;
 }
 
-export async function createLocation(name: string, description?: string, parentLocationId?: string, latitude?: number, longitude?: number): Promise<LocationDto> {
-  const response = await api.post<LocationDto>('/locations', { name, description, parentLocationId, latitude, longitude });
+export async function createLocation(
+  name: string,
+  description?: string,
+  parentLocationId?: string,
+  latitude?: number,
+  longitude?: number,
+  boundary?: LocationBoundary,
+  color?: string | null,
+): Promise<LocationDto> {
+  const response = await api.post<LocationDto>('/locations', {
+    name,
+    description,
+    parentLocationId,
+    latitude,
+    longitude,
+    boundary,
+    color,
+  });
   return response.data;
 }
 
-export async function updateLocation(id: string, request: { name?: string; description?: string; parentLocationId?: string | null; latitude?: number | null; longitude?: number | null }): Promise<LocationDto> {
+export async function updateLocation(
+  id: string,
+  request: {
+    name?: string;
+    description?: string;
+    parentLocationId?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    boundary?: LocationBoundary | null;
+    color?: string | null;
+  },
+): Promise<LocationDto> {
   const response = await api.put<LocationDto>(`/locations/${id}`, request);
   return response.data;
 }

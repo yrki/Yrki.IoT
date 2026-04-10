@@ -1,6 +1,7 @@
 using Contracts.Requests;
 using Contracts.Responses;
 using Core.Contexts;
+using Core.Features.Locations.Query;
 using Microsoft.EntityFrameworkCore;
 
 namespace Core.Features.Locations.Command;
@@ -31,6 +32,12 @@ public class UpdateLocationCommandHandler(DatabaseContext db)
         if (request.Longitude is not null)
             location.Longitude = request.Longitude;
 
+        if (request.Boundary is not null)
+            location.Boundary = BoundarySerializer.Serialize(request.Boundary);
+
+        if (request.Color is not null)
+            location.Color = NormalizeColor(request.Color);
+
         await db.SaveChangesAsync(cancellationToken);
 
         return new LocationResponse(
@@ -40,6 +47,16 @@ public class UpdateLocationCommandHandler(DatabaseContext db)
             location.Devices.Count(d => !d.IsNew),
             location.ParentLocationId,
             location.Latitude,
-            location.Longitude);
+            location.Longitude,
+            BoundarySerializer.Deserialize(location.Boundary),
+            location.Color);
+    }
+
+    private static string? NormalizeColor(string? color)
+    {
+        if (string.IsNullOrWhiteSpace(color))
+            return null;
+        var trimmed = color.Trim();
+        return trimmed.Length == 0 ? null : trimmed;
     }
 }

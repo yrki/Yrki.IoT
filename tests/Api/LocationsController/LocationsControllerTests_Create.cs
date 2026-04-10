@@ -18,7 +18,7 @@ public sealed class LocationsControllerTests_Create : IClassFixture<ApiDatabaseF
             new CreateLocationCommandHandler(_dbContext),
             new UpdateLocationCommandHandler(_dbContext),
             new DeleteLocationCommandHandler(_dbContext));
-        var request = new CreateLocationRequest("Alpha site", "Main campus", null, null, null);
+        var request = new CreateLocationRequest("Alpha site", "Main campus", null, null, null, null, null);
 
         // Act
         var result = await controller.Create(request, CancellationToken.None);
