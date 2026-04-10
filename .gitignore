@@ -239,9 +239,10 @@ _pkginfo.txt
 # Others
 ClientBin/
 
-# Core dumps
-core
-core.*
+# Core dumps (anchored to repo root so the Core/ subtree is not ignored on
+# case-insensitive filesystems like macOS)
+/core
+/core.*
 ~$*
 *~
 *.dbmdl
