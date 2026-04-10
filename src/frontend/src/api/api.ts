@@ -115,6 +115,29 @@ export async function getGatewaySensors(gatewayId: string): Promise<GatewaySenso
   return response.data;
 }
 
+export interface RawPayloadDto {
+  id: string;
+  receivedAt: string;
+  payloadHex: string;
+  source: string;
+  deviceId: string | null;
+  manufacturer: string | null;
+  gatewayId: string | null;
+  rssi: number | null;
+  error: string | null;
+}
+
+export async function getRawPayloadsByDevice(
+  deviceId: string,
+  limit = 100,
+): Promise<RawPayloadDto[]> {
+  const response = await api.get<RawPayloadDto[]>(
+    `/rawpayloads/device/${encodeURIComponent(deviceId)}`,
+    { params: { limit } },
+  );
+  return response.data;
+}
+
 export interface NewDeviceDto {
   id: string;
   uniqueId: string;
@@ -249,6 +272,17 @@ export async function updateLocation(
   },
 ): Promise<LocationDto> {
   const response = await api.put<LocationDto>(`/locations/${id}`, request);
+  return response.data;
+}
+
+export async function assignDevicesToLocation(
+  locationId: string,
+  deviceIds: string[],
+): Promise<{ affected: number }> {
+  const response = await api.post<{ affected: number }>('/devices/assign-to-location', {
+    locationId,
+    deviceIds,
+  });
   return response.data;
 }
 

@@ -25,6 +25,7 @@ const GatewayListView = lazy(() => import('../features/gateways/GatewayListView'
 const GatewayView = lazy(() => import('../features/gateways/GatewayView'));
 const UsersView = lazy(() => import('../features/users/UsersView'));
 const MapView = lazy(() => import('../features/map/MapView'));
+const RawPayloadsView = lazy(() => import('../features/raw-payloads/RawPayloadsView'));
 
 const drawerWidth = 220;
 
@@ -40,6 +41,10 @@ function getSectionFromPath(pathname: string): NavigationSection {
 
   if (matchPath('/gateways/:gatewayId', pathname)) {
     return 'Gateway View';
+  }
+
+  if (matchPath('/raw-payloads/:deviceId', pathname)) {
+    return 'New Sensors';
   }
 
   if (pathname.startsWith('/gateways')) {
@@ -106,7 +111,8 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
     ].some((path) => location.pathname === path)
       || matchPath('/sensors/:sensorId', location.pathname)
       || matchPath('/locations/:locationId', location.pathname)
-      || matchPath('/gateways/:gatewayId', location.pathname);
+      || matchPath('/gateways/:gatewayId', location.pathname)
+      || matchPath('/raw-payloads/:deviceId', location.pathname);
 
     if (!isKnownRoute) {
       navigate('/sensors', { replace: true });
@@ -127,6 +133,12 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
 
   const navigateToGatewayView = useCallback((gatewayId: string) => {
     navigate(`/gateways/${encodeURIComponent(gatewayId)}`, {
+      state: { from: location.pathname },
+    });
+  }, [location.pathname, navigate]);
+
+  const navigateToRawPayloads = useCallback((deviceId: string) => {
+    navigate(`/raw-payloads/${encodeURIComponent(deviceId)}`, {
       state: { from: location.pathname },
     });
   }, [location.pathname, navigate]);
@@ -153,9 +165,19 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
     const sensorMatch = matchPath('/sensors/:sensorId', location.pathname);
     const locationMatch = matchPath('/locations/:locationId', location.pathname);
     const gatewayMatch = matchPath('/gateways/:gatewayId', location.pathname);
+    const rawPayloadsMatch = matchPath('/raw-payloads/:deviceId', location.pathname);
     const fromPath = typeof location.state === 'object' && location.state && 'from' in location.state
       ? String(location.state.from)
       : null;
+
+    if (rawPayloadsMatch?.params.deviceId) {
+      return (
+        <RawPayloadsView
+          deviceId={decodeURIComponent(rawPayloadsMatch.params.deviceId)}
+          onBack={() => navigate(fromPath || '/new-sensors')}
+        />
+      );
+    }
 
     if (sensorMatch?.params.sensorId) {
       return (
@@ -199,7 +221,7 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
           />
         );
       case 'New Sensors':
-        return <NewSensorsView />;
+        return <NewSensorsView onNavigateToRawPayloads={navigateToRawPayloads} />;
       case 'Map':
         return (
           <MapView

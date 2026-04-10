@@ -216,7 +216,11 @@ function EditDialog({ device, open, locations, onClose, onSave }: EditDialogProp
   );
 }
 
-function NewSensorsView() {
+interface NewSensorsViewProps {
+  onNavigateToRawPayloads: (deviceId: string) => void;
+}
+
+function NewSensorsView({ onNavigateToRawPayloads }: NewSensorsViewProps) {
   const [devices, setDevices] = useState<NewDeviceDto[]>([]);
   const [locations, setLocations] = useState<LocationDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -325,13 +329,22 @@ function NewSensorsView() {
                   <TableCell>{formatTimestamp(device.installationDate)}</TableCell>
                   <TableCell>{formatTimestamp(device.lastContact)}</TableCell>
                   <TableCell align="right">
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => setEditDevice(device)}
-                    >
-                      Configure
-                    </Button>
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                      <Button
+                        size="small"
+                        variant="text"
+                        onClick={() => onNavigateToRawPayloads(device.uniqueId)}
+                      >
+                        Raw payloads
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setEditDevice(device)}
+                      >
+                        Configure
+                      </Button>
+                    </Stack>
                   </TableCell>
                 </TableRow>
               ))}
