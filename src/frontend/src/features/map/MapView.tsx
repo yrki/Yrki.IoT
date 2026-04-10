@@ -1,12 +1,40 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, FormControl, InputLabel, MenuItem, Paper, Select, Stack, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Box, Button, FormControl, InputLabel, MenuItem, Paper, Select, Snackbar, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { getDevices, getGateways, SensorListItemDto } from '../../api/api';
+import {
+  assignDevicesToLocation,
+  createLocation,
+  getDevices,
+  getGateways,
+  getLocations,
+  LocationBoundary,
+  LocationDto,
+  SensorListItemDto,
+  updateLocation,
+} from '../../api/api';
 import { clusterDevices, DeviceCluster } from './deviceClusters';
+import {
+  getDevicesInsideBoundary,
+  getLocationPolygonStyle,
+  isPointInPolygon,
+  locationsWithBoundary,
+} from './locationBoundaries';
+import AssignBoundaryDialog, { AssignBoundarySubmitPayload } from './AssignBoundaryDialog';
 
 const activityFadeDurationMs = 6 * 60 * 60 * 1000;
 const clusterRadiusPx = 44;
+const polygonZoomThreshold = 12;
+const boundarySourceId = 'location-boundaries';
+const boundaryFillLayerId = 'location-boundaries-fill';
+const boundaryOutlineLayerId = 'location-boundaries-outline';
+const boundaryVerticesSourceId = 'location-boundary-vertices';
+const boundaryVerticesLayerId = 'location-boundary-vertices-layer';
+const vertexHitRadiusPx = 10;
+const drawingSourceId = 'map-drawing';
+const drawingFillLayerId = 'map-drawing-fill';
+const drawingOutlineLayerId = 'map-drawing-outline';
+const drawingVerticesLayerId = 'map-drawing-vertices';
 
 interface MapViewProps {
   onNavigateToSensor: (sensorId: string) => void;
@@ -346,15 +374,82 @@ function zoomToCluster(map: maplibregl.Map, cluster: DeviceCluster): void {
   });
 }
 
+function closePolygonRing(boundary: LocationBoundary): number[][] {
+  if (boundary.length === 0) {
+    return boundary;
+  }
+
+  const first = boundary[0];
+  const last = boundary[boundary.length - 1];
+  if (first[0] === last[0] && first[1] === last[1]) {
+    return boundary;
+  }
+
+  return [...boundary, first];
+}
+
+function polygonCentroid(boundary: LocationBoundary): [number, number] {
+  let lng = 0;
+  let lat = 0;
+  for (const [x, y] of boundary) {
+    lng += x;
+    lat += y;
+  }
+  return [lng / boundary.length, lat / boundary.length];
+}
+
 function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
+  const labelMarkersRef = useRef<maplibregl.Marker[]>([]);
   const popupRef = useRef<maplibregl.Popup | null>(null);
+  const drawingActiveRef = useRef(false);
+  const drawingPointsRef = useRef<[number, number][]>([]);
+  const locationsRef = useRef<LocationDto[]>([]);
+  const boundaryOverridesRef = useRef<Map<string, LocationBoundary>>(new Map());
   const [devices, setDevices] = useState<SensorListItemDto[]>([]);
+  const [locations, setLocations] = useState<LocationDto[]>([]);
+  const [boundaryOverrides, setBoundaryOverrides] = useState<Map<string, LocationBoundary>>(new Map());
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [sensorsVisible, setSensorsVisible] = useState(false);
   const [kindFilter, setKindFilter] = useState<DeviceKindFilter>('all');
   const [manufacturerFilter, setManufacturerFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [mapReady, setMapReady] = useState(false);
+  const [drawingActive, setDrawingActive] = useState(false);
+  const [drawingPoints, setDrawingPoints] = useState<[number, number][]>([]);
+  const [pendingBoundary, setPendingBoundary] = useState<LocationBoundary | null>(null);
+  const [enclosedDevices, setEnclosedDevices] = useState<SensorListItemDto[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [feedback, setFeedback] = useState<{ severity: 'success' | 'error'; message: string } | null>(null);
+
+  useEffect(() => {
+    drawingActiveRef.current = drawingActive;
+  }, [drawingActive]);
+
+  useEffect(() => {
+    drawingPointsRef.current = drawingPoints;
+  }, [drawingPoints]);
+
+  useEffect(() => {
+    locationsRef.current = locations;
+  }, [locations]);
+
+  useEffect(() => {
+    boundaryOverridesRef.current = boundaryOverrides;
+  }, [boundaryOverrides]);
+
+  const getEffectiveBoundary = useCallback(
+    (location: LocationDto): LocationBoundary | null => {
+      const override = boundaryOverrides.get(location.id);
+      if (override) {
+        return override;
+      }
+      return location.boundary ?? null;
+    },
+    [boundaryOverrides],
+  );
 
   const manufacturers = useMemo(
     () => [...new Set(devices.map((device) => device.manufacturer).filter((value): value is string => Boolean(value)))].sort((left, right) => left.localeCompare(right)),
@@ -404,13 +499,15 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
     .sort((left, right) => left.localeCompare(right))
     .join('|'), [filteredDevices]);
 
-  useEffect(() => {
-    Promise.all([getDevices(), getGateways()])
-      .then(([sensors, gateways]) => {
-        setDevices([...sensors, ...gateways]);
-      })
-      .catch((err) => console.error('Failed to fetch devices for map:', err));
+  const reloadMapData = useCallback(async () => {
+    const [sensors, gateways, locs] = await Promise.all([getDevices(), getGateways(), getLocations()]);
+    setDevices([...sensors, ...gateways]);
+    setLocations(locs);
   }, []);
+
+  useEffect(() => {
+    reloadMapData().catch((err) => console.error('Failed to fetch map data:', err));
+  }, [reloadMapData]);
 
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) {
@@ -425,13 +522,573 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
     });
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    map.on('load', () => setMapReady(true));
     mapRef.current = map;
 
     return () => {
       map.remove();
       mapRef.current = null;
+      setMapReady(false);
     };
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) {
+      return;
+    }
+
+    const updateZoomState = () => {
+      setSensorsVisible(map.getZoom() >= polygonZoomThreshold);
+    };
+
+    updateZoomState();
+    map.on('zoomend', updateZoomState);
+    return () => {
+      map.off('zoomend', updateZoomState);
+    };
+  }, [mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) {
+      return;
+    }
+
+    if (!map.getSource(boundarySourceId)) {
+      map.addSource(boundarySourceId, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.addLayer({
+        id: boundaryFillLayerId,
+        type: 'fill',
+        source: boundarySourceId,
+        paint: {
+          'fill-color': ['get', 'fillColor'],
+          'fill-opacity': 0.35,
+        },
+      });
+      map.addLayer({
+        id: boundaryOutlineLayerId,
+        type: 'line',
+        source: boundarySourceId,
+        paint: {
+          'line-color': ['get', 'strokeColor'],
+          'line-width': 2,
+          'line-opacity': 0.9,
+        },
+      });
+    }
+
+    if (!map.getSource(boundaryVerticesSourceId)) {
+      map.addSource(boundaryVerticesSourceId, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.addLayer({
+        id: boundaryVerticesLayerId,
+        type: 'circle',
+        source: boundaryVerticesSourceId,
+        paint: {
+          'circle-radius': 6,
+          'circle-color': '#ffffff',
+          'circle-stroke-color': ['get', 'strokeColor'],
+          'circle-stroke-width': 2,
+        },
+      });
+    }
+
+    if (!map.getSource(drawingSourceId)) {
+      map.addSource(drawingSourceId, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.addLayer({
+        id: drawingFillLayerId,
+        type: 'fill',
+        source: drawingSourceId,
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: {
+          'fill-color': '#0ea5e9',
+          'fill-opacity': 0.18,
+        },
+      });
+      map.addLayer({
+        id: drawingOutlineLayerId,
+        type: 'line',
+        source: drawingSourceId,
+        filter: ['==', ['geometry-type'], 'LineString'],
+        paint: {
+          'line-color': '#0ea5e9',
+          'line-width': 2,
+          'line-dasharray': [2, 1],
+        },
+      });
+      map.addLayer({
+        id: drawingVerticesLayerId,
+        type: 'circle',
+        source: drawingSourceId,
+        filter: ['==', ['geometry-type'], 'Point'],
+        paint: {
+          'circle-radius': 5,
+          'circle-color': '#ffffff',
+          'circle-stroke-color': '#0ea5e9',
+          'circle-stroke-width': 2,
+        },
+      });
+    }
+  }, [mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) {
+      return;
+    }
+
+    const source = map.getSource(boundarySourceId) as maplibregl.GeoJSONSource | undefined;
+    if (!source) {
+      return;
+    }
+
+    const renderable = locations.flatMap((location) => {
+      const boundary = getEffectiveBoundary(location);
+      if (!boundary || boundary.length < 3) {
+        return [];
+      }
+      const style = getLocationPolygonStyle(location.id, location.color);
+      return [{ location, boundary, style }];
+    });
+
+    source.setData({
+      type: 'FeatureCollection',
+      features: renderable.map(({ location, boundary, style }) => ({
+        type: 'Feature' as const,
+        properties: {
+          id: location.id,
+          name: location.name,
+          fillColor: style.fill,
+          strokeColor: style.stroke,
+        },
+        geometry: {
+          type: 'Polygon' as const,
+          coordinates: [closePolygonRing(boundary)],
+        },
+      })),
+    });
+
+    const verticesSource = map.getSource(boundaryVerticesSourceId) as maplibregl.GeoJSONSource | undefined;
+    if (verticesSource) {
+      verticesSource.setData({
+        type: 'FeatureCollection',
+        features: selectedLocationId
+          ? renderable
+              .filter(({ location }) => location.id === selectedLocationId)
+              .flatMap(({ location, boundary, style }) =>
+                boundary.map((point, index) => ({
+                  type: 'Feature' as const,
+                  properties: {
+                    locationId: location.id,
+                    vertexIndex: index,
+                    strokeColor: style.stroke,
+                  },
+                  geometry: { type: 'Point' as const, coordinates: point },
+                })),
+              )
+          : [],
+      });
+    }
+  }, [locations, mapReady, getEffectiveBoundary, selectedLocationId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) {
+      return;
+    }
+
+    const source = map.getSource(drawingSourceId) as maplibregl.GeoJSONSource | undefined;
+    if (!source) {
+      return;
+    }
+
+    const features: GeoJSON.Feature[] = drawingPoints.map((coordinate, index) => ({
+      type: 'Feature',
+      properties: { index },
+      geometry: { type: 'Point', coordinates: coordinate },
+    }));
+
+    if (drawingPoints.length >= 2) {
+      const lineCoords = drawingPoints.length >= 3
+        ? [...drawingPoints, drawingPoints[0]]
+        : drawingPoints;
+      features.push({
+        type: 'Feature',
+        properties: {},
+        geometry: { type: 'LineString', coordinates: lineCoords },
+      });
+    }
+
+    if (drawingPoints.length >= 3) {
+      features.push({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'Polygon',
+          coordinates: [[...drawingPoints, drawingPoints[0]]],
+        },
+      });
+    }
+
+    source.setData({ type: 'FeatureCollection', features });
+  }, [drawingPoints, mapReady]);
+
+  const finishDrawing = useCallback(() => {
+    const points = drawingPointsRef.current;
+    if (points.length < 3) {
+      setFeedback({ severity: 'error', message: 'Draw at least three points to form an area.' });
+      return;
+    }
+
+    const boundary: LocationBoundary = points.map(([lng, lat]) => [lng, lat]);
+    const inside = getDevicesInsideBoundary(devices, boundary);
+
+    setPendingBoundary(boundary);
+    setEnclosedDevices(inside);
+    setDialogOpen(true);
+    setDrawingActive(false);
+  }, [devices]);
+
+  const cancelDrawing = useCallback(() => {
+    setDrawingActive(false);
+    setDrawingPoints([]);
+  }, []);
+
+  const startDrawing = useCallback(() => {
+    popupRef.current?.remove();
+    popupRef.current = null;
+    setDrawingPoints([]);
+    setDrawingActive(true);
+  }, []);
+
+  const handleDialogCancel = useCallback(() => {
+    setDialogOpen(false);
+    setPendingBoundary(null);
+    setEnclosedDevices([]);
+    setDrawingPoints([]);
+  }, []);
+
+  const handleDialogSubmit = useCallback(async (payload: AssignBoundarySubmitPayload) => {
+    if (!pendingBoundary) {
+      return;
+    }
+
+    let targetLocationId: string;
+    if (payload.mode === 'create') {
+      const created = await createLocation(
+        payload.newLocationName ?? '',
+        undefined,
+        payload.newLocationParentId ?? undefined,
+        undefined,
+        undefined,
+        pendingBoundary,
+      );
+      targetLocationId = created.id;
+    } else {
+      if (!payload.existingLocationId) {
+        throw new Error('Missing existing location id.');
+      }
+      await updateLocation(payload.existingLocationId, { boundary: pendingBoundary });
+      targetLocationId = payload.existingLocationId;
+    }
+
+    const deviceIds = enclosedDevices.map((device) => device.id);
+    let affected = 0;
+    if (deviceIds.length > 0) {
+      const result = await assignDevicesToLocation(targetLocationId, deviceIds);
+      affected = result.affected;
+    }
+
+    setDialogOpen(false);
+    setPendingBoundary(null);
+    setEnclosedDevices([]);
+    setDrawingPoints([]);
+    setFeedback({
+      severity: 'success',
+      message: affected === 0
+        ? 'Saved boundary. No sensors were inside the area.'
+        : `Saved boundary and assigned ${affected} sensor${affected === 1 ? '' : 's'}.`,
+    });
+
+    await reloadMapData();
+  }, [pendingBoundary, enclosedDevices, reloadMapData]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) {
+      return;
+    }
+
+    if (!drawingActive) {
+      map.getCanvas().style.cursor = '';
+      return;
+    }
+
+    map.getCanvas().style.cursor = 'crosshair';
+    popupRef.current?.remove();
+    popupRef.current = null;
+
+    const onClick = (event: maplibregl.MapMouseEvent) => {
+      const next: [number, number] = [event.lngLat.lng, event.lngLat.lat];
+      setDrawingPoints((previous) => [...previous, next]);
+    };
+
+    const onDblClick = (event: maplibregl.MapMouseEvent) => {
+      event.preventDefault();
+      finishDrawing();
+    };
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Enter') {
+        finishDrawing();
+      } else if (event.key === 'Escape') {
+        cancelDrawing();
+      }
+    };
+
+    map.on('click', onClick);
+    map.on('dblclick', onDblClick);
+    window.addEventListener('keydown', onKey);
+
+    return () => {
+      map.off('click', onClick);
+      map.off('dblclick', onDblClick);
+      window.removeEventListener('keydown', onKey);
+      map.getCanvas().style.cursor = '';
+    };
+  }, [drawingActive, mapReady, finishDrawing, cancelDrawing]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) {
+      return;
+    }
+
+    let dragging: { locationId: string; vertexIndex: number } | null = null;
+
+    const findVertexAt = (point: maplibregl.Point) => {
+      const box: [maplibregl.PointLike, maplibregl.PointLike] = [
+        [point.x - vertexHitRadiusPx, point.y - vertexHitRadiusPx],
+        [point.x + vertexHitRadiusPx, point.y + vertexHitRadiusPx],
+      ];
+      const features = map.queryRenderedFeatures(box, { layers: [boundaryVerticesLayerId] });
+      if (features.length === 0) {
+        return null;
+      }
+      const feature = features[0];
+      const locationId = feature.properties?.locationId as string | undefined;
+      const vertexIndex = feature.properties?.vertexIndex;
+      if (!locationId || typeof vertexIndex !== 'number') {
+        return null;
+      }
+      return { locationId, vertexIndex };
+    };
+
+    const updateVertex = (locationId: string, vertexIndex: number, next: [number, number]) => {
+      setBoundaryOverrides((previous) => {
+        const updated = new Map(previous);
+        const base = updated.get(locationId)
+          ?? locationsRef.current.find((location) => location.id === locationId)?.boundary
+          ?? null;
+        if (!base) {
+          return previous;
+        }
+        const cloned = base.map((point) => [point[0], point[1]] as [number, number]);
+        if (vertexIndex < 0 || vertexIndex >= cloned.length) {
+          return previous;
+        }
+        cloned[vertexIndex] = next;
+        updated.set(locationId, cloned);
+        return updated;
+      });
+    };
+
+    const onMouseMove = (event: maplibregl.MapMouseEvent) => {
+      if (drawingActiveRef.current) {
+        return;
+      }
+      if (dragging) {
+        updateVertex(dragging.locationId, dragging.vertexIndex, [event.lngLat.lng, event.lngLat.lat]);
+        return;
+      }
+      const hit = findVertexAt(event.point);
+      map.getCanvas().style.cursor = hit ? 'grab' : '';
+    };
+
+    const onMouseDown = (event: maplibregl.MapMouseEvent) => {
+      if (drawingActiveRef.current) {
+        return;
+      }
+      const hit = findVertexAt(event.point);
+      if (!hit) {
+        return;
+      }
+      event.preventDefault();
+      dragging = hit;
+      map.getCanvas().style.cursor = 'grabbing';
+      map.dragPan.disable();
+    };
+
+    const onMouseUp = async () => {
+      if (!dragging) {
+        return;
+      }
+      const completed = dragging;
+      dragging = null;
+      map.dragPan.enable();
+      map.getCanvas().style.cursor = '';
+
+      const updatedBoundary = boundaryOverridesRef.current.get(completed.locationId);
+      if (!updatedBoundary) {
+        return;
+      }
+
+      try {
+        await updateLocation(completed.locationId, { boundary: updatedBoundary });
+        await reloadMapData();
+      } catch (error) {
+        console.error('Failed to save resized boundary:', error);
+        setFeedback({ severity: 'error', message: 'Failed to save the resized area.' });
+      } finally {
+        setBoundaryOverrides((previous) => {
+          if (!previous.has(completed.locationId)) {
+            return previous;
+          }
+          const next = new Map(previous);
+          next.delete(completed.locationId);
+          return next;
+        });
+      }
+    };
+
+    map.on('mousemove', onMouseMove);
+    map.on('mousedown', onMouseDown);
+    map.on('mouseup', onMouseUp);
+
+    return () => {
+      map.off('mousemove', onMouseMove);
+      map.off('mousedown', onMouseDown);
+      map.off('mouseup', onMouseUp);
+      map.dragPan.enable();
+      map.getCanvas().style.cursor = '';
+    };
+  }, [mapReady, reloadMapData]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) {
+      return;
+    }
+
+    const onMapClick = (event: maplibregl.MapMouseEvent) => {
+      if (drawingActiveRef.current) {
+        return;
+      }
+      const vertexHits = map.queryRenderedFeatures(event.point, { layers: [boundaryVerticesLayerId] });
+      if (vertexHits.length > 0) {
+        return;
+      }
+      const polygonHits = map.queryRenderedFeatures(event.point, { layers: [boundaryFillLayerId] });
+      if (polygonHits.length > 0) {
+        const id = polygonHits[0].properties?.id as string | undefined;
+        if (id) {
+          setSelectedLocationId((current) => (current === id ? null : id));
+        }
+        return;
+      }
+      setSelectedLocationId(null);
+    };
+
+    map.on('click', onMapClick);
+    return () => {
+      map.off('click', onMapClick);
+    };
+  }, [mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) {
+      return;
+    }
+
+    const clearLabels = () => {
+      for (const marker of labelMarkersRef.current) {
+        marker.remove();
+      }
+      labelMarkersRef.current = [];
+    };
+
+    clearLabels();
+
+    const labelZIndex = sensorsVisible ? '50' : '500';
+    const labelBackground = sensorsVisible ? '#ffffff' : 'rgba(255, 255, 255, 0.94)';
+    const labelBoxShadow = sensorsVisible ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.2)';
+    const labelBorder = sensorsVisible ? '1px solid rgba(148, 163, 184, 0.45)' : 'none';
+    const dimmedTextColor = 'rgba(71, 85, 105, 0.78)';
+    const dimmedSubColor = 'rgba(100, 116, 139, 0.7)';
+
+    for (const location of locations) {
+      const boundary = getEffectiveBoundary(location);
+      if (!boundary || boundary.length < 3) {
+        continue;
+      }
+
+      const style = getLocationPolygonStyle(location.id, location.color);
+      const insideCount = getDevicesInsideBoundary(filteredDevices, boundary).length;
+      const sensorWord = insideCount === 1 ? 'sensor' : 'sensors';
+
+      const labelEl = document.createElement('div');
+      labelEl.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      labelEl.style.background = labelBackground;
+      labelEl.style.color = sensorsVisible ? dimmedTextColor : style.stroke;
+      labelEl.style.padding = '6px 10px';
+      labelEl.style.borderRadius = '6px';
+      labelEl.style.boxShadow = labelBoxShadow;
+      labelEl.style.border = labelBorder;
+      labelEl.style.pointerEvents = 'none';
+      labelEl.style.textAlign = 'center';
+      labelEl.style.whiteSpace = 'nowrap';
+      labelEl.style.zIndex = labelZIndex;
+
+      const nameEl = document.createElement('div');
+      nameEl.textContent = location.name;
+      nameEl.style.fontSize = '15px';
+      nameEl.style.fontWeight = sensorsVisible ? '600' : '700';
+      nameEl.style.lineHeight = '1.15';
+      nameEl.style.letterSpacing = '0.01em';
+
+      const countEl = document.createElement('div');
+      countEl.textContent = `${insideCount} ${sensorWord}`;
+      countEl.style.fontSize = '13px';
+      countEl.style.fontWeight = sensorsVisible ? '500' : '600';
+      countEl.style.color = sensorsVisible ? dimmedSubColor : 'inherit';
+      countEl.style.opacity = sensorsVisible ? '1' : '0.85';
+      countEl.style.marginTop = '2px';
+
+      labelEl.appendChild(nameEl);
+      labelEl.appendChild(countEl);
+
+      const marker = new maplibregl.Marker({ element: labelEl, anchor: 'center' })
+        .setLngLat(polygonCentroid(boundary))
+        .addTo(map);
+      marker.getElement().style.zIndex = labelZIndex;
+
+      labelMarkersRef.current.push(marker);
+    }
+
+    return () => {
+      clearLabels();
+    };
+  }, [locations, mapReady, getEffectiveBoundary, filteredDevices, sensorsVisible]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -464,8 +1121,17 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
         .setDOMContent(buildLocationPopupContent(devicesAtLocation, now, onNavigateToSensor, onNavigateToGateway, closePopup))
         .addTo(map);
 
+      popup.getElement().style.zIndex = '1000';
+
       popupRef.current = popup;
     };
+
+    const polygonsForCulling = locationsWithBoundary(locations)
+      .map((location) => location.boundary as LocationBoundary);
+
+    const isInsideAnyPolygon = (device: SensorListItemDto) =>
+      polygonsForCulling.some((boundary) =>
+        isPointInPolygon(device.longitude!, device.latitude!, boundary));
 
     const renderMarkers = () => {
       clearMarkers();
@@ -475,11 +1141,31 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
       }
 
       const now = Date.now();
-      const clusters = clusterDevices(
-        mappableDevices,
-        (device) => map.project([device.longitude!, device.latitude!]),
-        clusterRadiusPx,
-      );
+      const skipClustering = map.getZoom() >= polygonZoomThreshold;
+      const visibleDevices = skipClustering
+        ? mappableDevices
+        : mappableDevices.filter((device) => !isInsideAnyPolygon(device));
+
+      if (visibleDevices.length === 0) {
+        return;
+      }
+
+      const clusters = skipClustering
+        ? visibleDevices.map((device): DeviceCluster => {
+            const projected = map.project([device.longitude!, device.latitude!]);
+            return {
+              longitude: device.longitude!,
+              latitude: device.latitude!,
+              devices: [device],
+              projectedX: projected.x,
+              projectedY: projected.y,
+            };
+          })
+        : clusterDevices(
+            visibleDevices,
+            (device) => map.project([device.longitude!, device.latitude!]),
+            clusterRadiusPx,
+          );
 
       for (const cluster of clusters) {
         if (cluster.devices.length === 1) {
@@ -491,23 +1177,22 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
 
           el.addEventListener('click', (event) => {
             event.stopPropagation();
+            if (drawingActiveRef.current) {
+              return;
+            }
             openLocationPopup(devicesAtLocation, lngLat, now);
           });
 
           const marker = new maplibregl.Marker({ element: el })
             .setLngLat(lngLat)
             .addTo(map);
+          marker.getElement().style.zIndex = '100';
 
           markersRef.current.push(marker);
           continue;
         }
 
         const clusterKind = getClusterKind(cluster);
-        const clusterLabel = clusterKind === 'Gateway'
-          ? 'Gateway cluster'
-          : clusterKind === 'Mixed'
-            ? 'Mixed cluster'
-            : 'Device cluster';
         const clusterEl = createClusterElement(cluster.devices.length, clusterKind);
 
         clusterEl.title = areDevicesAtExactSameLocation(cluster.devices)
@@ -515,6 +1200,9 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
           : `${cluster.devices.length} devices in this area`;
         clusterEl.addEventListener('click', (event) => {
           event.stopPropagation();
+          if (drawingActiveRef.current) {
+            return;
+          }
           if (areDevicesAtExactSameLocation(cluster.devices)) {
             const first = cluster.devices[0];
             openLocationPopup(cluster.devices, [first.longitude!, first.latitude!], now);
@@ -528,6 +1216,7 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
         const marker = new maplibregl.Marker({ element: clusterEl })
           .setLngLat([cluster.longitude, cluster.latitude])
           .addTo(map);
+        marker.getElement().style.zIndex = '100';
 
         markersRef.current.push(marker);
       }
@@ -545,7 +1234,7 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
       closePopup();
       clearMarkers();
     };
-  }, [devicesByCoordinate, filteredDevices, onNavigateToSensor, onNavigateToGateway]);
+  }, [devicesByCoordinate, filteredDevices, locations, onNavigateToSensor, onNavigateToGateway]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -641,6 +1330,37 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
             ))}
           </Select>
         </FormControl>
+
+        <Box sx={{ flexGrow: 1 }} />
+
+        {drawingActive ? (
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Typography variant="body2" sx={{ color: 'rgba(226, 232, 240, 0.85)' }}>
+              {drawingPoints.length < 3
+                ? `Click on the map to add points (${drawingPoints.length}/3 minimum)`
+                : `${drawingPoints.length} points · double-click or press Enter to finish`}
+            </Typography>
+            <Button
+              size="small"
+              variant="contained"
+              color="primary"
+              onClick={finishDrawing}
+              disabled={drawingPoints.length < 3}
+            >
+              Finish
+            </Button>
+            <Button size="small" onClick={cancelDrawing}>Cancel</Button>
+          </Stack>
+        ) : (
+          <Button
+            size="small"
+            variant="outlined"
+            color="primary"
+            onClick={startDrawing}
+          >
+            Draw area
+          </Button>
+        )}
       </Stack>
       <Box
         ref={mapContainer}
@@ -649,6 +1369,29 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
           minHeight: 0,
         }}
       />
+      <AssignBoundaryDialog
+        open={dialogOpen}
+        enclosedDeviceCount={enclosedDevices.length}
+        locations={locations}
+        onCancel={handleDialogCancel}
+        onSubmit={handleDialogSubmit}
+      />
+      <Snackbar
+        open={feedback !== null}
+        autoHideDuration={5000}
+        onClose={() => setFeedback(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        {feedback ? (
+          <Alert
+            severity={feedback.severity}
+            onClose={() => setFeedback(null)}
+            sx={{ width: '100%' }}
+          >
+            {feedback.message}
+          </Alert>
+        ) : undefined}
+      </Snackbar>
     </Paper>
   );
 }

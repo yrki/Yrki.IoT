@@ -4,7 +4,7 @@ import { calculateSensorStatistics } from './sensorStats';
 describe('calculateSensorStatistics', () => {
   it('Shall_return_null_when_history_is_empty', () => {
     // Arrange
-    const history = [];
+    const history: { time: number; value: number }[] = [];
 
     // Act
     const result = calculateSensorStatistics(history);
