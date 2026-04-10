@@ -5,9 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import SensorListView from './SensorListView';
 
-const { getDevices, deleteDevice } = vi.hoisted(() => ({
+const { getDevices, deleteDevice, getLocations } = vi.hoisted(() => ({
   getDevices: vi.fn(),
   deleteDevice: vi.fn(),
+  getLocations: vi.fn(),
 }));
 
 const signalRMocks = vi.hoisted(() => {
@@ -41,6 +42,7 @@ const signalRMocks = vi.hoisted(() => {
 vi.mock('../../api/api', () => ({
   getDevices,
   deleteDevice,
+  getLocations,
 }));
 
 vi.mock('@microsoft/signalr', () => signalRMocks);
@@ -93,6 +95,7 @@ describe('SensorListView', () => {
       },
     ]);
     deleteDevice.mockResolvedValue(undefined);
+    getLocations.mockResolvedValue([]);
   });
 
   it('Shall_search_sensors_by_unique_id', async () => {

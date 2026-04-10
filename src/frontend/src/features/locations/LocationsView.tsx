@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   Chip,
-  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -28,19 +27,14 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import BarChartRoundedIcon from '@mui/icons-material/BarChartRounded';
-import RouterRoundedIcon from '@mui/icons-material/RouterRounded';
 import SensorsRoundedIcon from '@mui/icons-material/SensorsRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
 import {
   createLocation,
   deleteLocation,
-  getDevices,
-  getDevicesByLocation,
-  getGateways,
   getLocations,
   LocationDto,
-  SensorListItemDto,
   updateLocation,
 } from '../../api/api';
 
@@ -65,38 +59,14 @@ function countNodes(nodes: LocationNode[]): number {
   return nodes.reduce((sum, n) => sum + 1 + countNodes(n.children), 0);
 }
 
-function sortSensorsByName(sensors: SensorListItemDto[]): SensorListItemDto[] {
-  return [...sensors].sort((left, right) => {
-    const leftName = left.name?.trim() || left.uniqueId;
-    const rightName = right.name?.trim() || right.uniqueId;
-    return leftName.localeCompare(rightName, 'nb-NO', { sensitivity: 'base' });
-  });
-}
-
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString([], {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-}
-
 interface LocationsViewProps {
   onNavigateToLiveView: (locationId: string, locationName: string) => void;
-  onNavigateToSensor: (sensorId: string) => void;
-  onNavigateToGateway?: (gatewayId: string) => void;
+  onNavigateToSensorList: (locationId: string) => void;
 }
 
-function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToGateway }: LocationsViewProps) {
+function LocationsView({ onNavigateToLiveView, onNavigateToSensorList }: LocationsViewProps) {
   const [locations, setLocations] = useState<LocationDto[]>([]);
-  const [locationSensors, setLocationSensors] = useState<Record<string, SensorListItemDto[]>>({});
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [sensorExpandedIds, setSensorExpandedIds] = useState<Set<string>>(new Set());
-  const [loadingLocationId, setLoadingLocationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -131,38 +101,6 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
       return next;
     });
   }, []);
-
-  const toggleSensors = useCallback(async (locationId: string) => {
-    setSensorExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(locationId)) {
-        next.delete(locationId);
-        return next;
-      }
-      next.add(locationId);
-      return next;
-    });
-
-    if (locationSensors[locationId]) return;
-
-    setLoadingLocationId(locationId);
-    try {
-      let devices = await getDevicesByLocation(locationId);
-      if (devices.length === 0) {
-        const location = locations.find((item) => item.id === locationId);
-        if (location && location.deviceCount > 0) {
-          const [allDevices, allGateways] = await Promise.all([getDevices(), getGateways()]);
-          devices = [...allDevices, ...allGateways].filter((device) => device.locationId === locationId);
-        }
-      }
-      setLocationSensors((current) => ({ ...current, [locationId]: sortSensorsByName(devices) }));
-    } catch (err) {
-      console.error('Failed to fetch devices for location:', err);
-      setLocationSensors((current) => ({ ...current, [locationId]: [] }));
-    } finally {
-      setLoadingLocationId((current) => current === locationId ? null : current);
-    }
-  }, [locationSensors, locations]);
 
   const openCreateDialog = (parentId?: string) => {
     setEditingLocation(null);
@@ -223,16 +161,12 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
     loadLocations();
   };
 
-  const canExpand = (node: LocationNode) =>
-    node.children.length > 0 || node.location.deviceCount > 0;
-
   const renderLocationRows = (nodes: LocationNode[], depth: number): React.ReactNode =>
     nodes.map((node) => {
       const { location } = node;
       const isExpanded = expandedIds.has(location.id);
-      const sensorsOpen = sensorExpandedIds.has(location.id);
       const totalDevices = accumulatedDeviceCount(node);
-      const sensorContentPaddingLeft = 7 + depth * 3;
+      const hasChildren = node.children.length > 0;
 
       return (
         <Fragment key={location.id}>
@@ -246,14 +180,10 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
               <Stack direction="row" spacing={1} alignItems="center" sx={{ pl: depth * 3 }}>
                 <IconButton
                   size="small"
-                  onClick={() => {
-                    toggleExpanded(location.id);
-                    if (location.deviceCount > 0) {
-                      toggleSensors(location.id);
-                    }
-                  }}
-                  disabled={!canExpand(node)}
+                  onClick={() => toggleExpanded(location.id)}
+                  disabled={!hasChildren}
                   aria-label={isExpanded ? `Collapse ${location.name}` : `Expand ${location.name}`}
+                  sx={{ visibility: hasChildren ? 'visible' : 'hidden' }}
                 >
                   {isExpanded
                     ? <KeyboardArrowUpRoundedIcon fontSize="small" />
@@ -279,20 +209,22 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
               <Chip label={totalDevices} size="small" variant="outlined" />
             </TableCell>
             <TableCell>
-              <Stack direction="row" spacing={0.5}>
-                {location.deviceCount > 0 && node.children.length > 0 && (
-                  <Tooltip title={sensorsOpen ? 'Hide sensors' : 'Show sensors'}>
-                    <IconButton
+              <Stack direction="row" spacing={0.5} alignItems="center">
+                <Tooltip title={totalDevices > 0 ? 'Show sensors in this location' : 'No sensors at this location'}>
+                  <span>
+                    <Button
                       size="small"
-                      color={sensorsOpen ? 'primary' : 'default'}
-                      onClick={() => toggleSensors(location.id)}
+                      variant="outlined"
+                      startIcon={<SensorsRoundedIcon fontSize="small" />}
+                      onClick={() => onNavigateToSensorList(location.id)}
+                      disabled={totalDevices === 0}
                     >
-                      <BarChartRoundedIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                )}
-                {(node.children.length === 0 || location.deviceCount === 0) && (
-                  <Tooltip title="Show live data">
+                      Sensors
+                    </Button>
+                  </span>
+                </Tooltip>
+                <Tooltip title="Show live data">
+                  <span>
                     <IconButton
                       size="small"
                       color="primary"
@@ -301,8 +233,8 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
                     >
                       <BarChartRoundedIcon fontSize="small" />
                     </IconButton>
-                  </Tooltip>
-                )}
+                  </span>
+                </Tooltip>
                 <Tooltip title="Add sub-location">
                   <IconButton size="small" onClick={() => openCreateDialog(location.id)}>
                     <AddRoundedIcon fontSize="small" />
@@ -314,117 +246,23 @@ function LocationsView({ onNavigateToLiveView, onNavigateToSensor, onNavigateToG
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Delete">
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => handleDelete(location.id)}
-                    disabled={totalDevices > 0 || node.children.length > 0}
-                  >
-                    <DeleteRoundedIcon fontSize="small" />
-                  </IconButton>
+                  <span>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleDelete(location.id)}
+                      disabled={totalDevices > 0 || hasChildren}
+                    >
+                      <DeleteRoundedIcon fontSize="small" />
+                    </IconButton>
+                  </span>
                 </Tooltip>
               </Stack>
             </TableCell>
           </TableRow>
 
-          {/* Device details row */}
-          {(sensorsOpen || (isExpanded && node.children.length === 0 && location.deviceCount > 0)) && (
-            <TableRow>
-              <TableCell
-                colSpan={4}
-                sx={{
-                  p: 0,
-                  borderBottomColor: 'rgba(255,255,255,0.06)',
-                  backgroundColor: 'rgba(255,255,255,0.02)',
-                }}
-              >
-                <Collapse in timeout="auto">
-                  <Box sx={{ p: 2.5, pl: sensorContentPaddingLeft }}>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
-                      {`Devices at ${location.name}`}
-                    </Typography>
-                    {loadingLocationId === location.id ? (
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        Loading devices...
-                      </Typography>
-                    ) : (locationSensors[location.id] ?? []).length > 0 ? (
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            {['Device', 'Unique ID', 'Name', 'Type', 'Last Received'].map((header) => (
-                              <TableCell
-                                key={header}
-                                sx={{
-                                  backgroundColor: 'rgba(255,255,255,0.03)',
-                                  borderBottomColor: 'rgba(255,255,255,0.08)',
-                                  fontWeight: 600,
-                                  fontSize: '0.8rem',
-                                }}
-                              >
-                                {header}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {locationSensors[location.id].map((device) => (
-                            <TableRow
-                              key={device.id}
-                              hover
-                              onClick={() => {
-                                if (device.kind === 'Gateway') {
-                                  onNavigateToGateway?.(device.uniqueId);
-                                  return;
-                                }
-
-                                onNavigateToSensor(device.uniqueId);
-                              }}
-                              sx={{
-                                cursor: 'pointer',
-                                '& .MuiTableCell-root': {
-                                  borderBottomColor: 'rgba(255,255,255,0.04)',
-                                  fontSize: '0.85rem',
-                                  py: 1,
-                                },
-                              }}
-                            >
-                              <TableCell>
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                  {device.kind === 'Gateway'
-                                    ? <RouterRoundedIcon fontSize="small" color="primary" />
-                                    : <SensorsRoundedIcon fontSize="small" color="action" />}
-                                  <Typography variant="body2">
-                                    {device.kind === 'Gateway' ? 'Gateway' : 'Sensor'}
-                                  </Typography>
-                                </Stack>
-                              </TableCell>
-                              <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem !important' }}>
-                                {device.uniqueId}
-                              </TableCell>
-                              <TableCell>{device.name ?? '-'}</TableCell>
-                              <TableCell>{device.type}</TableCell>
-                              <TableCell sx={{ color: 'text.secondary' }}>
-                                {device.lastContact
-                                  ? formatDateTime(device.lastContact)
-                                  : '-'}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    ) : (
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        No devices found for this location.
-                      </Typography>
-                    )}
-                  </Box>
-                </Collapse>
-              </TableCell>
-            </TableRow>
-          )}
-
           {/* Recursively render children when expanded */}
-          {isExpanded && node.children.length > 0 && renderLocationRows(node.children, depth + 1)}
+          {isExpanded && hasChildren && renderLocationRows(node.children, depth + 1)}
         </Fragment>
       );
     });

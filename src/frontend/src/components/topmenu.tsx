@@ -143,6 +143,12 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
     });
   }, [location.pathname, navigate]);
 
+  const navigateToSensorListWithLocationFilter = useCallback((locationId: string) => {
+    navigate(`/sensors?locationId=${encodeURIComponent(locationId)}`, {
+      state: { from: location.pathname },
+    });
+  }, [location.pathname, navigate]);
+
   const handleSelectSection = useCallback((section: NavigationSection) => {
     navigate(getPrimaryPath(section));
     setMobileOpen(false);
@@ -216,8 +222,7 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
         return (
           <LocationsView
             onNavigateToLiveView={(locationId) => navigateToLocationView(locationId)}
-            onNavigateToSensor={navigateToSensorView}
-            onNavigateToGateway={navigateToGatewayView}
+            onNavigateToSensorList={navigateToSensorListWithLocationFilter}
           />
         );
       case 'New Sensors':

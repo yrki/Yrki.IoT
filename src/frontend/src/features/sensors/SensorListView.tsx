@@ -12,6 +12,7 @@ import {
   DialogTitle,
   IconButton,
   InputAdornment,
+  MenuItem,
   Paper,
   Stack,
   Table,
@@ -26,11 +27,24 @@ import {
   Typography,
   Link,
 } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
-import { deleteDevice, getDevices, SensorListItemDto } from '../../api/api';
+import {
+  deleteDevice,
+  getDevices,
+  getLocations,
+  LocationDto,
+  SensorListItemDto,
+} from '../../api/api';
+import {
+  buildLocationOptions,
+  buildTree,
+  collectDescendantLocationIds,
+  findLocationNode,
+  rolledUpDeviceCounts,
+} from '../locations/locationTree';
 
 type SortableField = 'uniqueId' | 'name' | 'manufacturer' | 'type' | 'locationName' | 'lastContact';
 type SortDirection = 'asc' | 'desc';
@@ -96,6 +110,7 @@ function buildSensorHref(sensorId: string) {
 
 function SensorListView() {
   const [sensors, setSensors] = useState<SensorListItemDto[]>([]);
+  const [locations, setLocations] = useState<LocationDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortableField>('lastContact');
@@ -109,6 +124,20 @@ function SensorListView() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [visibleCount, setVisibleCount] = useState(initialVisibleSensorCount);
   const deferredSearchTerm = useDeferredValue(searchTerm);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterLocationId = searchParams.get('locationId') ?? '';
+
+  const setFilterLocationId = (nextId: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (nextId) {
+        next.set('locationId', nextId);
+      } else {
+        next.delete('locationId');
+      }
+      return next;
+    }, { replace: true });
+  };
 
   const loadSensors = () => {
     getDevices()
@@ -145,6 +174,12 @@ function SensorListView() {
       .catch((err) => console.error('Failed to fetch sensors:', err))
       .finally(() => setLoading(false));
   };
+
+  useEffect(() => {
+    getLocations()
+      .then(setLocations)
+      .catch((err) => console.error('Failed to fetch locations:', err));
+  }, []);
 
   useEffect(() => {
     loadSensors();
@@ -223,6 +258,30 @@ function SensorListView() {
   const manufacturers = useMemo(() => [...new Set(sensors.map((s) => s.manufacturer).filter(Boolean))] as string[], [sensors]);
   const types = useMemo(() => [...new Set(sensors.map((s) => s.type).filter(Boolean))] as string[], [sensors]);
 
+  const locationTree = useMemo(() => buildTree(locations), [locations]);
+  const locationOptions = useMemo(() => buildLocationOptions(locations), [locations]);
+  const locationCounts = useMemo(() => rolledUpDeviceCounts(locationTree), [locationTree]);
+
+  const allowedLocationIds = useMemo(() => {
+    if (!filterLocationId) {
+      return null;
+    }
+    const node = findLocationNode(locationTree, filterLocationId);
+    if (!node) {
+      // Tree may not be loaded yet, or the id is unknown — fall back to a
+      // single-id match so the filter still works.
+      return new Set([filterLocationId]);
+    }
+    return collectDescendantLocationIds(node);
+  }, [filterLocationId, locationTree]);
+
+  const selectedLocationName = useMemo(() => {
+    if (!filterLocationId) {
+      return null;
+    }
+    return locations.find((l) => l.id === filterLocationId)?.name ?? null;
+  }, [filterLocationId, locations]);
+
   const filteredSensors = useMemo(() => {
     const term = deferredSearchTerm.trim().toLowerCase();
     const normalizedTerm = normalizeSearchValue(deferredSearchTerm.trim());
@@ -231,6 +290,7 @@ function SensorListView() {
       .filter((s) => {
         if (filterManufacturer && s.manufacturer !== filterManufacturer) return false;
         if (filterType && s.type !== filterType) return false;
+        if (allowedLocationIds && (!s.locationId || !allowedLocationIds.has(s.locationId))) return false;
         if (!term) return true;
 
         const fields = [s.id, s.uniqueId, s.name, s.manufacturer, s.type, s.locationName];
@@ -247,7 +307,7 @@ function SensorListView() {
         const bv = String(b[sortBy] ?? '');
         return sortDirection === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
       });
-  }, [sensors, deferredSearchTerm, sortBy, sortDirection, filterManufacturer, filterType]);
+  }, [sensors, deferredSearchTerm, sortBy, sortDirection, filterManufacturer, filterType, allowedLocationIds]);
 
   const visibleSensors = useMemo(
     () => filteredSensors.slice(0, visibleCount),
@@ -257,7 +317,7 @@ function SensorListView() {
 
   useEffect(() => {
     setVisibleCount(initialVisibleSensorCount);
-  }, [deferredSearchTerm, sortBy, sortDirection, filterManufacturer, filterType]);
+  }, [deferredSearchTerm, sortBy, sortDirection, filterManufacturer, filterType, filterLocationId]);
 
   useEffect(() => {
     if (!hasMoreSensors || !loadMoreRef.current || typeof IntersectionObserver === 'undefined') {
@@ -319,23 +379,91 @@ function SensorListView() {
             Sensors
           </Typography>
         </Box>
-        <TextField
-          placeholder="Search sensors by name, uniqueId or location"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ minWidth: { sm: 320 } }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchRoundedIcon sx={{ color: 'text.secondary' }} />
-              </InputAdornment>
-            ),
-          }}
-        />
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={1.5}
+          alignItems={{ xs: 'stretch', sm: 'center' }}
+        >
+          <TextField
+            label="Location"
+            select
+            size="small"
+            value={filterLocationId}
+            onChange={(e) => setFilterLocationId(e.target.value)}
+            sx={{ minWidth: { sm: 240 } }}
+            SelectProps={{
+              displayEmpty: true,
+              renderValue: (value) => {
+                if (!value) {
+                  return 'All locations';
+                }
+                const name = locations.find((l) => l.id === value)?.name;
+                return name ?? 'All locations';
+              },
+            }}
+          >
+            <MenuItem value="">
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
+                <Box sx={{ flex: 1 }}>All locations</Box>
+                <Chip label={sensors.length} size="small" variant="outlined" />
+              </Stack>
+            </MenuItem>
+            {locationOptions.map(({ location, depth }) => (
+              <MenuItem
+                key={location.id}
+                value={location.id}
+                sx={{ pl: 2 + depth * 2 }}
+              >
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
+                  {location.color && (
+                    <Box
+                      sx={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        background: location.color,
+                        border: '1px solid rgba(15, 23, 42, 0.25)',
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+                  <Box sx={{ flex: 1 }}>{location.name}</Box>
+                  <Chip
+                    label={locationCounts.get(location.id) ?? 0}
+                    size="small"
+                    variant="outlined"
+                  />
+                </Stack>
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            placeholder="Search sensors by name, uniqueId or location"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            size="small"
+            sx={{ minWidth: { sm: 320 } }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRoundedIcon sx={{ color: 'text.secondary' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Stack>
       </Stack>
 
       <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mb: 2.5 }}>
         <Chip label={`${filteredSensors.length} sensor${filteredSensors.length === 1 ? '' : 's'}`} />
+        {selectedLocationName && (
+          <Chip
+            label={`Location: ${selectedLocationName}`}
+            size="small"
+            color="primary"
+            onDelete={() => setFilterLocationId('')}
+          />
+        )}
         {manufacturers.map((m) => (
           <Chip
             key={`m-${m}`}
