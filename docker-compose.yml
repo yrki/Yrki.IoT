@@ -129,10 +129,13 @@ services:
         dotnet run --project src/backend/Simulator/Simulator.csproj --no-restore
     restart: unless-stopped
     environment:
+      ConnectionStrings__DatabaseConnectionString: Host=postgres;Port=5432;Database=YrkiIoT;Username=postgres;Password=postgres
       RabbitMq__Host: rabbitmq
       RabbitMq__Username: guest
       RabbitMq__Password: guest
     depends_on:
+      postgres:
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
     profiles:

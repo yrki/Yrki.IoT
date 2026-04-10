@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -301,12 +301,10 @@ describe('SensorsView', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Edit Sensor' });
     await waitFor(() => expect(getEncryptionKeyByDevice).toHaveBeenCalledWith('sensor-1', undefined));
 
-    await user.clear(within(dialog).getByLabelText('Name'));
-    await user.type(within(dialog).getByLabelText('Name'), 'Updated sensor');
+    fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'Updated sensor' } });
     await user.click(within(dialog).getByRole('combobox'));
     await user.click(await screen.findByRole('option', { name: 'Lab' }));
-    await user.clear(within(dialog).getByLabelText('Encryption Key (AES-128 hex)'));
-    await user.type(within(dialog).getByLabelText('Encryption Key (AES-128 hex)'), '00112233445566778899AABBCCDDEEFF');
+    fireEvent.change(within(dialog).getByLabelText('Encryption Key (AES-128 hex)'), { target: { value: '00112233445566778899AABBCCDDEEFF' } });
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
 
     // Assert

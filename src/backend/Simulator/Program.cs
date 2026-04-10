@@ -1,5 +1,7 @@
 using EasyNetQ;
 using EasyNetQ.Serialization.SystemTextJson;
+using Core.Contexts;
+using Microsoft.EntityFrameworkCore;
 using Simulator;
 
 var host = Host.CreateDefaultBuilder(args)
@@ -13,7 +15,11 @@ var host = Host.CreateDefaultBuilder(args)
         services.RegisterEasyNetQ($"host={rabbitHost};username={rabbitUser};password={rabbitPassword}")
             .UseSystemTextJson();
 
+        services.AddDbContext<DatabaseContext>(options =>
+            options.UseNpgsql(config.GetConnectionString("DatabaseConnectionString")));
+
         services.AddHostedService<MultiDeviceSimulatorWorker>();
+        services.AddHostedService<WaterMeterSimulatorWorker>();
     })
     .Build();
 

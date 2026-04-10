@@ -13,6 +13,8 @@ public class SensorReadingReceivedConsumer(
 {
     public async Task HandleAsync(SensorReadingReceived msg, CancellationToken cancellationToken)
     {
+        var device = await db.Devices.SingleOrDefaultAsync(device => device.UniqueId == msg.SensorId, cancellationToken);
+
         try
         {
             var reading = new SensorReading
@@ -27,6 +29,12 @@ public class SensorReadingReceivedConsumer(
             };
 
             db.SensorReadings.Add(reading);
+
+            if (device is not null && device.LastContact < msg.Timestamp)
+            {
+                device.LastContact = msg.Timestamp;
+            }
+
             await db.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "23505" })

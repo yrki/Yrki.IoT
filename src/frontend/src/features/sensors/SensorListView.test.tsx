@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -176,10 +176,10 @@ describe('SensorListView', () => {
     await waitFor(() => expect(screen.getByText('Showing 101 of 101 sensors')).toBeInTheDocument());
     expect(screen.getByText('SENSOR-0101')).toBeInTheDocument();
 
-    await user.type(screen.getByPlaceholderText('Search sensors by name, uniqueId or location'), 'sensor0101');
+    fireEvent.change(screen.getByPlaceholderText('Search sensors by name, uniqueId or location'), { target: { value: 'sensor0101' } });
 
     await waitFor(() => expect(screen.getByText('Showing 1 of 1 sensor')).toBeInTheDocument());
     expect(screen.getByText('SENSOR-0101')).toBeInTheDocument();
     expect(screen.queryByText('SENSOR-0100')).not.toBeInTheDocument();
-  }, 10000);
+  });
 });

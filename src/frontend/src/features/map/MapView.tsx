@@ -113,7 +113,10 @@ function createMarkerElement(device: SensorListItemDto, now: number): HTMLElemen
   return outer;
 }
 
-function createClusterElement(deviceCount: number, kind: 'Sensor' | 'Gateway' | 'Mixed'): HTMLButtonElement {
+function createClusterElement(
+  deviceCount: number,
+  kind: 'Sensor' | 'Gateway' | 'Mixed',
+): HTMLButtonElement {
   const size = Math.min(64, 34 + Math.log2(deviceCount) * 8);
   const el = document.createElement('button');
   const isGatewayCluster = kind === 'Gateway';
@@ -145,6 +148,7 @@ function createClusterElement(deviceCount: number, kind: 'Sensor' | 'Gateway' | 
   el.style.justifyContent = 'center';
   el.style.cursor = 'pointer';
   el.style.padding = '0';
+
   return el;
 }
 
@@ -182,6 +186,7 @@ function buildLocationPopupContent(
   now: number,
   onNavigateToSensor: (sensorId: string) => void,
   onNavigateToGateway: (gatewayId: string) => void,
+  onClose: () => void,
 ): HTMLElement {
   const container = document.createElement('div');
   container.style.fontFamily = 'Manrope, sans-serif';
@@ -191,6 +196,32 @@ function buildLocationPopupContent(
   container.style.width = '360px';
   container.style.maxWidth = 'min(360px, calc(100vw - 64px))';
   container.style.boxSizing = 'border-box';
+  container.style.position = 'relative';
+  container.style.paddingRight = '20px';
+
+  const closeButton = document.createElement('button');
+  closeButton.type = 'button';
+  closeButton.setAttribute('aria-label', 'Close details');
+  closeButton.textContent = '×';
+  closeButton.style.position = 'absolute';
+  closeButton.style.top = '-2px';
+  closeButton.style.right = '-2px';
+  closeButton.style.margin = '0';
+  closeButton.style.padding = '0';
+  closeButton.style.border = '0';
+  closeButton.style.outline = 'none';
+  closeButton.style.background = 'none';
+  closeButton.style.boxShadow = 'none';
+  closeButton.style.color = '#64748b';
+  closeButton.style.fontFamily = 'inherit';
+  closeButton.style.fontSize = '20px';
+  closeButton.style.lineHeight = '1';
+  closeButton.style.cursor = 'pointer';
+  closeButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    onClose();
+  });
+  container.appendChild(closeButton);
 
   const title = document.createElement('div');
   title.textContent = devices.length === 1 ? 'Device at this location' : `${devices.length} devices at this location`;
@@ -216,10 +247,11 @@ function buildLocationPopupContent(
   });
 
   for (const device of sortedDevices) {
+    const isGateway = device.kind === 'Gateway';
     const row = document.createElement('button');
     row.type = 'button';
     row.style.display = 'grid';
-    row.style.gridTemplateColumns = '12px 1fr auto';
+    row.style.gridTemplateColumns = isGateway ? '1fr auto' : '12px 1fr auto';
     row.style.gap = '10px';
     row.style.alignItems = 'center';
     row.style.width = '100%';
@@ -231,30 +263,37 @@ function buildLocationPopupContent(
     row.style.cursor = 'pointer';
     row.style.textAlign = 'left';
 
-    const statusDot = document.createElement('span');
-    statusDot.style.width = '10px';
-    statusDot.style.height = '10px';
-    statusDot.style.borderRadius = '999px';
-    statusDot.style.backgroundColor = getStatusDotColor(device.lastContact, now);
-    statusDot.style.boxShadow = `0 0 0 1px ${device.kind === 'Gateway' ? 'rgba(59, 130, 246, 0.18)' : 'rgba(34, 197, 94, 0.18)'}`;
-    row.appendChild(statusDot);
+    if (!isGateway) {
+      const statusDot = document.createElement('span');
+      statusDot.style.width = '10px';
+      statusDot.style.height = '10px';
+      statusDot.style.borderRadius = '999px';
+      statusDot.style.backgroundColor = getStatusDotColor(device.lastContact, now);
+      statusDot.style.boxShadow = '0 0 0 1px rgba(34, 197, 94, 0.18)';
+      row.appendChild(statusDot);
+    }
 
     const info = document.createElement('div');
     info.style.display = 'flex';
     info.style.flexDirection = 'column';
     info.style.gap = '2px';
 
-    const idLine = document.createElement('div');
-    idLine.textContent = device.uniqueId;
-    idLine.style.fontFamily = 'monospace';
-    idLine.style.fontSize = '11px';
-    idLine.style.fontWeight = '700';
-    info.appendChild(idLine);
+    const nameLine = document.createElement('div');
+    const displayName = device.name?.trim() || device.uniqueId;
+    nameLine.textContent = isGateway || !device.name?.trim()
+      ? displayName
+      : `${displayName} (${device.uniqueId})`;
+    nameLine.style.fontSize = '12px';
+    nameLine.style.fontWeight = '700';
+    nameLine.style.color = '#0f172a';
+    info.appendChild(nameLine);
 
-    const metaLine = document.createElement('div');
-    metaLine.textContent = `${device.manufacturer ?? '-'} • ${device.type}`;
-    metaLine.style.color = '#475569';
-    info.appendChild(metaLine);
+    if (!isGateway) {
+      const metaLine = document.createElement('div');
+      metaLine.textContent = `${device.manufacturer ?? '-'} • ${device.type}`;
+      metaLine.style.color = '#475569';
+      info.appendChild(metaLine);
+    }
 
     const statusLine = document.createElement('div');
     statusLine.textContent = `Last contact ${formatLastContact(device.lastContact)}`;
@@ -264,15 +303,15 @@ function buildLocationPopupContent(
     row.appendChild(info);
 
     const tag = document.createElement('span');
-    tag.textContent = device.kind === 'Gateway' ? 'Gateway' : 'Sensor';
+    tag.textContent = isGateway ? 'Gateway' : 'Sensor';
     tag.style.fontSize = '11px';
     tag.style.fontWeight = '700';
-    tag.style.color = device.kind === 'Gateway' ? '#2563eb' : '#15803d';
+    tag.style.color = isGateway ? '#2563eb' : '#15803d';
     row.appendChild(tag);
 
     row.addEventListener('click', (event) => {
       event.stopPropagation();
-      if (device.kind === 'Gateway') {
+      if (isGateway) {
         onNavigateToGateway(device.uniqueId);
       } else {
         onNavigateToSensor(device.uniqueId);
@@ -359,10 +398,17 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
 
     return groups;
   }, [filteredDevices]);
+  const mapViewportSignature = useMemo(() => filteredDevices
+    .filter(hasCoordinates)
+    .map((device) => `${device.uniqueId}:${device.latitude}:${device.longitude}`)
+    .sort((left, right) => left.localeCompare(right))
+    .join('|'), [filteredDevices]);
 
   useEffect(() => {
     Promise.all([getDevices(), getGateways()])
-      .then(([sensors, gateways]) => setDevices([...sensors, ...gateways]))
+      .then(([sensors, gateways]) => {
+        setDevices([...sensors, ...gateways]);
+      })
       .catch((err) => console.error('Failed to fetch devices for map:', err));
   }, []);
 
@@ -410,12 +456,12 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
 
       const popup = new maplibregl.Popup({
         offset: 12,
-        closeButton: true,
-        closeOnClick: false,
+        closeButton: false,
+        closeOnClick: true,
         maxWidth: '420px',
       })
         .setLngLat(lngLat)
-        .setDOMContent(buildLocationPopupContent(devicesAtLocation, now, onNavigateToSensor, onNavigateToGateway))
+        .setDOMContent(buildLocationPopupContent(devicesAtLocation, now, onNavigateToSensor, onNavigateToGateway, closePopup))
         .addTo(map);
 
       popupRef.current = popup;
@@ -423,7 +469,6 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
 
     const renderMarkers = () => {
       clearMarkers();
-      closePopup();
 
       if (mappableDevices.length === 0) {
         return;
@@ -527,7 +572,7 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
     }
 
     map.fitBounds(bounds, { padding: 60, maxZoom: 15 });
-  }, [filteredDevices]);
+  }, [mapViewportSignature]);
 
   return (
     <Paper
@@ -597,7 +642,13 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
           </Select>
         </FormControl>
       </Stack>
-      <Box ref={mapContainer} sx={{ flex: 1, minHeight: 0 }} />
+      <Box
+        ref={mapContainer}
+        sx={{
+          flex: 1,
+          minHeight: 0,
+        }}
+      />
     </Paper>
   );
 }
