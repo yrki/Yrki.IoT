@@ -440,6 +440,8 @@ function EditSensorSettingsDialog({
         locationName: selectedLocation?.name ?? null,
         lastContact: updated.lastContact,
         installationDate: updated.installationDate,
+        latitude: updated.latitude,
+        longitude: updated.longitude,
       });
       onClose();
     } catch (err) {
@@ -611,6 +613,8 @@ function EditSensorLocationDialog({
         locationName: selectedLocation?.name ?? null,
         lastContact: updated.lastContact,
         installationDate: updated.installationDate,
+        latitude: updated.latitude,
+        longitude: updated.longitude,
       });
       onClose();
     } catch (err) {
