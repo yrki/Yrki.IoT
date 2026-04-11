@@ -881,6 +881,8 @@ const defaultConfig = { label: 'Unknown', unit: '', decimals: 3, icon: <SpeedRou
 const timeRanges = [
   { label: '3h', hours: 3 },
   { label: '12h', hours: 12 },
+  { label: '24h', hours: 24 },
+  { label: '3d', hours: 24 * 3 },
   { label: '1w', hours: 24 * 7 },
   { label: '1m', hours: 24 * 30 },
 ] as const;
