@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Contracts.Responses;
 using Core.Contexts;
+using Core.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Core.Features.Locations.Query;
@@ -17,7 +18,7 @@ public class LocationsQueryHandler(DatabaseContext db)
                 l.Id,
                 l.Name,
                 l.Description,
-                DeviceCount = l.Devices.Count(d => !d.IsNew && !d.IsDeleted),
+                DeviceCount = l.Devices.Count(d => !d.IsNew && !d.IsDeleted && d.Kind != DeviceKind.Gateway),
                 l.ParentLocationId,
                 l.Latitude,
                 l.Longitude,

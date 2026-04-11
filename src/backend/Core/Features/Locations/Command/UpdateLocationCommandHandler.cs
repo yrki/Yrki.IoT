@@ -2,6 +2,7 @@ using Contracts.Requests;
 using Contracts.Responses;
 using Core.Contexts;
 using Core.Features.Locations.Query;
+using Core.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Core.Features.Locations.Command;
@@ -44,7 +45,7 @@ public class UpdateLocationCommandHandler(DatabaseContext db)
             location.Id,
             location.Name,
             location.Description,
-            location.Devices.Count(d => !d.IsNew),
+            location.Devices.Count(d => !d.IsNew && d.Kind != DeviceKind.Gateway),
             location.ParentLocationId,
             location.Latitude,
             location.Longitude,
