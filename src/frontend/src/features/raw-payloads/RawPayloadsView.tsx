@@ -47,14 +47,48 @@ function RawPayloadsView({ deviceId, onBack }: RawPayloadsViewProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const copyPayload = async (payload: RawPayloadDto) => {
-    try {
-      await navigator.clipboard.writeText(payload.payloadHex);
+    const markCopied = () => {
       setCopiedId(payload.id);
       window.setTimeout(() => {
         setCopiedId((current) => (current === payload.id ? null : current));
       }, 1500);
-    } catch (copyError: unknown) {
-      console.error('Failed to copy payload to clipboard:', copyError);
+    };
+
+    // navigator.clipboard is only available in secure contexts (HTTPS or
+    // localhost). On a plain HTTP deployment it is undefined and accessing
+    // .writeText throws, so fall back to the legacy textarea + execCommand
+    // approach which works in any context as long as the call sits inside
+    // a user gesture.
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(payload.payloadHex);
+        markCopied();
+        return;
+      } catch (clipboardError: unknown) {
+        console.warn('navigator.clipboard.writeText failed, falling back:', clipboardError);
+      }
+    }
+
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = payload.payloadHex;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '0';
+      textarea.style.left = '0';
+      textarea.style.opacity = '0';
+      textarea.style.pointerEvents = 'none';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      if (!ok) {
+        throw new Error('document.execCommand("copy") returned false');
+      }
+      markCopied();
+    } catch (fallbackError: unknown) {
+      console.error('Failed to copy payload to clipboard:', fallbackError);
       setError('Could not copy payload to clipboard.');
     }
   };
