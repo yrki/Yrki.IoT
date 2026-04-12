@@ -4,11 +4,14 @@ import {
   Button,
   ButtonGroup,
   CircularProgress,
+  FormControlLabel,
   Paper,
   Stack,
+  Switch,
   Tooltip,
   Typography,
 } from '@mui/material';
+import { HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
@@ -20,6 +23,9 @@ import {
   SensorListItemDto,
 } from '../../api/api';
 import type { MapPosition } from './MapContainer';
+
+const HUB_URL = import.meta.env.VITE_SIGNALR_URL ?? '/hubs/sensors';
+const BLINK_DURATION_MS = 2000;
 
 const connectionSourceId = 'coverage-connections';
 const connectionLayerId = 'coverage-connections-layer';
@@ -109,6 +115,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
+  const markerElementsRef = useRef<Map<string, HTMLElement>>(new Map());
   const popupRef = useRef<maplibregl.Popup | null>(null);
   const [devices, setDevices] = useState<SensorListItemDto[]>([]);
   const [connections, setConnections] = useState<CoverageConnectionDto[]>([]);
@@ -118,6 +125,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
   const [coverageHours, setCoverageHours] = useState(24 * 7);
   const [popupDevice, setPopupDevice] = useState<SensorListItemDto | null>(null);
   const replacingPopupRef = useRef(false);
+  const [liveEnabled, setLiveEnabled] = useState(false);
 
   // Load devices once
   useEffect(() => {
@@ -266,6 +274,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
       marker.remove();
     }
     markersRef.current = [];
+    markerElementsRef.current.clear();
 
     const mappableDevices = devices.filter(hasCoordinates);
     if (mappableDevices.length === 0) {
@@ -289,6 +298,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
       el.style.border = `2px solid ${color}`;
       el.style.cursor = 'pointer';
       el.style.boxShadow = getMarkerGlow(device.lastContact, now, isGateway);
+      el.style.transition = 'outline 0.15s ease, outline-offset 0.15s ease, box-shadow 0.15s ease';
       el.title = `${isGateway ? 'Gateway' : 'Sensor'}: ${device.name ?? device.uniqueId}`;
 
       el.addEventListener('click', (event) => {
@@ -301,6 +311,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
         .addTo(map);
       marker.getElement().style.zIndex = isGateway ? '20' : '10';
       markersRef.current.push(marker);
+      markerElementsRef.current.set(device.uniqueId, el);
     }
 
     // Only fit bounds on first load (not when returning from the other map mode)
@@ -579,6 +590,83 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
     showDevicePopup(map, popupDevice);
   }, [popupDevice, connections, coverageHours, showDevicePopup]);
 
+  // Lookup: sensorId → connected gatewayIds (for blink propagation)
+  const sensorToGatewaysRef = useRef<Map<string, string[]>>(new Map());
+  useEffect(() => {
+    const lookup = new Map<string, string[]>();
+    for (const conn of connections) {
+      const existing = lookup.get(conn.sensorId);
+      if (existing) {
+        if (!existing.includes(conn.gatewayId)) existing.push(conn.gatewayId);
+      } else {
+        lookup.set(conn.sensorId, [conn.gatewayId]);
+      }
+    }
+    sensorToGatewaysRef.current = lookup;
+  }, [connections]);
+
+  // Blink a marker element using outline + box-shadow (no transform — that
+  // conflicts with MapLibre's positioning transform on the marker wrapper).
+  const blinkMarker = useCallback((uniqueId: string, isGateway: boolean) => {
+    const el = markerElementsRef.current.get(uniqueId);
+    if (!el) return;
+
+    const map = mapRef.current;
+    if (map) {
+      const device = devices.find((d) => d.uniqueId === uniqueId);
+      if (device?.latitude != null && device?.longitude != null) {
+        if (!map.getBounds().contains([device.longitude, device.latitude])) return;
+      }
+    }
+
+    const glowColor = isGateway ? 'rgba(59, 130, 246, 0.9)' : 'rgba(34, 197, 94, 0.9)';
+    el.style.outline = `3px solid ${glowColor}`;
+    el.style.outlineOffset = '3px';
+    el.style.boxShadow = `0 0 14px ${glowColor}`;
+
+    window.setTimeout(() => {
+      el.style.outline = '';
+      el.style.outlineOffset = '';
+      el.style.boxShadow = getMarkerGlow(
+        devices.find((d) => d.uniqueId === uniqueId)?.lastContact ?? '',
+        Date.now(),
+        isGateway,
+      );
+    }, BLINK_DURATION_MS);
+  }, [devices]);
+
+  // SignalR live data connection
+  useEffect(() => {
+    if (!liveEnabled) return;
+
+    const connection = new HubConnectionBuilder()
+      .withUrl(HUB_URL)
+      .withAutomaticReconnect()
+      .configureLogging(LogLevel.Warning)
+      .build();
+
+    connection.on('SensorReadingReceived', (reading: { sensorId: string; timestamp: string }) => {
+      // Blink sensor
+      blinkMarker(reading.sensorId, false);
+
+      // Blink connected gateways
+      const gateways = sensorToGatewaysRef.current.get(reading.sensorId);
+      if (gateways) {
+        for (const gwId of gateways) {
+          blinkMarker(gwId, true);
+        }
+      }
+    });
+
+    connection.start().catch((err) => console.error('Coverage SignalR connect failed:', err));
+
+    return () => {
+      if (connection.state !== HubConnectionState.Disconnected) {
+        connection.stop();
+      }
+    };
+  }, [liveEnabled, blinkMarker]);
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
       {(loading || loadingConnections) && (
@@ -612,6 +700,17 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
             </Button>
           ))}
         </ButtonGroup>
+        <FormControlLabel
+          control={
+            <Switch
+              size="small"
+              checked={liveEnabled}
+              onChange={(e) => setLiveEnabled(e.target.checked)}
+            />
+          }
+          label={<Typography variant="caption" sx={{ color: liveEnabled ? 'success.light' : 'text.secondary' }}>Live</Typography>}
+          sx={{ ml: 1, mr: 0 }}
+        />
       </Paper>
 
       {/* Legend */}
