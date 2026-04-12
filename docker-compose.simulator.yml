@@ -1,0 +1,14 @@
+services:
+  simulator:
+    image: yrkiiot-simulator
+    restart: unless-stopped
+    environment:
+      ConnectionStrings__DatabaseConnectionString: Host=postgres;Port=5432;Database=YrkiIoT;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy

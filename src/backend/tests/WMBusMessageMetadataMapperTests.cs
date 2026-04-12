@@ -1,5 +1,4 @@
 using service.Consumers;
-using Simulator;
 using Yrki.IoT.WMBus.Parser;
 using ParserDeviceType = Yrki.IoT.WMBus.Parser.DeviceType;
 

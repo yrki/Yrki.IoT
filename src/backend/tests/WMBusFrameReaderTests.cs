@@ -1,5 +1,4 @@
 using service.Consumers;
-using Simulator;
 using Yrki.IoT.WMBus.Parser;
 
 namespace tests;

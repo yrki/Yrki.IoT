@@ -15,6 +15,8 @@ public class SensorReadingReceivedConsumer(
     {
         var device = await db.Devices.SingleOrDefaultAsync(device => device.UniqueId == msg.SensorId, cancellationToken);
 
+        await TrackGatewayContactAsync(msg, cancellationToken);
+
         try
         {
             var reading = new SensorReading
@@ -45,5 +47,44 @@ public class SensorReadingReceivedConsumer(
 
         await hubNotifier.NotifyReadingAsync(
             msg.SensorId, msg.SensorType, msg.Value, msg.Timestamp, cancellationToken);
+    }
+
+    private async Task TrackGatewayContactAsync(SensorReadingReceived msg, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(msg.GatewayId))
+            return;
+
+        var gatewayId = msg.GatewayId.Trim();
+
+        var gateway = await db.Devices.FirstOrDefaultAsync(d => d.UniqueId == gatewayId, cancellationToken);
+        if (gateway is null)
+        {
+            db.Devices.Add(new Device
+            {
+                Id = Guid.NewGuid(),
+                UniqueId = gatewayId,
+                Name = gatewayId,
+                Type = "Gateway",
+                Description = string.Empty,
+                Kind = DeviceKind.Gateway,
+                LastContact = msg.Timestamp,
+                InstallationDate = msg.Timestamp,
+            });
+        }
+        else if (gateway.LastContact < msg.Timestamp)
+        {
+            gateway.LastContact = msg.Timestamp;
+        }
+
+        db.GatewayReadings.Add(new GatewayReading
+        {
+            Id = Guid.NewGuid(),
+            GatewayUniqueId = gatewayId,
+            SensorUniqueId = msg.SensorId,
+            Rssi = msg.Rssi,
+            ReceivedAt = msg.Timestamp,
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
     }
 }

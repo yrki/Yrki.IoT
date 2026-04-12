@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 
-namespace Simulator;
+namespace tests;
 
 public static class LansenFrameBuilder
 {

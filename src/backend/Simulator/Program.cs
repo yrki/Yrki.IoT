@@ -2,7 +2,7 @@ using EasyNetQ;
 using EasyNetQ.Serialization.SystemTextJson;
 using Core.Contexts;
 using Microsoft.EntityFrameworkCore;
-using Simulator;
+using Simulator.GeoAware;
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
@@ -18,8 +18,8 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddDbContext<DatabaseContext>(options =>
             options.UseNpgsql(config.GetConnectionString("DatabaseConnectionString")));
 
-        services.AddHostedService<MultiDeviceSimulatorWorker>();
-        services.AddHostedService<WaterMeterSimulatorWorker>();
+        services.AddSingleton<IHostedService, DemoDataSeeder>();
+        services.AddHostedService<GeoAwareSimulatorWorker>();
     })
     .Build();
 
