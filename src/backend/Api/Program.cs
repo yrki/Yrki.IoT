@@ -8,6 +8,8 @@ using Core.Features.Devices.Command;
 using Core.Features.Devices.Query;
 using Core.Features.EncryptionKeys.Command;
 using Core.Features.EncryptionKeys.Query;
+using Core.Features.Buildings.Command;
+using Core.Features.Buildings.Query;
 using Core.Features.Locations.Command;
 using Core.Features.Locations.Query;
 using Core.Features.RawPayloads.Query;
@@ -24,6 +26,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 150_000_000; // 150 MB for IFC uploads
+});
 
 builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
 
@@ -47,6 +54,11 @@ builder.Services.AddScoped<SensorsBySensorLocationQueryHandler>();
 builder.Services.AddScoped<SensorByUniqueIdQueryHandler>();
 builder.Services.AddScoped<DeleteSensorCommandHandler>();
 builder.Services.AddScoped<RawPayloadsQueryHandler>();
+builder.Services.AddScoped<BuildingsQueryHandler>();
+builder.Services.AddScoped<CreateBuildingCommandHandler>();
+builder.Services.AddScoped<UpdateBuildingCommandHandler>();
+builder.Services.AddScoped<DeleteBuildingCommandHandler>();
+builder.Services.AddScoped<AssignDeviceToBuildingCommandHandler>();
 builder.Services.AddScoped<LocationsQueryHandler>();
 builder.Services.AddScoped<CreateLocationCommandHandler>();
 builder.Services.AddScoped<UpdateLocationCommandHandler>();

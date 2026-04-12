@@ -23,6 +23,15 @@ public class Device
 
     public Guid? LocationId { get; set; }
     public Location? Location { get; set; }
+
+    public Guid? BuildingId { get; set; }
+    public Building? Building { get; set; }
+
+    /// <summary>3D position inside the BIM model (metres from model origin).</summary>
+    public double? BimX { get; set; }
+    public double? BimY { get; set; }
+    public double? BimZ { get; set; }
+
     public DateTimeOffset LastContact { get; set; }
     public DateTimeOffset InstallationDate { get; set; }
 }

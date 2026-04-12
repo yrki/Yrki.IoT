@@ -328,6 +328,74 @@ export async function importDevices(
   return response.data;
 }
 
+// --- Buildings ---
+
+export interface BuildingDto {
+  id: string;
+  name: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  ifcFileName: string | null;
+  deviceCount: number;
+  createdAtUtc: string;
+}
+
+export async function getBuildings(): Promise<BuildingDto[]> {
+  const response = await api.get<BuildingDto[]>('/buildings');
+  return response.data;
+}
+
+export async function getBuilding(id: string): Promise<BuildingDto> {
+  const response = await api.get<BuildingDto>(`/buildings/${id}`);
+  return response.data;
+}
+
+export async function createBuilding(
+  name: string,
+  address?: string,
+  latitude?: number,
+  longitude?: number,
+): Promise<BuildingDto> {
+  const response = await api.post<BuildingDto>('/buildings', { name, address, latitude, longitude });
+  return response.data;
+}
+
+export async function updateBuilding(
+  id: string,
+  request: { name?: string; address?: string; latitude?: number | null; longitude?: number | null },
+): Promise<BuildingDto> {
+  const response = await api.put<BuildingDto>(`/buildings/${id}`, request);
+  return response.data;
+}
+
+export async function deleteBuilding(id: string): Promise<void> {
+  await api.delete(`/buildings/${id}`);
+}
+
+export async function uploadBuildingIfc(id: string, file: File): Promise<{ fileName: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post<{ fileName: string }>(`/buildings/${id}/upload-ifc`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+}
+
+export function getBuildingIfcUrl(id: string): string {
+  return `${API_BASE_URL}/buildings/${id}/ifc`;
+}
+
+export async function assignDeviceToBuilding(
+  deviceId: string,
+  buildingId: string,
+  bimX?: number,
+  bimY?: number,
+  bimZ?: number,
+): Promise<void> {
+  await api.post('/buildings/assign-device', { deviceId, buildingId, bimX, bimY, bimZ });
+}
+
 export async function exportReadings(
   sensorIds: string[],
   sensorTypes: string[],

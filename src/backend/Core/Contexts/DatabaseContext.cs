@@ -18,6 +18,7 @@ public class DatabaseContext : DbContext
     public DbSet<EncryptionKey> EncryptionKeys { get; set; }
     public DbSet<RawPayload> RawPayloads { get; set; }
     public DbSet<GatewayReading> GatewayReadings { get; set; }
+    public DbSet<Building> Buildings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

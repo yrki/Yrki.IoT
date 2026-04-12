@@ -26,6 +26,8 @@ const GatewayView = lazy(() => import('../features/gateways/GatewayView'));
 const UsersView = lazy(() => import('../features/users/UsersView'));
 const MapContainer = lazy(() => import('../features/map/MapContainer'));
 const RawPayloadsView = lazy(() => import('../features/raw-payloads/RawPayloadsView'));
+const BimView = lazy(() => import('../features/bim/BimView'));
+const BuildingsListView = lazy(() => import('../features/buildings/BuildingsListView'));
 const ImportDataView = lazy(() => import('../features/import/ImportDataView'));
 const ExportDataView = lazy(() => import('../features/export/ExportDataView'));
 
@@ -61,6 +63,14 @@ function getSectionFromPath(pathname: string): NavigationSection {
     return 'Map';
   }
 
+  if (matchPath('/buildings/:buildingId', pathname)) {
+    return 'Building View';
+  }
+
+  if (pathname.startsWith('/buildings')) {
+    return 'Buildings';
+  }
+
   if (pathname.startsWith('/import')) {
     return 'Import Data';
   }
@@ -90,6 +100,8 @@ function getPrimaryPath(section: NavigationSection) {
       return '/new-sensors';
     case 'Map':
       return '/map';
+    case 'Buildings':
+      return '/buildings';
     case 'Import Data':
       return '/import';
     case 'Export Data':
@@ -122,13 +134,15 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
       '/users',
       '/new-sensors',
       '/map',
+      '/buildings',
       '/import',
       '/export',
     ].some((path) => location.pathname === path)
       || matchPath('/sensors/:sensorId', location.pathname)
       || matchPath('/locations/:locationId', location.pathname)
       || matchPath('/gateways/:gatewayId', location.pathname)
-      || matchPath('/raw-payloads/:deviceId', location.pathname);
+      || matchPath('/raw-payloads/:deviceId', location.pathname)
+      || matchPath('/buildings/:buildingId', location.pathname);
 
     if (!isKnownRoute) {
       navigate('/sensors', { replace: true });
@@ -155,6 +169,12 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
 
   const navigateToRawPayloads = useCallback((deviceId: string) => {
     navigate(`/raw-payloads/${encodeURIComponent(deviceId)}`, {
+      state: { from: location.pathname },
+    });
+  }, [location.pathname, navigate]);
+
+  const navigateToBuildingView = useCallback((buildingId: string) => {
+    navigate(`/buildings/${encodeURIComponent(buildingId)}`, {
       state: { from: location.pathname },
     });
   }, [location.pathname, navigate]);
@@ -188,9 +208,21 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
     const locationMatch = matchPath('/locations/:locationId', location.pathname);
     const gatewayMatch = matchPath('/gateways/:gatewayId', location.pathname);
     const rawPayloadsMatch = matchPath('/raw-payloads/:deviceId', location.pathname);
+    const buildingMatch = matchPath('/buildings/:buildingId', location.pathname);
     const fromPath = typeof location.state === 'object' && location.state && 'from' in location.state
       ? String(location.state.from)
       : null;
+
+    if (buildingMatch?.params.buildingId) {
+      const bid = decodeURIComponent(buildingMatch.params.buildingId);
+      return (
+        <BimView
+          buildingId={bid}
+          buildingName={bid}
+          onBack={() => navigate(fromPath || '/buildings')}
+        />
+      );
+    }
 
     if (rawPayloadsMatch?.params.deviceId) {
       return (
@@ -250,6 +282,8 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
             onNavigateToGateway={navigateToGatewayView}
           />
         );
+      case 'Buildings':
+        return <BuildingsListView onNavigateToBuilding={navigateToBuildingView} />;
       case 'Import Data':
         return <ImportDataView />;
       case 'Export Data':
