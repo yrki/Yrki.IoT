@@ -8,6 +8,11 @@ COPY src/frontend/package*.json ./
 RUN npm ci
 
 COPY src/frontend/ ./
+
+# Copy web-ifc WASM files into public so Vite includes them in the build
+RUN cp node_modules/web-ifc/web-ifc.wasm public/ && \
+    cp node_modules/web-ifc/web-ifc-mt.wasm public/
+
 RUN npm run build
 
 FROM nginx:1.27-alpine AS final
