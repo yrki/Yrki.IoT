@@ -303,6 +303,31 @@ export async function assignDevicesToLocation(
   return response.data;
 }
 
+export interface ImportDeviceEntry {
+  uniqueId: string;
+  name?: string;
+  manufacturer?: string;
+  type?: string;
+  kind?: string;
+  latitude?: number;
+  longitude?: number;
+  locationName?: string;
+}
+
+export interface ImportDevicesResponse {
+  inserted: number;
+  updated: number;
+  deleted: number;
+}
+
+export async function importDevices(
+  devices: ImportDeviceEntry[],
+  mode: 'update' | 'replace',
+): Promise<ImportDevicesResponse> {
+  const response = await api.post<ImportDevicesResponse>('/devices/import', { devices, mode });
+  return response.data;
+}
+
 export async function deleteLocation(id: string): Promise<void> {
   await api.delete(`/locations/${id}`);
 }

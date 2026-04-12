@@ -24,7 +24,7 @@ public sealed class SensorReadingsControllerTests_GetGateways : IClassFixture<Ap
         var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext));
 
         // Act
-        var result = await controller.GetGateways("sensor-1", CancellationToken.None);
+        var result = await controller.GetGateways("sensor-1", null, CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);

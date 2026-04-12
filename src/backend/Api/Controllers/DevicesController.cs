@@ -18,6 +18,7 @@ public class DevicesController(
     SensorByUniqueIdQueryHandler sensorByUniqueIdQueryHandler,
     UpdateDeviceCommandHandler updateHandler,
     AssignDevicesToLocationCommandHandler assignDevicesToLocationHandler,
+    ImportDevicesCommandHandler importHandler,
     DeleteSensorCommandHandler deleteHandler) : ControllerBase
 {
     [HttpGet]
@@ -81,6 +82,15 @@ public class DevicesController(
             return NotFound();
 
         return Ok(new { affected });
+    }
+
+    [HttpPost("import")]
+    public async Task<IActionResult> Import(
+        [FromBody] ImportDevicesRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await importHandler.HandleAsync(request, cancellationToken);
+        return Ok(result);
     }
 
     [HttpDelete("{id:guid}")]

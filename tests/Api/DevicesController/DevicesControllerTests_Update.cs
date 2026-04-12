@@ -28,6 +28,7 @@ public sealed class DevicesControllerTests_Update : IClassFixture<ApiDatabaseFix
             new SensorByUniqueIdQueryHandler(_dbContext),
             new UpdateDeviceCommandHandler(_dbContext),
             new AssignDevicesToLocationCommandHandler(_dbContext),
+            new ImportDevicesCommandHandler(_dbContext),
             new DeleteSensorCommandHandler(_dbContext));
 
         var request = new UpdateDeviceRequest(device.Name, device.Description, location.Id, null, null);

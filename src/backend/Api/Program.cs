@@ -39,6 +39,7 @@ builder.Services.AddScoped<SensorReadingsQueryHandler>();
 builder.Services.AddScoped<NewDevicesQueryHandler>();
 builder.Services.AddScoped<UpdateDeviceCommandHandler>();
 builder.Services.AddScoped<AssignDevicesToLocationCommandHandler>();
+builder.Services.AddScoped<ImportDevicesCommandHandler>();
 builder.Services.AddScoped<AllSensorsQueryHandler>();
 builder.Services.AddScoped<AllGatewaysQueryHandler>();
 builder.Services.AddScoped<SensorsByLocationQueryHandler>();
