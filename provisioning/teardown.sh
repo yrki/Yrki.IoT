@@ -8,9 +8,10 @@ if [[ -t 1 ]]; then
   DIM=$'\033[2m'
   CYAN=$'\033[38;5;51m'
   RED=$'\033[38;5;196m'
+  GREEN=$'\033[38;5;46m'
   YELLOW=$'\033[38;5;220m'
 else
-  RESET='' BOLD='' DIM='' CYAN='' RED='' YELLOW=''
+  RESET='' BOLD='' DIM='' CYAN='' RED='' GREEN='' YELLOW=''
 fi
 
 DIVIDER='━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
