@@ -502,3 +502,4 @@ $RECYCLE.BIN/
 # Environment secrets
 .env
 .env.prod
+.secrets/

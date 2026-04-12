@@ -94,8 +94,23 @@ ssh "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p ${REMOTE_DIR}/volumes/mosquitto/co
 rsync -avz \
   docker-compose.prod.yml \
   Caddyfile \
-  .env.prod \
   "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
+
+# Only upload .env.prod if one doesn't already exist on the remote
+if ssh -o BatchMode=yes "${REMOTE_USER}@${REMOTE_HOST}" "test -f ${REMOTE_DIR}/.env.prod"; then
+  printf '  %s.env.prod already exists on remote — keeping it.%s\n' "${DIM}" "${RESET}"
+else
+  if [[ -f .secrets/prod.env ]]; then
+    printf '  %s⚠  Uploading .secrets/prod.env (no existing file on remote)%s\n' "${YELLOW}" "${RESET}"
+    rsync -avz .secrets/prod.env "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/.env.prod"
+  elif [[ -f .env.prod ]]; then
+    printf '  %s⚠  Uploading .env.prod (no existing file on remote)%s\n' "${YELLOW}" "${RESET}"
+    rsync -avz .env.prod "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
+  else
+    printf '  %s⚠  No .env.prod found locally or on remote. Create one on the server:%s\n' "${RED}" "${RESET}"
+    printf '  %s   ssh %s@%s nano %s/.env.prod%s\n' "${DIM}" "${REMOTE_USER}" "${REMOTE_HOST}" "${REMOTE_DIR}" "${RESET}"
+  fi
+fi
 
 rsync -avz \
   volumes/mosquitto/config/ \
