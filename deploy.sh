@@ -74,6 +74,8 @@ fi
 
 # --- Build ---
 print_step "Building backend images locally..."
+# Clean publish output to prevent recursive bin/ dirs from PublishContainer
+rm -rf src/backend/Api/bin/Release src/backend/Service/bin/Release
 dotnet publish src/backend/Api/Api.csproj /t:PublishContainer -p:ContainerRuntimeIdentifier=linux-musl-x64
 dotnet publish src/backend/Service/Service.csproj /t:PublishContainer -p:ContainerRuntimeIdentifier=linux-musl-x64
 

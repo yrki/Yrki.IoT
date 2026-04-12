@@ -374,6 +374,7 @@ print_step "Deploying to $SERVER_IP..."
 
 # Build images locally
 printf '  Building backend images...\n'
+rm -rf src/backend/Api/bin/Release src/backend/Service/bin/Release
 dotnet publish src/backend/Api/Api.csproj /t:PublishContainer -p:ContainerRuntimeIdentifier=linux-musl-x64 -v:q
 dotnet publish src/backend/Service/Service.csproj /t:PublishContainer -p:ContainerRuntimeIdentifier=linux-musl-x64 -v:q
 
