@@ -27,6 +27,7 @@ const UsersView = lazy(() => import('../features/users/UsersView'));
 const MapContainer = lazy(() => import('../features/map/MapContainer'));
 const RawPayloadsView = lazy(() => import('../features/raw-payloads/RawPayloadsView'));
 const ImportDataView = lazy(() => import('../features/import/ImportDataView'));
+const ExportDataView = lazy(() => import('../features/export/ExportDataView'));
 
 const drawerWidth = 220;
 
@@ -64,6 +65,10 @@ function getSectionFromPath(pathname: string): NavigationSection {
     return 'Import Data';
   }
 
+  if (pathname.startsWith('/export')) {
+    return 'Export Data';
+  }
+
   if (pathname.startsWith('/users')) {
     return 'Users';
   }
@@ -87,6 +92,8 @@ function getPrimaryPath(section: NavigationSection) {
       return '/map';
     case 'Import Data':
       return '/import';
+    case 'Export Data':
+      return '/export';
     case 'Users':
       return '/users';
     case 'Sensors':
@@ -116,6 +123,7 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
       '/new-sensors',
       '/map',
       '/import',
+      '/export',
     ].some((path) => location.pathname === path)
       || matchPath('/sensors/:sensorId', location.pathname)
       || matchPath('/locations/:locationId', location.pathname)
@@ -244,6 +252,8 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
         );
       case 'Import Data':
         return <ImportDataView />;
+      case 'Export Data':
+        return <ExportDataView />;
       case 'Users':
         return <UsersView />;
       case 'Sensors':

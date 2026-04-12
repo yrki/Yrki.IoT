@@ -328,6 +328,27 @@ export async function importDevices(
   return response.data;
 }
 
+export async function exportReadings(
+  sensorIds: string[],
+  sensorTypes: string[],
+  from: string,
+  to: string,
+): Promise<SensorReadingDto[]> {
+  const response = await api.post<SensorReadingDto[]>('/sensorreadings/export', {
+    sensorIds,
+    sensorTypes,
+    from,
+    to,
+  });
+  return response.data;
+}
+
+export async function getDistinctSensorTypes(sensorIds?: string[]): Promise<string[]> {
+  const params = sensorIds && sensorIds.length > 0 ? { sensorIds: sensorIds.join(',') } : undefined;
+  const response = await api.get<string[]>('/sensorreadings/sensor-types', { params });
+  return response.data;
+}
+
 export async function deleteLocation(id: string): Promise<void> {
   await api.delete(`/locations/${id}`);
 }

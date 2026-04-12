@@ -12,9 +12,10 @@ import RouterRoundedIcon from '@mui/icons-material/RouterRounded';
 import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
 import MapRoundedIcon from '@mui/icons-material/MapRounded';
 import UploadFileRoundedIcon from '@mui/icons-material/UploadFileRounded';
+import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
 import type { SvgIconComponent } from '@mui/icons-material';
 
-export type NavigationSection = 'Sensors' | 'Gateways' | 'New Sensors' | 'Locations' | 'Map' | 'Import Data' | 'Users' | 'Live View' | 'Gateway View';
+export type NavigationSection = 'Sensors' | 'Gateways' | 'New Sensors' | 'Locations' | 'Map' | 'Import Data' | 'Export Data' | 'Users' | 'Live View' | 'Gateway View';
 
 const primaryItems: Array<{ label: NavigationSection; icon: SvgIconComponent }> = [
   { label: 'Sensors', icon: SensorsRoundedIcon },
@@ -23,6 +24,7 @@ const primaryItems: Array<{ label: NavigationSection; icon: SvgIconComponent }> 
   { label: 'Locations', icon: PlaceRoundedIcon },
   { label: 'Map', icon: MapRoundedIcon },
   { label: 'Import Data', icon: UploadFileRoundedIcon },
+  { label: 'Export Data', icon: DownloadRoundedIcon },
   { label: 'Users', icon: PeopleRoundedIcon },
 ];
 

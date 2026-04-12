@@ -1,3 +1,4 @@
+using Contracts.Requests;
 using Core.Features.SensorData.Query;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -52,6 +53,35 @@ public class SensorReadingsController(SensorReadingsQueryHandler queryHandler) :
     {
         var sensors = await queryHandler.GetSensorStatisticsForGatewayAsync(gatewayId, cancellationToken);
         return Ok(sensors);
+    }
+
+    [HttpGet("sensor-types")]
+    public async Task<IActionResult> GetSensorTypes(
+        [FromQuery] string? sensorIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<string>? idList = null;
+        if (!string.IsNullOrWhiteSpace(sensorIds))
+        {
+            idList = sensorIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+
+        var types = await queryHandler.GetDistinctSensorTypesAsync(idList, cancellationToken);
+        return Ok(types);
+    }
+
+    [HttpPost("export")]
+    public async Task<IActionResult> Export(
+        [FromBody] ExportReadingsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var readings = await queryHandler.ExportAsync(
+            request.SensorIds,
+            request.SensorTypes,
+            request.From,
+            request.To,
+            cancellationToken);
+        return Ok(readings);
     }
 
     [HttpGet("coverage")]

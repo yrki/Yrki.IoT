@@ -148,4 +148,59 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
             .ThenBy(c => c.SensorId)
             .ToList();
     }
+
+    public async Task<IReadOnlyList<string>> GetDistinctSensorTypesAsync(
+        IReadOnlyList<string>? sensorIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = db.SensorReadings.AsNoTracking();
+
+        if (sensorIds is { Count: > 0 })
+        {
+            var idSet = sensorIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            query = query.Where(r => idSet.Contains(r.SensorId));
+        }
+
+        return await query
+            .Select(r => r.SensorType)
+            .Distinct()
+            .OrderBy(t => t)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<SensorReadingResponse>> ExportAsync(
+        IReadOnlyList<string>? sensorIds,
+        IReadOnlyList<string>? sensorTypes,
+        DateTimeOffset from,
+        DateTimeOffset to,
+        CancellationToken cancellationToken = default)
+    {
+        var query = db.SensorReadings
+            .AsNoTracking()
+            .Where(r => r.Timestamp >= from && r.Timestamp <= to);
+
+        if (sensorIds is { Count: > 0 })
+        {
+            var idSet = sensorIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            query = query.Where(r => idSet.Contains(r.SensorId));
+        }
+
+        if (sensorTypes is { Count: > 0 })
+        {
+            var typeSet = sensorTypes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            query = query.Where(r => typeSet.Contains(r.SensorType));
+        }
+
+        return await query
+            .OrderBy(r => r.SensorId)
+            .ThenBy(r => r.Timestamp)
+            .Select(r => new SensorReadingResponse(
+                r.SensorId,
+                r.SensorType,
+                r.Value,
+                r.Timestamp,
+                r.GatewayId,
+                r.Rssi))
+            .ToListAsync(cancellationToken);
+    }
 }
