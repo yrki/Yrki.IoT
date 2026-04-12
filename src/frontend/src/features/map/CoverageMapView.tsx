@@ -61,6 +61,42 @@ function rssiColor(rssi: number): string {
 }
 
 const staleColor = '#1e293b';
+const activityFadeDurationMs = 6 * 60 * 60 * 1000;
+
+function getSensorMarkerColor(lastContact: string, now: number): string {
+  const ageMs = Math.max(0, now - new Date(lastContact).getTime());
+  const progress = Math.max(0, 1 - ageMs / activityFadeDurationMs);
+
+  if (progress <= 0) return 'rgba(148, 163, 184, 0.55)';
+
+  const green = Math.round(120 + progress * 90);
+  const red = Math.round(148 - progress * 88);
+  return `rgba(${red}, ${green}, 105, ${0.35 + progress * 0.65})`;
+}
+
+function getGatewayMarkerColor(lastContact: string, now: number): string {
+  const ageMs = Math.max(0, now - new Date(lastContact).getTime());
+  const progress = Math.max(0, 1 - ageMs / activityFadeDurationMs);
+
+  if (progress <= 0) return 'rgba(148, 163, 184, 0.55)';
+
+  const blue = Math.round(120 + progress * 135);
+  const red = Math.round(148 - progress * 89);
+  const green = Math.round(148 - progress * 18);
+  return `rgba(${red}, ${green}, ${blue}, ${0.35 + progress * 0.65})`;
+}
+
+function getMarkerGlow(lastContact: string, now: number, isGateway: boolean): string {
+  const ageMs = Math.max(0, now - new Date(lastContact).getTime());
+  const progress = Math.max(0, 1 - ageMs / activityFadeDurationMs);
+
+  if (progress <= 0) return '0 0 0 1px rgba(148, 163, 184, 0.2)';
+
+  const glowColor = isGateway
+    ? `rgba(59, 130, 246, ${0.2 + progress * 0.4})`
+    : `rgba(34, 197, 94, ${0.2 + progress * 0.4})`;
+  return `0 0 ${4 + progress * 6}px ${glowColor}`;
+}
 
 function hasCoordinates(device: SensorListItemDto): boolean {
   return device.latitude != null && device.longitude != null
@@ -236,20 +272,23 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
       return;
     }
 
+    const now = Date.now();
+
     for (const device of mappableDevices) {
       const isGateway = device.kind === 'Gateway';
       const size = isGateway ? 16 : 12;
+      const color = isGateway
+        ? getGatewayMarkerColor(device.lastContact, now)
+        : getSensorMarkerColor(device.lastContact, now);
 
       const el = document.createElement('div');
       el.style.width = `${size}px`;
       el.style.height = `${size}px`;
       el.style.borderRadius = isGateway ? '3px' : '50%';
-      el.style.backgroundColor = isGateway ? '#3b82f6' : '#22c55e';
-      el.style.border = `2px solid ${isGateway ? '#1d4ed8' : '#15803d'}`;
+      el.style.backgroundColor = color;
+      el.style.border = `2px solid ${color}`;
       el.style.cursor = 'pointer';
-      el.style.boxShadow = isGateway
-        ? '0 0 6px rgba(59, 130, 246, 0.5)'
-        : '0 0 4px rgba(34, 197, 94, 0.4)';
+      el.style.boxShadow = getMarkerGlow(device.lastContact, now, isGateway);
       el.title = `${isGateway ? 'Gateway' : 'Sensor'}: ${device.name ?? device.uniqueId}`;
 
       el.addEventListener('click', (event) => {

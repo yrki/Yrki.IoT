@@ -15,7 +15,7 @@ public class SensorReadingReceivedConsumer(
     {
         var device = await db.Devices.SingleOrDefaultAsync(device => device.UniqueId == msg.SensorId, cancellationToken);
 
-        await TrackGatewayContactAsync(msg, cancellationToken);
+        TrackGatewayContact(msg);
 
         try
         {
@@ -49,32 +49,12 @@ public class SensorReadingReceivedConsumer(
             msg.SensorId, msg.SensorType, msg.Value, msg.Timestamp, cancellationToken);
     }
 
-    private async Task TrackGatewayContactAsync(SensorReadingReceived msg, CancellationToken cancellationToken)
+    private void TrackGatewayContact(SensorReadingReceived msg)
     {
         if (string.IsNullOrWhiteSpace(msg.GatewayId))
             return;
 
         var gatewayId = msg.GatewayId.Trim();
-
-        var gateway = await db.Devices.FirstOrDefaultAsync(d => d.UniqueId == gatewayId, cancellationToken);
-        if (gateway is null)
-        {
-            db.Devices.Add(new Device
-            {
-                Id = Guid.NewGuid(),
-                UniqueId = gatewayId,
-                Name = gatewayId,
-                Type = "Gateway",
-                Description = string.Empty,
-                Kind = DeviceKind.Gateway,
-                LastContact = msg.Timestamp,
-                InstallationDate = msg.Timestamp,
-            });
-        }
-        else if (gateway.LastContact < msg.Timestamp)
-        {
-            gateway.LastContact = msg.Timestamp;
-        }
 
         db.GatewayReadings.Add(new GatewayReading
         {
@@ -85,6 +65,8 @@ public class SensorReadingReceivedConsumer(
             ReceivedAt = msg.Timestamp,
         });
 
-        await db.SaveChangesAsync(cancellationToken);
+        // Gateway device upsert is handled by SensorReadingConsumer,
+        // so we only track the reading here — it gets saved with the
+        // sensor reading in a single SaveChangesAsync above.
     }
 }

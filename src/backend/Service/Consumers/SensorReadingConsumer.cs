@@ -51,6 +51,7 @@ public class SensorReadingConsumer(
         if (payload is null)
         {
             await UpsertUnknownDeviceAsync(sensorId, metadata, msg.Timestamp, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
             return;
         }
 
@@ -71,6 +72,7 @@ public class SensorReadingConsumer(
         await StoreRawPayloadAsync(msg, sensorId, metadata.Manufacturer, null, cancellationToken);
         await UpsertDeviceAsync(readings[0], metadata, cancellationToken);
         await PersistReadingsAsync(readings, metadata, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
         await PublishNotificationsAsync(readings, cancellationToken);
     }
 
@@ -87,6 +89,7 @@ public class SensorReadingConsumer(
 
         await StoreRawPayloadAsync(msg, sensorId, metadata.Manufacturer, "Missing encryption key", cancellationToken);
         await UpsertUnknownDeviceAsync(sensorId, metadata, msg.Timestamp, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task HandleUnsupportedEncryptionAsync(
@@ -127,6 +130,7 @@ public class SensorReadingConsumer(
             },
             new WMBusMessageMetadata(manufacturer, "Unknown"),
             cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<IParsedPayload?> TryParsePayloadAsync(
@@ -307,7 +311,6 @@ public class SensorReadingConsumer(
             Rssi = msg.Rssi,
             Error = error,
         });
-        await db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task UpsertGatewayContactAsync(
@@ -355,8 +358,6 @@ public class SensorReadingConsumer(
             Rssi = rssi,
             ReceivedAt = timestamp,
         });
-
-        await db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task PersistReadingsAsync(
@@ -365,7 +366,6 @@ public class SensorReadingConsumer(
         CancellationToken cancellationToken)
     {
         db.SensorReadings.AddRange(readings);
-        await db.SaveChangesAsync(cancellationToken);
         if (logger.IsEnabled(LogLevel.Information))
             logger.LogInformation("Stored {Count} readings for sensor {SensorId} ({Manufacturer}, {DeviceType})",
                 readings.Count, readings[0].SensorId, metadata.Manufacturer, metadata.DeviceType);
@@ -392,7 +392,6 @@ public class SensorReadingConsumer(
                 LastContact = reading.Timestamp,
                 InstallationDate = reading.Timestamp,
             });
-            await db.SaveChangesAsync(cancellationToken);
             return;
         }
 
@@ -400,7 +399,6 @@ public class SensorReadingConsumer(
         device.Manufacturer = metadata.Manufacturer;
         device.Kind = DeviceKind.Sensor;
         device.LastContact = reading.Timestamp;
-        await db.SaveChangesAsync(cancellationToken);
     }
 
     private Task UpsertUnknownDeviceAsync(

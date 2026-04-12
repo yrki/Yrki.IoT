@@ -20,7 +20,7 @@ public class RabbitMqSubscriptionWorker(
                 var consumer = scope.ServiceProvider.GetRequiredService<SensorReadingConsumer>();
                 await consumer.HandleAsync(msg, ct);
             },
-            _ => { },
+            config => config.WithPrefetchCount(5),
             stoppingToken);
 
         await bus.PubSub.SubscribeAsync<SensorReadingReceived>(
@@ -31,7 +31,7 @@ public class RabbitMqSubscriptionWorker(
                 var consumer = scope.ServiceProvider.GetRequiredService<SensorReadingReceivedConsumer>();
                 await consumer.HandleAsync(msg, ct);
             },
-            _ => { },
+            config => config.WithPrefetchCount(5),
             stoppingToken);
 
         logger.LogInformation("RabbitMQ subscriptions active");
