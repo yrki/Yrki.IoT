@@ -52,4 +52,14 @@ public class SensorReadingsController(SensorReadingsQueryHandler queryHandler) :
         var sensors = await queryHandler.GetSensorStatisticsForGatewayAsync(gatewayId, cancellationToken);
         return Ok(sensors);
     }
+
+    [HttpGet("coverage")]
+    public async Task<IActionResult> GetCoverage(
+        [FromQuery] int days = 7,
+        CancellationToken cancellationToken = default)
+    {
+        var clampedDays = Math.Clamp(days, 1, 90);
+        var connections = await queryHandler.GetCoverageConnectionsAsync(clampedDays, cancellationToken);
+        return Ok(connections);
+    }
 }

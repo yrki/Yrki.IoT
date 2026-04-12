@@ -24,7 +24,7 @@ const LocationsView = lazy(() => import('../features/locations/LocationsView'));
 const GatewayListView = lazy(() => import('../features/gateways/GatewayListView'));
 const GatewayView = lazy(() => import('../features/gateways/GatewayView'));
 const UsersView = lazy(() => import('../features/users/UsersView'));
-const MapView = lazy(() => import('../features/map/MapView'));
+const MapContainer = lazy(() => import('../features/map/MapContainer'));
 const RawPayloadsView = lazy(() => import('../features/raw-payloads/RawPayloadsView'));
 
 const drawerWidth = 220;
@@ -229,7 +229,7 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
         return <NewSensorsView onNavigateToRawPayloads={navigateToRawPayloads} />;
       case 'Map':
         return (
-          <MapView
+          <MapContainer
             onNavigateToSensor={navigateToSensorView}
             onNavigateToGateway={navigateToGatewayView}
           />

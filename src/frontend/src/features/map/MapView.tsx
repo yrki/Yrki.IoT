@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Box, Button, FormControl, InputLabel, MenuItem, Paper, Select, Snackbar, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Alert, Box, Button, FormControl, InputLabel, MenuItem, Select, Snackbar, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
@@ -36,9 +36,13 @@ const drawingFillLayerId = 'map-drawing-fill';
 const drawingOutlineLayerId = 'map-drawing-outline';
 const drawingVerticesLayerId = 'map-drawing-vertices';
 
+import type { MapPosition } from './MapContainer';
+
 interface MapViewProps {
   onNavigateToSensor: (sensorId: string) => void;
   onNavigateToGateway: (gatewayId: string) => void;
+  initialPosition?: MapPosition;
+  onPositionChange?: (pos: MapPosition) => void;
 }
 
 type DeviceKindFilter = 'all' | 'Sensor' | 'Gateway';
@@ -398,7 +402,7 @@ function polygonCentroid(boundary: LocationBoundary): [number, number] {
   return [lng / boundary.length, lat / boundary.length];
 }
 
-function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
+function MapView({ onNavigateToSensor, onNavigateToGateway, initialPosition, onPositionChange }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
@@ -517,12 +521,22 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
     const map = new maplibregl.Map({
       container: mapContainer.current,
       style: 'https://tiles.openfreemap.org/styles/positron',
-      center: [10.4, 63.4],
-      zoom: 5,
+      center: initialPosition?.center ?? [10.4, 63.4],
+      zoom: initialPosition?.zoom ?? 5,
     });
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
     map.on('load', () => setMapReady(true));
+
+    if (onPositionChange) {
+      const report = () => {
+        const c = map.getCenter();
+        onPositionChange({ center: [c.lng, c.lat], zoom: map.getZoom() });
+      };
+      map.on('moveend', report);
+      map.on('zoomend', report);
+    }
+
     mapRef.current = map;
 
     return () => {
@@ -1236,9 +1250,15 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
     };
   }, [devicesByCoordinate, filteredDevices, locations, onNavigateToSensor, onNavigateToGateway]);
 
+  const skipInitialFitRef = useRef(!!initialPosition);
   useEffect(() => {
     const map = mapRef.current;
     if (!map) {
+      return;
+    }
+
+    if (skipInitialFitRef.current) {
+      skipInitialFitRef.current = false;
       return;
     }
 
@@ -1264,16 +1284,11 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
   }, [mapViewportSignature]);
 
   return (
-    <Paper
+    <Box
       sx={{
-        borderRadius: '6px',
-        backgroundColor: 'rgba(36, 42, 51, 0.82)',
-        border: '1px solid rgba(255,255,255,0.06)',
-        boxShadow: '0 28px 80px rgba(0, 0, 0, 0.24)',
-        overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        height: 'calc(100vh - 120px)',
+        height: '100%',
       }}
     >
       <Stack
@@ -1392,7 +1407,7 @@ function MapView({ onNavigateToSensor, onNavigateToGateway }: MapViewProps) {
           </Alert>
         ) : undefined}
       </Snackbar>
-    </Paper>
+    </Box>
   );
 }
 

@@ -78,6 +78,8 @@ export interface SensorGatewayDto {
   gatewayId: string;
   readingCount: number;
   averageRssi: number;
+  minRssi: number | null;
+  maxRssi: number | null;
   lastSeenAt: string;
 }
 
@@ -112,6 +114,19 @@ export async function getSensorGateways(sensorId: string): Promise<SensorGateway
 
 export async function getGatewaySensors(gatewayId: string): Promise<GatewaySensorDto[]> {
   const response = await api.get<GatewaySensorDto[]>(`/sensorreadings/gateway/${encodeURIComponent(gatewayId)}/sensors`);
+  return response.data;
+}
+
+export interface CoverageConnectionDto {
+  gatewayId: string;
+  sensorId: string;
+  averageRssi: number | null;
+  readingCount: number;
+  lastSeenAt: string;
+}
+
+export async function getCoverageConnections(days = 7): Promise<CoverageConnectionDto[]> {
+  const response = await api.get<CoverageConnectionDto[]>('/sensorreadings/coverage', { params: { days } });
   return response.data;
 }
 

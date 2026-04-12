@@ -13,4 +13,5 @@ public record SimulatedDevice(
     double TemperaturePhase,
     double HumidityPhase,
     double Co2Phase,
-    double SoundPhase);
+    double SoundPhase,
+    int BaseRssi = -75);

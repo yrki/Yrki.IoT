@@ -1,9 +1,8 @@
 namespace Contracts.Responses;
 
-public record SensorGatewayResponse(
+public record CoverageConnectionResponse(
     string GatewayId,
+    string SensorId,
+    double? AverageRssi,
     int ReadingCount,
-    decimal AverageRssi,
-    int? MinRssi,
-    int? MaxRssi,
     DateTimeOffset LastSeenAt);
