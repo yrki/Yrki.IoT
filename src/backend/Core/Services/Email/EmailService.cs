@@ -16,23 +16,47 @@ public class EmailService : IEmailService
         _logger = logger;
     }
 
-    public async Task SendAsync(
+    public Task SendAsync(
         string recipientEmail,
         string subject,
         string plainTextContent,
         CancellationToken cancellationToken)
+        => SendAsync(recipientEmail, subject, plainTextContent, htmlContent: null, cancellationToken);
+
+    public async Task SendAsync(
+        string recipientEmail,
+        string subject,
+        string plainTextContent,
+        string? htmlContent,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_options.ConnectionString))
         {
-            _logger.LogInformation(
-                "Email sending is disabled. Intended message to {RecipientEmail}. Subject: {Subject}. Body: {Body}",
-                recipientEmail,
-                subject,
-                plainTextContent);
+            if (!string.IsNullOrWhiteSpace(htmlContent))
+            {
+                _logger.LogInformation(
+                    "Email sending is disabled. Intended HTML message to {RecipientEmail}. Subject: {Subject}.\n\n--- HTML body ---\n{HtmlBody}\n--- end ---",
+                    recipientEmail,
+                    subject,
+                    htmlContent);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Email sending is disabled. Intended message to {RecipientEmail}. Subject: {Subject}. Body: {Body}",
+                    recipientEmail,
+                    subject,
+                    plainTextContent);
+            }
+
             return;
         }
 
         var client = new EmailClient(_options.ConnectionString);
+
+        var content = new EmailContent(subject) { PlainText = plainTextContent };
+        if (!string.IsNullOrWhiteSpace(htmlContent))
+            content.Html = htmlContent;
 
         var message = new EmailMessage(
             senderAddress: _options.SenderAddress,
@@ -41,10 +65,7 @@ public class EmailService : IEmailService
                 {
                     new EmailAddress(recipientEmail)
                 }),
-            content: new EmailContent(subject)
-            {
-                PlainText = plainTextContent
-            });
+            content: content);
 
         var operation = await client.SendAsync(WaitUntil.Completed, message, cancellationToken);
 
