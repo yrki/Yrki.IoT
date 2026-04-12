@@ -218,7 +218,6 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
       return (
         <BimView
           buildingId={bid}
-          buildingName={bid}
           onBack={() => navigate(fromPath || '/buildings')}
         />
       );
