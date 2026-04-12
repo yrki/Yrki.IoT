@@ -1,4 +1,4 @@
-import { Alert, Box, Button, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, TextField, Typography } from '@mui/material';
 import { FormEvent, useState } from 'react';
 
 interface LoginPageProps {
@@ -91,7 +91,14 @@ function LoginPage({ onSubmit }: LoginPageProps) {
           size="large"
           disabled={status === 'submitting'}
         >
-          Send magic link
+          {status === 'submitting' ? (
+            <>
+              <CircularProgress size={20} sx={{ mr: 1 }} color="inherit" />
+              Sending…
+            </>
+          ) : (
+            'Send magic link'
+          )}
         </Button>
       </Box>
     </Box>
