@@ -73,12 +73,17 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
 
     public async Task<IReadOnlyList<SensorGatewayResponse>> GetGatewayStatisticsAsync(
         string sensorId,
+        int? hours = null,
         CancellationToken cancellationToken = default)
     {
-        var readings = await db.GatewayReadings
+        IQueryable<Core.Models.GatewayReading> query = db.GatewayReadings
             .AsNoTracking()
-            .Where(reading => reading.SensorUniqueId == sensorId)
-            .ToListAsync(cancellationToken);
+            .Where(reading => reading.SensorUniqueId == sensorId);
+
+        if (hours.HasValue)
+            query = query.Where(reading => reading.ReceivedAt >= DateTimeOffset.UtcNow.AddHours(-hours.Value));
+
+        var readings = await query.ToListAsync(cancellationToken);
 
         return readings
             .GroupBy(reading => reading.GatewayUniqueId)
@@ -118,10 +123,10 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
     }
 
     public async Task<IReadOnlyList<CoverageConnectionResponse>> GetCoverageConnectionsAsync(
-        int days,
+        int hours,
         CancellationToken cancellationToken = default)
     {
-        var since = DateTimeOffset.UtcNow.AddDays(-days);
+        var since = DateTimeOffset.UtcNow.AddHours(-hours);
 
         var readings = await db.GatewayReadings
             .AsNoTracking()

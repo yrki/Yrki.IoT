@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
+  Button,
+  ButtonGroup,
   CircularProgress,
   Paper,
   Stack,
@@ -21,7 +23,15 @@ import type { MapPosition } from './MapContainer';
 
 const connectionSourceId = 'coverage-connections';
 const connectionLayerId = 'coverage-connections-layer';
-const coverageDays = 7;
+
+const coverageTimeRanges = [
+  { label: '3h', hours: 3 },
+  { label: '12h', hours: 12 },
+  { label: '24h', hours: 24 },
+  { label: '3d', hours: 24 * 3 },
+  { label: '1w', hours: 24 * 7 },
+  { label: '1m', hours: 24 * 30 },
+] as const;
 
 interface CoverageMapViewProps {
   onNavigateToSensor: (sensorId: string) => void;
@@ -50,7 +60,7 @@ function rssiColor(rssi: number): string {
   return `rgb(${r},${g},${b})`;
 }
 
-const staleColor = '#475569';
+const staleColor = '#1e293b';
 
 function hasCoordinates(device: SensorListItemDto): boolean {
   return device.latitude != null && device.longitude != null
@@ -67,30 +77,29 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
   const [devices, setDevices] = useState<SensorListItemDto[]>([]);
   const [connections, setConnections] = useState<CoverageConnectionDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingConnections, setLoadingConnections] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+  const [coverageHours, setCoverageHours] = useState(24 * 7);
+  const [popupDevice, setPopupDevice] = useState<SensorListItemDto | null>(null);
+  const replacingPopupRef = useRef(false);
 
-  const loadData = useCallback(async () => {
+  // Load devices once
+  useEffect(() => {
     setLoading(true);
-    try {
-      const [sensors, gateways] = await Promise.all([getDevices(), getGateways()]);
-      setDevices([...sensors, ...gateways]);
-    } catch (err) {
-      console.error('Failed to fetch devices:', err);
-    }
-
-    try {
-      const conns = await getCoverageConnections(coverageDays);
-      setConnections(conns);
-    } catch (err) {
-      console.error('Failed to fetch coverage connections:', err);
-    }
-
-    setLoading(false);
+    Promise.all([getDevices(), getGateways()])
+      .then(([sensors, gateways]) => setDevices([...sensors, ...gateways]))
+      .catch((err) => console.error('Failed to fetch devices:', err))
+      .finally(() => setLoading(false));
   }, []);
 
+  // Load connections whenever the time range changes
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    setLoadingConnections(true);
+    getCoverageConnections(coverageHours)
+      .then(setConnections)
+      .catch((err) => console.error('Failed to fetch coverage connections:', err))
+      .finally(() => setLoadingConnections(false));
+  }, [coverageHours]);
 
   // Map initialisation
   useEffect(() => {
@@ -174,7 +183,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
       return;
     }
 
-    const cutoff = Date.now() - coverageDays * 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - coverageHours * 60 * 60 * 1000;
 
     const features: GeoJSON.Feature[] = connections.flatMap((conn) => {
       const gw = deviceByUniqueId.get(conn.gatewayId);
@@ -208,7 +217,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
     });
 
     source.setData({ type: 'FeatureCollection', features });
-  }, [connections, deviceByUniqueId, mapReady]);
+  }, [connections, deviceByUniqueId, mapReady, coverageHours]);
 
   // Device markers
   useEffect(() => {
@@ -245,7 +254,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
 
       el.addEventListener('click', (event) => {
         event.stopPropagation();
-        showDevicePopup(map, device);
+        setPopupDevice(device);
       });
 
       const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
@@ -278,19 +287,22 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
   }, [devices, mapReady]);
 
   const showDevicePopup = useCallback((map: maplibregl.Map, device: SensorListItemDto) => {
+    replacingPopupRef.current = true;
     popupRef.current?.remove();
+    replacingPopupRef.current = false;
 
     const isGateway = device.kind === 'Gateway';
     const deviceConnections = connections.filter((conn) =>
       isGateway ? conn.gatewayId === device.uniqueId : conn.sensorId === device.uniqueId,
     );
 
-    const cutoff = Date.now() - coverageDays * 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - coverageHours * 60 * 60 * 1000;
 
     const container = document.createElement('div');
     container.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     container.style.fontSize = '13px';
     container.style.maxWidth = '340px';
+    container.style.color = '#1e293b';
 
     // Title
     const title = document.createElement('div');
@@ -305,7 +317,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
       const id = document.createElement('div');
       id.style.fontFamily = 'monospace';
       id.style.fontSize = '11px';
-      id.style.color = '#94a3b8';
+      id.style.color = '#334155';
       id.style.marginBottom = '8px';
       id.textContent = device.uniqueId;
       container.appendChild(id);
@@ -320,7 +332,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
 
       const header = document.createElement('div');
       header.style.fontSize = '11px';
-      header.style.color = '#64748b';
+      header.style.color = '#334155';
       header.style.marginBottom = '4px';
       header.textContent = isGateway
         ? `Sensors (${deviceConnections.length}):`
@@ -338,8 +350,12 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
         const peerName = document.createElement('span');
         peerName.style.fontFamily = 'monospace';
         peerName.style.fontSize = '11px';
+        peerName.style.flex = '1';
+        peerName.style.minWidth = '0';
+        peerName.style.overflow = 'hidden';
+        peerName.style.textOverflow = 'ellipsis';
         const peerId = isGateway ? conn.sensorId : conn.gatewayId;
-        peerName.textContent = peerId.length > 20 ? peerId.substring(0, 18) + '...' : peerId;
+        peerName.textContent = peerId;
         row.appendChild(peerName);
 
         const rssiSpan = document.createElement('span');
@@ -355,13 +371,26 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
         }
         row.appendChild(rssiSpan);
 
-        list.appendChild(row);
+        const lastSeen = document.createElement('div');
+        lastSeen.style.fontSize = '10px';
+        lastSeen.style.color = '#334155';
+        lastSeen.textContent = new Date(conn.lastSeenAt).toLocaleString([], {
+          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+        });
+
+        const rowWrapper = document.createElement('div');
+        rowWrapper.appendChild(row);
+        rowWrapper.appendChild(lastSeen);
+        rowWrapper.style.padding = '2px 0 4px';
+        rowWrapper.style.borderBottom = '1px solid rgba(148,163,184,0.1)';
+
+        list.appendChild(rowWrapper);
       }
 
       if (deviceConnections.length > 10) {
         const more = document.createElement('div');
         more.style.fontSize = '11px';
-        more.style.color = '#64748b';
+        more.style.color = '#334155';
         more.style.marginTop = '4px';
         more.textContent = `+${deviceConnections.length - 10} more`;
         list.appendChild(more);
@@ -377,11 +406,11 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
       detailSection.style.paddingTop = '6px';
       detailSection.style.marginTop = '6px';
       detailSection.style.fontSize = '12px';
-      detailSection.style.color = '#94a3b8';
+      detailSection.style.color = '#334155';
       detailSection.textContent = 'Loading RSSI details...';
       container.appendChild(detailSection);
 
-      getSensorGateways(device.uniqueId)
+      getSensorGateways(device.uniqueId, coverageHours)
         .then((gatewayStats) => {
           detailSection.textContent = '';
 
@@ -392,7 +421,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
 
           const detailHeader = document.createElement('div');
           detailHeader.style.fontSize = '11px';
-          detailHeader.style.color = '#64748b';
+          detailHeader.style.color = '#334155';
           detailHeader.style.marginBottom = '4px';
           detailHeader.textContent = 'RSSI details per gateway:';
           detailSection.appendChild(detailHeader);
@@ -427,7 +456,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
               const stat = document.createElement('span');
               stat.style.whiteSpace = 'nowrap';
               const labelSpan = document.createElement('span');
-              labelSpan.style.color = '#64748b';
+              labelSpan.style.color = '#334155';
               labelSpan.textContent = `${item.label}: `;
               stat.appendChild(labelSpan);
 
@@ -438,7 +467,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
                 valueSpan.style.color = rssiColor(item.value);
               } else {
                 valueSpan.textContent = '—';
-                valueSpan.style.color = '#475569';
+                valueSpan.style.color = '#334155';
               }
               stat.appendChild(valueSpan);
               statsRow.appendChild(stat);
@@ -448,7 +477,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
 
             const countRow = document.createElement('div');
             countRow.style.fontSize = '10px';
-            countRow.style.color = '#475569';
+            countRow.style.color = '#334155';
             countRow.style.marginTop = '2px';
             countRow.textContent = `${gw.readingCount} readings`;
             gwBlock.appendChild(countRow);
@@ -493,16 +522,58 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
       .addTo(map);
 
     popup.getElement().style.zIndex = '1000';
+    popup.on('close', () => {
+      popupRef.current = null;
+      if (!replacingPopupRef.current) {
+        setPopupDevice(null);
+      }
+    });
     popupRef.current = popup;
-  }, [connections, onNavigateToSensor, onNavigateToGateway]);
+  }, [connections, coverageHours, onNavigateToSensor, onNavigateToGateway]);
+
+  // (Re-)render popup whenever the selected device, connections, or time range changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !popupDevice) {
+      return;
+    }
+    showDevicePopup(map, popupDevice);
+  }, [popupDevice, connections, coverageHours, showDevicePopup]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
-      {loading && (
+      {(loading || loadingConnections) && (
         <Box sx={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}>
           <CircularProgress size={24} />
         </Box>
       )}
+
+      {/* Time range selector */}
+      <Paper
+        sx={{
+          position: 'absolute',
+          top: 16,
+          left: 16,
+          zIndex: 10,
+          p: 1,
+          borderRadius: '8px',
+          backgroundColor: 'rgba(15, 23, 42, 0.88)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(255,255,255,0.08)',
+        }}
+      >
+        <ButtonGroup size="small" variant="outlined">
+          {coverageTimeRanges.map((range) => (
+            <Button
+              key={range.label}
+              variant={coverageHours === range.hours ? 'contained' : 'outlined'}
+              onClick={() => setCoverageHours(range.hours)}
+            >
+              {range.label}
+            </Button>
+          ))}
+        </ButtonGroup>
+      </Paper>
 
       {/* Legend */}
       <Paper
@@ -519,7 +590,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
         }}
       >
         <Typography variant="caption" sx={{ fontWeight: 700, mb: 0.5, display: 'block', color: 'text.secondary' }}>
-          RSSI (last {coverageDays} days)
+          RSSI ({coverageTimeRanges.find((r) => r.hours === coverageHours)?.label ?? `${coverageHours}h`})
         </Typography>
         <Stack spacing={0.5}>
           {[
@@ -527,7 +598,7 @@ function CoverageMapView({ onNavigateToSensor, onNavigateToGateway, initialPosit
             { label: 'Good (-60 dBm)', color: rssiColor(-60) },
             { label: 'Fair (-80 dBm)', color: rssiColor(-80) },
             { label: 'Poor (-100 dBm)', color: rssiColor(-100) },
-            { label: `Stale (>${coverageDays}d)`, color: staleColor },
+            { label: 'Stale (older)', color: staleColor },
           ].map(({ label, color }) => (
             <Stack key={label} direction="row" spacing={1} alignItems="center">
               <Box sx={{ width: 20, height: 3, borderRadius: 1, backgroundColor: color, flexShrink: 0 }} />

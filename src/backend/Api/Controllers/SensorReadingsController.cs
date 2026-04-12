@@ -38,9 +38,10 @@ public class SensorReadingsController(SensorReadingsQueryHandler queryHandler) :
     [HttpGet("{sensorId}/gateways")]
     public async Task<IActionResult> GetGateways(
         string sensorId,
+        [FromQuery] int? hours = null,
         CancellationToken cancellationToken = default)
     {
-        var gateways = await queryHandler.GetGatewayStatisticsAsync(sensorId, cancellationToken);
+        var gateways = await queryHandler.GetGatewayStatisticsAsync(sensorId, hours, cancellationToken);
         return Ok(gateways);
     }
 
@@ -55,11 +56,11 @@ public class SensorReadingsController(SensorReadingsQueryHandler queryHandler) :
 
     [HttpGet("coverage")]
     public async Task<IActionResult> GetCoverage(
-        [FromQuery] int days = 7,
+        [FromQuery] int hours = 168,
         CancellationToken cancellationToken = default)
     {
-        var clampedDays = Math.Clamp(days, 1, 90);
-        var connections = await queryHandler.GetCoverageConnectionsAsync(clampedDays, cancellationToken);
+        var clampedHours = Math.Clamp(hours, 1, 24 * 90);
+        var connections = await queryHandler.GetCoverageConnectionsAsync(clampedHours, cancellationToken);
         return Ok(connections);
     }
 }

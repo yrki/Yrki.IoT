@@ -107,8 +107,10 @@ export async function getLatestReadings(sensorId: string): Promise<SensorReading
   return response.data;
 }
 
-export async function getSensorGateways(sensorId: string): Promise<SensorGatewayDto[]> {
-  const response = await api.get<SensorGatewayDto[]>(`/sensorreadings/${encodeURIComponent(sensorId)}/gateways`);
+export async function getSensorGateways(sensorId: string, hours?: number): Promise<SensorGatewayDto[]> {
+  const response = await api.get<SensorGatewayDto[]>(`/sensorreadings/${encodeURIComponent(sensorId)}/gateways`, {
+    params: hours != null ? { hours } : undefined,
+  });
   return response.data;
 }
 
@@ -125,8 +127,8 @@ export interface CoverageConnectionDto {
   lastSeenAt: string;
 }
 
-export async function getCoverageConnections(days = 7): Promise<CoverageConnectionDto[]> {
-  const response = await api.get<CoverageConnectionDto[]>('/sensorreadings/coverage', { params: { days } });
+export async function getCoverageConnections(hours = 168): Promise<CoverageConnectionDto[]> {
+  const response = await api.get<CoverageConnectionDto[]>('/sensorreadings/coverage', { params: { hours } });
   return response.data;
 }
 
