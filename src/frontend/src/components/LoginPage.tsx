@@ -48,7 +48,20 @@ function LoginPage({ onSubmit }: LoginPageProps) {
           bgcolor: 'background.paper',
         }}
       >
-        <Typography variant="h4">Yrki IoT</Typography>
+        <pre
+          style={{
+            fontFamily: 'monospace',
+            fontSize: '0.7rem',
+            lineHeight: 1.15,
+            color: 'inherit',
+            margin: 0,
+            textAlign: 'center',
+            whiteSpace: 'pre',
+          }}
+        >{` __ __     _   _
+|  |  |___| |_|_|
+|_   _|  _| '_| |
+  |_| |_| |_,_|_|`}</pre>
         <Typography variant="body1" sx={{ color: 'text.secondary' }}>
           Enter your email and we will send you a sign-in link.
         </Typography>

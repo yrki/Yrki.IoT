@@ -22,6 +22,6 @@ test('renders login page when not authenticated', () => {
       <App />
     </MemoryRouter>,
   );
-  expect(screen.getByText('Yrki IoT')).toBeInTheDocument();
+  expect(screen.getByText(/\|_\|/)).toBeInTheDocument();
   expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
 });
