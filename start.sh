@@ -100,6 +100,6 @@ print_step "Building frontend..."
 )
 
 print_step "Starting docker compose..."
-docker-compose up --build -d
+docker-compose up --build -d --force-recreate api service simulator frontend
 
 print_services

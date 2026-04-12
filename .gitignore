@@ -503,3 +503,10 @@ $RECYCLE.BIN/
 .env
 .env.prod
 .secrets/
+uploads/
+
+# IFC sample models (large binary files)
+*.ifc
+
+# web-ifc WASM (copied from node_modules at install time)
+src/frontend/public/web-ifc*.wasm
