@@ -19,8 +19,20 @@ public class DevicesController(
     UpdateDeviceCommandHandler updateHandler,
     AssignDevicesToLocationCommandHandler assignDevicesToLocationHandler,
     ImportDevicesCommandHandler importHandler,
+    CreateDeviceCommandHandler createHandler,
     DeleteSensorCommandHandler deleteHandler) : ControllerBase
 {
+    [HttpPost]
+    public async Task<IActionResult> Create(
+        [FromBody] CreateDeviceRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await createHandler.HandleAsync(request, cancellationToken);
+        if (result is null)
+            return Conflict(new { error = "Device with this unique ID already exists." });
+        return Created($"/devices/unique/{result.UniqueId}", result);
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {

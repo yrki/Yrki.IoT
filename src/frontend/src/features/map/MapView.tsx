@@ -4,7 +4,9 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   assignDevicesToLocation,
+  BuildingDto,
   createLocation,
+  getBuildings,
   getDevices,
   getGateways,
   getLocations,
@@ -414,6 +416,8 @@ function MapView({ onNavigateToSensor, onNavigateToGateway, initialPosition, onP
   const boundaryOverridesRef = useRef<Map<string, LocationBoundary>>(new Map());
   const [devices, setDevices] = useState<SensorListItemDto[]>([]);
   const [locations, setLocations] = useState<LocationDto[]>([]);
+  const [buildings, setBuildings] = useState<BuildingDto[]>([]);
+  const buildingMarkersRef = useRef<maplibregl.Marker[]>([]);
   const [boundaryOverrides, setBoundaryOverrides] = useState<Map<string, LocationBoundary>>(new Map());
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [sensorsVisible, setSensorsVisible] = useState(false);
@@ -504,9 +508,12 @@ function MapView({ onNavigateToSensor, onNavigateToGateway, initialPosition, onP
     .join('|'), [filteredDevices]);
 
   const reloadMapData = useCallback(async () => {
-    const [sensors, gateways, locs] = await Promise.all([getDevices(), getGateways(), getLocations()]);
+    const [sensors, gateways, locs, blds] = await Promise.all([
+      getDevices(), getGateways(), getLocations(), getBuildings(),
+    ]);
     setDevices([...sensors, ...gateways]);
     setLocations(locs);
+    setBuildings(blds);
   }, []);
 
   useEffect(() => {
@@ -1249,6 +1256,56 @@ function MapView({ onNavigateToSensor, onNavigateToGateway, initialPosition, onP
       clearMarkers();
     };
   }, [devicesByCoordinate, filteredDevices, locations, onNavigateToSensor, onNavigateToGateway]);
+
+  // Render building markers as green triangles
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+
+    // Clear existing building markers
+    for (const marker of buildingMarkersRef.current) marker.remove();
+    buildingMarkersRef.current = [];
+
+    for (const building of buildings) {
+      if (building.latitude == null || building.longitude == null) continue;
+
+      const el = document.createElement('div');
+      el.style.width = '0';
+      el.style.height = '0';
+      el.style.borderLeft = '8px solid transparent';
+      el.style.borderRight = '8px solid transparent';
+      el.style.borderBottom = '14px solid #22c55e';
+      el.style.filter = 'drop-shadow(0 0 3px rgba(34,197,94,0.5))';
+      el.style.cursor = 'pointer';
+      el.title = building.name;
+
+      el.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const popup = new maplibregl.Popup({ offset: 12, closeButton: false, closeOnClick: true, maxWidth: '240px' })
+          .setLngLat([building.longitude!, building.latitude!])
+          .setHTML(`
+            <div style="font-family:-apple-system,sans-serif;font-size:13px;color:#1e293b;">
+              <div style="font-weight:700;margin-bottom:4px;">🏢 ${building.name}</div>
+              ${building.address ? `<div style="color:#475569;font-size:12px;">${building.address}</div>` : ''}
+              <div style="color:#475569;font-size:11px;margin-top:4px;">${building.deviceCount} sensor${building.deviceCount === 1 ? '' : 's'}</div>
+            </div>
+          `)
+          .addTo(map);
+        popup.getElement().style.zIndex = '1000';
+      });
+
+      const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+        .setLngLat([building.longitude!, building.latitude!])
+        .addTo(map);
+      marker.getElement().style.zIndex = '200';
+      buildingMarkersRef.current.push(marker);
+    }
+
+    return () => {
+      for (const marker of buildingMarkersRef.current) marker.remove();
+      buildingMarkersRef.current = [];
+    };
+  }, [buildings, mapReady]);
 
   const skipInitialFitRef = useRef(!!initialPosition);
   useEffect(() => {

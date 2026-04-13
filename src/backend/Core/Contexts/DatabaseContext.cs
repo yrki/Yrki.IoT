@@ -19,6 +19,8 @@ public class DatabaseContext : DbContext
     public DbSet<RawPayload> RawPayloads { get; set; }
     public DbSet<GatewayReading> GatewayReadings { get; set; }
     public DbSet<Building> Buildings { get; set; }
+    public DbSet<Floor> Floors { get; set; }
+    public DbSet<Room> Rooms { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

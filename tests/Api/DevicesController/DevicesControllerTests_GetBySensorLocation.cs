@@ -32,6 +32,7 @@ public sealed class DevicesControllerTests_GetBySensorLocation : IClassFixture<A
             new UpdateDeviceCommandHandler(_dbContext),
             new AssignDevicesToLocationCommandHandler(_dbContext),
             new ImportDevicesCommandHandler(_dbContext),
+            new CreateDeviceCommandHandler(_dbContext),
             new DeleteSensorCommandHandler(_dbContext));
 
         // Act
@@ -65,6 +66,7 @@ public sealed class DevicesControllerTests_GetBySensorLocation : IClassFixture<A
             new UpdateDeviceCommandHandler(_dbContext),
             new AssignDevicesToLocationCommandHandler(_dbContext),
             new ImportDevicesCommandHandler(_dbContext),
+            new CreateDeviceCommandHandler(_dbContext),
             new DeleteSensorCommandHandler(_dbContext));
 
         // Act

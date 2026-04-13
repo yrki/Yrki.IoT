@@ -15,6 +15,7 @@ public class UpdateBuildingCommandHandler(DatabaseContext db)
     {
         var building = await db.Buildings
             .Include(b => b.Devices)
+            .Include(b => b.Location)
             .FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
 
         if (building is null) return null;
@@ -23,6 +24,8 @@ public class UpdateBuildingCommandHandler(DatabaseContext db)
         if (request.Address is not null) building.Address = request.Address;
         if (request.Latitude is not null) building.Latitude = request.Latitude;
         if (request.Longitude is not null) building.Longitude = request.Longitude;
+        if (request.LocationId is not null)
+            building.LocationId = request.LocationId == Guid.Empty ? null : request.LocationId;
 
         await db.SaveChangesAsync(cancellationToken);
 
@@ -30,6 +33,7 @@ public class UpdateBuildingCommandHandler(DatabaseContext db)
             building.Id, building.Name, building.Address,
             building.Latitude, building.Longitude, building.IfcFileName,
             building.Devices.Count(d => !d.IsDeleted && d.Kind != DeviceKind.Gateway),
+            building.LocationId, building.Location?.Name,
             building.CreatedAtUtc);
     }
 }

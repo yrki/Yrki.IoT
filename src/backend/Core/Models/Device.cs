@@ -27,6 +27,9 @@ public class Device
     public Guid? BuildingId { get; set; }
     public Building? Building { get; set; }
 
+    public Guid? RoomId { get; set; }
+    public Room? Room { get; set; }
+
     /// <summary>3D position inside the BIM model (metres from model origin).</summary>
     public double? BimX { get; set; }
     public double? BimY { get; set; }

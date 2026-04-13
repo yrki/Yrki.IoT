@@ -18,7 +18,11 @@ public class Building
     /// </summary>
     public string? IfcFileName { get; set; }
 
+    public Guid? LocationId { get; set; }
+    public Location? Location { get; set; }
+
     public DateTimeOffset CreatedAtUtc { get; set; }
 
+    public List<Floor> Floors { get; set; } = [];
     public List<Device> Devices { get; set; } = [];
 }

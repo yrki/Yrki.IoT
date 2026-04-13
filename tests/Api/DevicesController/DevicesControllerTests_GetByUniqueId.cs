@@ -29,6 +29,7 @@ public sealed class DevicesControllerTests_GetByUniqueId : IClassFixture<ApiData
             new UpdateDeviceCommandHandler(_dbContext),
             new AssignDevicesToLocationCommandHandler(_dbContext),
             new ImportDevicesCommandHandler(_dbContext),
+            new CreateDeviceCommandHandler(_dbContext),
             new DeleteSensorCommandHandler(_dbContext));
 
         // Act

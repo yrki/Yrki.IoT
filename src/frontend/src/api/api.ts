@@ -338,6 +338,8 @@ export interface BuildingDto {
   longitude: number | null;
   ifcFileName: string | null;
   deviceCount: number;
+  locationId: string | null;
+  locationName: string | null;
   createdAtUtc: string;
 }
 
@@ -356,14 +358,15 @@ export async function createBuilding(
   address?: string,
   latitude?: number,
   longitude?: number,
+  locationId?: string,
 ): Promise<BuildingDto> {
-  const response = await api.post<BuildingDto>('/buildings', { name, address, latitude, longitude });
+  const response = await api.post<BuildingDto>('/buildings', { name, address, latitude, longitude, locationId: locationId || undefined });
   return response.data;
 }
 
 export async function updateBuilding(
   id: string,
-  request: { name?: string; address?: string; latitude?: number | null; longitude?: number | null },
+  request: { name?: string; address?: string; latitude?: number | null; longitude?: number | null; locationId?: string | null },
 ): Promise<BuildingDto> {
   const response = await api.put<BuildingDto>(`/buildings/${id}`, request);
   return response.data;
@@ -382,8 +385,151 @@ export async function uploadBuildingIfc(id: string, file: File): Promise<{ fileN
   return response.data;
 }
 
+export interface FloorDto {
+  id: string;
+  name: string;
+  elevation: number;
+  sortOrder: number;
+  bimExpressId: number | null;
+  buildingId: string;
+  rooms: RoomDto[];
+}
+
+export interface RoomDto {
+  id: string;
+  name: string;
+  number: string | null;
+  sortOrder: number;
+  bimExpressId: number | null;
+  floorId: string;
+  deviceCount: number;
+}
+
+export async function getBuildingFloors(buildingId: string): Promise<FloorDto[]> {
+  const response = await api.get<FloorDto[]>(`/buildings/${buildingId}/floors`);
+  return response.data;
+}
+
+export async function createFloor(buildingId: string, name: string, elevation = 0): Promise<FloorDto> {
+  const response = await api.post<FloorDto>(`/buildings/${buildingId}/create-floor`, { name, elevation });
+  return response.data;
+}
+
+export async function createRoom(buildingId: string, floorId: string, name: string, number?: string): Promise<RoomDto> {
+  const response = await api.post<RoomDto>(`/buildings/${buildingId}/floors/${floorId}/create-room`, { name, number });
+  return response.data;
+}
+
+export async function assignDeviceToRoom(
+  buildingId: string,
+  deviceId: string,
+  roomId: string,
+  bimX?: number,
+  bimY?: number,
+  bimZ?: number,
+): Promise<void> {
+  await api.post(`/buildings/${buildingId}/assign-device-to-room`, { deviceId, roomId, bimX, bimY, bimZ });
+}
+
+export interface ImportFloorEntry {
+  name: string;
+  elevation: number;
+  bimExpressId?: number;
+  rooms: ImportRoomEntry[];
+}
+
+export interface ImportRoomEntry {
+  name: string;
+  number?: string;
+  bimExpressId?: number;
+}
+
+export interface BimStructureDiff {
+  newFloors: Array<{ name: string; elevation: number; bimExpressId: number | null; roomCount: number }>;
+  removedFloors: Array<{ existingId: string; name: string; roomCount: number }>;
+  newRooms: Array<{ name: string; number: string | null; floorName: string }>;
+  removedRooms: Array<{ existingId: string; name: string; floorName: string; deviceCount: number }>;
+  hasChanges: boolean;
+}
+
+export async function importBuildingStructure(
+  buildingId: string,
+  floors: ImportFloorEntry[],
+): Promise<BimStructureDiff> {
+  const response = await api.post<BimStructureDiff>(`/buildings/${buildingId}/import-structure`, { floors });
+  return response.data;
+}
+
+export async function applyBuildingStructureChanges(
+  buildingId: string,
+  floors: ImportFloorEntry[],
+  createNew: boolean,
+  deleteRemoved: boolean,
+): Promise<void> {
+  await api.post(`/buildings/${buildingId}/apply-structure-changes?createNew=${createNew}&deleteRemoved=${deleteRemoved}`, { floors });
+}
+
+export interface BuildingDeviceDto {
+  id: string;
+  uniqueId: string;
+  name: string | null;
+  manufacturer: string | null;
+  type: string;
+  kind: string;
+  lastContact: string;
+  bimX: number | null;
+  bimY: number | null;
+  bimZ: number | null;
+  roomId: string | null;
+}
+
+export async function getBuildingDevices(buildingId: string): Promise<BuildingDeviceDto[]> {
+  const response = await api.get<BuildingDeviceDto[]>(`/buildings/${buildingId}/devices`);
+  return response.data;
+}
+
 export function getBuildingIfcUrl(id: string): string {
   return `${API_BASE_URL}/buildings/${id}/ifc`;
+}
+
+export async function updateFloor(
+  buildingId: string,
+  floorId: string,
+  name: string,
+  elevation: number,
+): Promise<FloorDto> {
+  const response = await api.put<FloorDto>(`/buildings/${buildingId}/floors/${floorId}`, { name, elevation });
+  return response.data;
+}
+
+export async function deleteFloor(buildingId: string, floorId: string): Promise<void> {
+  await api.delete(`/buildings/${buildingId}/floors/${floorId}`);
+}
+
+export async function updateRoom(
+  buildingId: string,
+  floorId: string,
+  roomId: string,
+  name: string,
+  number?: string | null,
+): Promise<RoomDto> {
+  const response = await api.put<RoomDto>(
+    `/buildings/${buildingId}/floors/${floorId}/rooms/${roomId}`,
+    { name, number: number ?? null },
+  );
+  return response.data;
+}
+
+export async function deleteRoom(buildingId: string, floorId: string, roomId: string): Promise<void> {
+  await api.delete(`/buildings/${buildingId}/floors/${floorId}/rooms/${roomId}`);
+}
+
+export async function reorderFloors(buildingId: string, floorIds: string[]): Promise<void> {
+  await api.put(`/buildings/${buildingId}/reorder-floors`, { floorIds });
+}
+
+export async function reorderRooms(buildingId: string, floorId: string, roomIds: string[]): Promise<void> {
+  await api.put(`/buildings/${buildingId}/floors/${floorId}/reorder-rooms`, { roomIds });
 }
 
 export async function assignDeviceToBuilding(
@@ -414,6 +560,21 @@ export async function exportReadings(
 export async function getDistinctSensorTypes(sensorIds?: string[]): Promise<string[]> {
   const params = sensorIds && sensorIds.length > 0 ? { sensorIds: sensorIds.join(',') } : undefined;
   const response = await api.get<string[]>('/sensorreadings/sensor-types', { params });
+  return response.data;
+}
+
+export async function createDevice(
+  uniqueId: string,
+  manufacturer: string,
+  name?: string,
+  type?: string,
+): Promise<SensorListItemDto> {
+  const response = await api.post<SensorListItemDto>('/devices', {
+    uniqueId,
+    manufacturer,
+    name: name || undefined,
+    type: type || undefined,
+  });
   return response.data;
 }
 

@@ -18,6 +18,7 @@ public class CreateBuildingCommandHandler(DatabaseContext db)
             Address = request.Address,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
+            LocationId = request.LocationId,
             CreatedAtUtc = DateTimeOffset.UtcNow,
         };
 
@@ -27,6 +28,6 @@ public class CreateBuildingCommandHandler(DatabaseContext db)
         return new BuildingResponse(
             building.Id, building.Name, building.Address,
             building.Latitude, building.Longitude, building.IfcFileName,
-            0, building.CreatedAtUtc);
+            0, building.LocationId, null, building.CreatedAtUtc);
     }
 }

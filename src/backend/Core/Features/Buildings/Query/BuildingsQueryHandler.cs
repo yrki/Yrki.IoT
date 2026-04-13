@@ -20,6 +20,8 @@ public class BuildingsQueryHandler(DatabaseContext db)
                 b.Longitude,
                 b.IfcFileName,
                 b.Devices.Count(d => !d.IsDeleted && d.Kind != DeviceKind.Gateway),
+                b.LocationId,
+                b.Location != null ? b.Location.Name : null,
                 b.CreatedAtUtc))
             .ToListAsync(cancellationToken);
     }
@@ -37,6 +39,8 @@ public class BuildingsQueryHandler(DatabaseContext db)
                 b.Longitude,
                 b.IfcFileName,
                 b.Devices.Count(d => !d.IsDeleted && d.Kind != DeviceKind.Gateway),
+                b.LocationId,
+                b.Location != null ? b.Location.Name : null,
                 b.CreatedAtUtc))
             .FirstOrDefaultAsync(cancellationToken);
     }

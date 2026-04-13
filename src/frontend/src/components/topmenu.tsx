@@ -26,7 +26,7 @@ const GatewayView = lazy(() => import('../features/gateways/GatewayView'));
 const UsersView = lazy(() => import('../features/users/UsersView'));
 const MapContainer = lazy(() => import('../features/map/MapContainer'));
 const RawPayloadsView = lazy(() => import('../features/raw-payloads/RawPayloadsView'));
-const BimView = lazy(() => import('../features/bim/BimView'));
+const BuildingView = lazy(() => import('../features/bim/BuildingView'));
 const BuildingsListView = lazy(() => import('../features/buildings/BuildingsListView'));
 const ImportDataView = lazy(() => import('../features/import/ImportDataView'));
 const ExportDataView = lazy(() => import('../features/export/ExportDataView'));
@@ -216,7 +216,7 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
     if (buildingMatch?.params.buildingId) {
       const bid = decodeURIComponent(buildingMatch.params.buildingId);
       return (
-        <BimView
+        <BuildingView
           buildingId={bid}
           onBack={() => navigate(fromPath || '/buildings')}
         />

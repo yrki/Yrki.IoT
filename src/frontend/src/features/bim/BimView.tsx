@@ -1,12 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   ButtonGroup,
   CircularProgress,
-  ListSubheader,
-  MenuItem,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Paper,
   Slider,
   Stack,
@@ -15,11 +18,34 @@ import {
 } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
-import VerticalAlignTopRoundedIcon from '@mui/icons-material/VerticalAlignTopRounded';
+import BimSidePanel from './BimSidePanel';
+import { getSensorActivityHex } from '../sensors/sensorActivity';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as WebIFC from 'web-ifc';
-import { getBuilding, getBuildingIfcUrl } from '../../api/api';
+import {
+  applyBuildingStructureChanges,
+  assignDeviceToBuilding,
+  assignDeviceToRoom,
+  BimStructureDiff,
+  createDevice,
+  createFloor,
+  createRoom,
+  deleteFloor,
+  deleteRoom,
+  FloorDto,
+  getBuilding,
+  getBuildingDevices,
+  getBuildingFloors,
+  getBuildingIfcUrl,
+  getDevices,
+  ImportFloorEntry,
+  importBuildingStructure,
+  SensorListItemDto,
+  updateFloor,
+  updateRoom,
+} from '../../api/api';
+import type { StoreyInfo as PanelStoreyInfo, RoomInfo as PanelRoomInfo } from './BimSidePanel';
 
 interface StoreyInfo {
   id: number;
@@ -53,6 +79,10 @@ function BimView({ buildingId, onBack }: BimViewProps) {
   const [storeys, setStoreys] = useState<StoreyInfo[]>([]);
   const [activeStorey, setActiveStorey] = useState<number | null>(null);
   const [rooms, setRooms] = useState<RoomInfo[]>([]);
+  const [apiFloors, setApiFloors] = useState<FloorDto[]>([]);
+  const [structureDiff, setStructureDiff] = useState<BimStructureDiff | null>(null);
+  const [diffDialogOpen, setDiffDialogOpen] = useState(false);
+  const ifcStructureRef = useRef<ImportFloorEntry[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<RoomInfo | null>(null);
   const prevRoomMaterialsRef = useRef<Map<THREE.Mesh, THREE.Material>>(new Map());
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -61,15 +91,115 @@ function BimView({ buildingId, onBack }: BimViewProps) {
   const dirLightRef = useRef<THREE.DirectionalLight | null>(null);
   const [ambientIntensity, setAmbientIntensity] = useState(0.25);
   const [shadowIntensity, setShadowIntensity] = useState(1.2);
+
+  // Device placement (room-based)
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogRoom, setDialogRoom] = useState<RoomInfo | null>(null);
+  const [dialogApiRoomId, setDialogApiRoomId] = useState<string | null>(null);
+  const [dialogMode, setDialogMode] = useState<'existing' | 'new'>('existing');
+  const [allDevices, setAllDevices] = useState<SensorListItemDto[]>([]);
+  const [placedDevices, setPlacedDevices] = useState<Array<{ device: SensorListItemDto; position: THREE.Vector3; roomExpressId: number }>>([]);
+  const [searchDevice, setSearchDevice] = useState<SensorListItemDto | null>(null);
+  const [newUniqueId, setNewUniqueId] = useState('');
+  const [newManufacturer, setNewManufacturer] = useState('');
+  const [newName, setNewName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [dialogError, setDialogError] = useState<string | null>(null);
+  const deviceMarkersRef = useRef<THREE.Mesh[]>([]);
+  const sceneRef = useRef<THREE.Scene | null>(null);
   const initialCameraPos = useRef<THREE.Vector3>(new THREE.Vector3());
   const initialTarget = useRef<THREE.Vector3>(new THREE.Vector3());
 
-  // Fetch building name
+  // Fetch building name + devices
+  // Load building name, all devices (for search), and placed devices (for markers)
   useEffect(() => {
     getBuilding(buildingId)
       .then((b) => setBuildingName(b.name))
       .catch(() => {});
+    getDevices()
+      .then(setAllDevices)
+      .catch(() => {});
   }, [buildingId]);
+
+  const createDeviceMarker = useCallback((position: THREE.Vector3, color: number = 0x22c55e) => {
+    const geo = new THREE.SphereGeometry(0.3, 16, 16);
+    const mat = new THREE.MeshPhongMaterial({ color, emissive: color, emissiveIntensity: 0.4 });
+    const marker = new THREE.Mesh(geo, mat);
+    marker.position.copy(position);
+    marker.castShadow = true;
+    return marker;
+  }, []);
+
+  // Find the storey group a Y position belongs to
+  const findStoreyGroupForY = useCallback((y: number): THREE.Group | null => {
+    for (const storey of storeys) {
+      // Use the storey elevation ranges
+      const nextStorey = storeys.find((s) => s.elevation > storey.elevation);
+      const maxY = nextStorey ? nextStorey.elevation : Infinity;
+      if (y >= storey.elevation && y < maxY) {
+        return storey.group;
+      }
+    }
+    return null;
+  }, [storeys]);
+
+  const addMarkerToScene = useCallback((marker: THREE.Mesh) => {
+    const group = findStoreyGroupForY(marker.position.y);
+    if (group) {
+      group.add(marker);
+    } else {
+      sceneRef.current?.add(marker);
+    }
+  }, [findStoreyGroupForY]);
+
+  // Load already-placed devices from backend and create 3D markers
+  const loadPlacedDevices = useCallback(async () => {
+    try {
+      const devs = await getBuildingDevices(buildingId);
+      const placed = devs
+        .filter((d) => d.bimX != null && d.bimY != null && d.bimZ != null)
+        .map((d) => {
+          const pos = new THREE.Vector3(d.bimX!, d.bimY!, d.bimZ!);
+          let bestRoom = 0;
+          let bestDist = Infinity;
+          for (const room of rooms) {
+            if (room.center) {
+              const dist = pos.distanceTo(room.center);
+              if (dist < bestDist) {
+                bestDist = dist;
+                bestRoom = room.expressId;
+              }
+            }
+          }
+          return {
+            device: {
+              id: d.id, uniqueId: d.uniqueId, name: d.name, manufacturer: d.manufacturer,
+              type: d.type, kind: d.kind as 'Sensor' | 'Gateway' | undefined,
+              locationName: null, locationId: null,
+              lastContact: d.lastContact, installationDate: d.lastContact,
+              latitude: null, longitude: null,
+            } satisfies SensorListItemDto,
+            position: pos,
+            roomExpressId: bestRoom,
+          };
+        });
+      setPlacedDevices(placed);
+
+      const scene = sceneRef.current;
+      if (scene) {
+        for (const m of deviceMarkersRef.current) m.parent?.remove(m);
+        deviceMarkersRef.current = [];
+        for (const pd of placed) {
+          const color = getSensorActivityHex(pd.device.lastContact, Date.now());
+          const marker = createDeviceMarker(pd.position, color);
+          addMarkerToScene(marker);
+          deviceMarkersRef.current.push(marker);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load building devices:', err);
+    }
+  }, [buildingId, rooms, createDeviceMarker, addMarkerToScene]);
 
   const resetView = () => {
     const camera = cameraRef.current;
@@ -123,14 +253,13 @@ function BimView({ buildingId, onBack }: BimViewProps) {
       setActiveStorey(room.storeyId);
     }
 
-    // Top-down view centered on the room
+    // Near-top-down view centered on the room (slightly angled to avoid gimbal lock)
     const maxDim = room.size ? Math.max(room.size.x, room.size.z) : 5;
     const distance = Math.max(maxDim * 2.5, 8);
 
     controls.target.copy(room.center);
-    camera.position.set(room.center.x, room.center.y + distance, room.center.z + 0.01);
-    camera.up.set(0, 0, -1);
-    camera.lookAt(room.center);
+    camera.up.set(0, 1, 0);
+    camera.position.set(room.center.x, room.center.y + distance, room.center.z + 0.5);
     camera.updateProjectionMatrix();
     controls.update();
   };
@@ -140,10 +269,18 @@ function BimView({ buildingId, onBack }: BimViewProps) {
     const controls = controlsRef.current;
     if (!camera || !controls) return;
 
+    // Clear room highlight
+    for (const [mesh, mat] of prevRoomMaterialsRef.current) {
+      mesh.material = mat;
+    }
+    prevRoomMaterialsRef.current.clear();
+    setSelectedRoom(null);
+    setActiveStorey(null);
+
+    // Near-top-down view (slightly angled to avoid gimbal lock with polar limits)
     const target = controls.target.clone();
-    camera.position.set(target.x, target.y + 50, target.z + 0.01);
-    camera.up.set(0, 0, -1);
-    camera.lookAt(target);
+    camera.up.set(0, 1, 0);
+    camera.position.set(target.x, target.y + 50, target.z + 0.5);
     camera.updateProjectionMatrix();
     controls.update();
   };
@@ -157,6 +294,7 @@ function BimView({ buildingId, onBack }: BimViewProps) {
     // --- Scene ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1e293b);
+    sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(
       60,
@@ -182,6 +320,9 @@ function BimView({ buildingId, onBack }: BimViewProps) {
     controls.listenToKeyEvents(window);
     controls.keys = { LEFT: 'ArrowLeft', UP: 'ArrowUp', RIGHT: 'ArrowRight', BOTTOM: 'ArrowDown' };
     controls.keyPanSpeed = 15;
+    // Prevent camera roll (z-axis rotation) — keep camera upright
+    controls.minPolarAngle = 0.05;
+    controls.maxPolarAngle = Math.PI / 2;
 
     cameraRef.current = camera;
     controlsRef.current = controls;
@@ -577,6 +718,36 @@ function BimView({ buildingId, onBack }: BimViewProps) {
           group: sg.group,
         })));
         setRooms(roomList);
+
+        // Build IFC structure for import
+        const ifcStructure = storeyList.map((s) => {
+          const storeyRooms = roomList.filter((r) => r.storeyId === s.id);
+          return {
+            name: s.name,
+            elevation: s.elevation,
+            bimExpressId: s.id,
+            rooms: storeyRooms.map((r) => ({
+              name: r.name,
+              number: r.number || undefined,
+              bimExpressId: r.expressId,
+            })),
+          };
+        });
+        ifcStructureRef.current = ifcStructure;
+
+        // Import structure (first time auto-creates, subsequent returns diff)
+        importBuildingStructure(buildingId, ifcStructure)
+          .then((diff) => {
+            if (diff.hasChanges) {
+              setStructureDiff(diff);
+              setDiffDialogOpen(true);
+            }
+          })
+          .catch(() => {});
+
+        // Load persisted floors from API
+        getBuildingFloors(buildingId).then(setApiFloors).catch(() => {});
+
         setLoading(false);
       } catch (err: unknown) {
         if (!disposed) {
@@ -602,6 +773,13 @@ function BimView({ buildingId, onBack }: BimViewProps) {
     };
   }, []);
 
+  // Load placed devices after model is ready
+  useEffect(() => {
+    if (!loading && sceneRef.current) {
+      loadPlacedDevices();
+    }
+  }, [loading, loadPlacedDevices]);
+
   // Sync light sliders
   useEffect(() => {
     if (ambientRef.current) ambientRef.current.intensity = ambientIntensity;
@@ -617,6 +795,149 @@ function BimView({ buildingId, onBack }: BimViewProps) {
       storey.group.visible = activeStorey === null || storey.id === activeStorey;
     }
   }, [activeStorey, storeys]);
+
+  // Add device to a room (from side panel)
+  const openAddDeviceDialog = useCallback((room: RoomInfo | null, apiRoomId?: string) => {
+    setDialogRoom(room);
+    setDialogApiRoomId(apiRoomId ?? null);
+    setDialogMode('existing');
+    setSearchDevice(null);
+    setNewUniqueId('');
+    setNewManufacturer('');
+    setNewName('');
+    setDialogError(null);
+    setDialogOpen(true);
+  }, []);
+
+  const handlePlaceDeviceInRoom = async () => {
+    setSaving(true);
+    setDialogError(null);
+
+    try {
+      let device: SensorListItemDto;
+
+      if (dialogMode === 'existing') {
+        if (!searchDevice) return;
+        device = searchDevice;
+      } else {
+        if (!newUniqueId.trim() || !newManufacturer.trim()) return;
+        // Create new device
+        try {
+          device = await createDevice(
+            newUniqueId.trim(),
+            newManufacturer.trim(),
+            newName.trim() || undefined,
+          );
+          setAllDevices((prev) => [...prev, device]);
+        } catch (err: unknown) {
+          setDialogError('A device with this unique ID already exists. Use "Find existing" instead.');
+          setSaving(false);
+          return;
+        }
+      }
+
+      const center = dialogRoom?.center;
+
+      // Find the API room ID: prefer explicit dialogApiRoomId, else match by BimExpressId
+      const apiRoomId = dialogApiRoomId
+        ?? apiFloors.flatMap((f) => f.rooms).find(
+            (r) => dialogRoom && r.bimExpressId === dialogRoom.expressId,
+          )?.id;
+
+      if (apiRoomId) {
+        await assignDeviceToRoom(
+          buildingId, device.id, apiRoomId,
+          center?.x, center?.y, center?.z,
+        );
+      } else {
+        await assignDeviceToBuilding(
+          device.id, buildingId,
+          center?.x, center?.y, center?.z,
+        );
+      }
+
+      if (center) {
+        const activityColor = getSensorActivityHex(device.lastContact, Date.now());
+        const marker = createDeviceMarker(center, activityColor);
+        addMarkerToScene(marker);
+        deviceMarkersRef.current.push(marker);
+      }
+
+      setPlacedDevices((prev) => [...prev, {
+        device,
+        position: center ?? new THREE.Vector3(),
+        roomExpressId: dialogRoom?.expressId ?? 0,
+      }]);
+
+      setDialogOpen(false);
+      setDialogRoom(null);
+      setDialogApiRoomId(null);
+      setSearchDevice(null);
+    } catch (err) {
+      console.error('Failed to place device:', err);
+      setDialogError('Failed to assign device to room.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const cancelDialog = () => {
+    setDialogOpen(false);
+    setDialogRoom(null);
+    setSearchDevice(null);
+    setDialogError(null);
+  };
+
+  const deviceOptions = useMemo(() =>
+    allDevices.filter((d) => d.kind !== 'Gateway'),
+    [allDevices],
+  );
+
+  // Structure editing callbacks for BimSidePanel
+  const reloadApiFloors = async () => {
+    const floors = await getBuildingFloors(buildingId);
+    setApiFloors(floors);
+  };
+
+  const handleAddFloor = async (name: string) => {
+    await createFloor(buildingId, name);
+    await reloadApiFloors();
+  };
+
+  const handleEditFloor = async (storey: PanelStoreyInfo, name: string) => {
+    if (!storey.apiId) return;
+    const floor = apiFloors.find((f) => f.id === storey.apiId);
+    await updateFloor(buildingId, storey.apiId, name, floor?.elevation ?? 0);
+    await reloadApiFloors();
+  };
+
+  const handleDeleteFloor = async (storey: PanelStoreyInfo) => {
+    if (!storey.apiId) return;
+    await deleteFloor(buildingId, storey.apiId);
+    await reloadApiFloors();
+  };
+
+  const handleAddRoom = async (storey: PanelStoreyInfo, name: string, number?: string) => {
+    if (!storey.apiId) return;
+    await createRoom(buildingId, storey.apiId, name, number);
+    await reloadApiFloors();
+  };
+
+  const handleEditRoom = async (room: PanelRoomInfo, name: string, number?: string) => {
+    if (!room.apiId) return;
+    const floorId = apiFloors.find((f) => f.rooms.some((r) => r.id === room.apiId))?.id;
+    if (!floorId) return;
+    await updateRoom(buildingId, floorId, room.apiId, name, number ?? null);
+    await reloadApiFloors();
+  };
+
+  const handleDeleteRoom = async (room: PanelRoomInfo) => {
+    if (!room.apiId) return;
+    const floorId = apiFloors.find((f) => f.rooms.some((r) => r.id === room.apiId))?.id;
+    if (!floorId) return;
+    await deleteRoom(buildingId, floorId, room.apiId);
+    await reloadApiFloors();
+  };
 
   return (
     <Paper
@@ -648,80 +969,10 @@ function BimView({ buildingId, onBack }: BimViewProps) {
         <Typography variant="h6" sx={{ lineHeight: 1.2 }}>{buildingName}</Typography>
 
         <Box sx={{ flexGrow: 1 }} />
-
-        {storeys.length > 0 && (
-          <ButtonGroup size="small" variant="outlined">
-            <Button
-              variant={activeStorey === null ? 'contained' : 'outlined'}
-              onClick={() => setActiveStorey(null)}
-            >
-              All floors
-            </Button>
-            {storeys.map((storey) => (
-              <Button
-                key={storey.id}
-                variant={activeStorey === storey.id ? 'contained' : 'outlined'}
-                onClick={() => setActiveStorey(storey.id)}
-              >
-                {storey.name}
-              </Button>
-            ))}
-          </ButtonGroup>
-        )}
-
-        {rooms.length > 0 && (
-          <TextField
-            label="Room"
-            select
-            size="small"
-            value={selectedRoom ? String(selectedRoom.expressId) : ''}
-            onChange={(e) => {
-              const room = rooms.find((r) => String(r.expressId) === e.target.value);
-              if (room) navigateToRoom(room);
-            }}
-            sx={{ minWidth: 260 }}
-            InputLabelProps={{ shrink: true }}
-            SelectProps={{
-              displayEmpty: true,
-              renderValue: (v) => {
-                if (!v) return 'Go to room...';
-                const r = rooms.find((rm) => String(rm.expressId) === v);
-                return r?.name ?? 'Go to room...';
-              },
-            }}
-          >
-            {storeys.map((storey) => {
-              const storeyRooms = rooms.filter((r) => r.storeyId === storey.id);
-              if (storeyRooms.length === 0) return null;
-              return [
-                <ListSubheader key={`header-${storey.id}`} sx={{ backgroundColor: 'rgba(15,23,42,0.95)', color: 'text.secondary', fontWeight: 700, fontSize: '0.75rem', lineHeight: '32px' }}>
-                  {storey.name}
-                </ListSubheader>,
-                ...storeyRooms.map((room) => (
-                  <MenuItem key={room.expressId} value={String(room.expressId)} disabled={!room.center} sx={{ pl: 4 }}>
-                    {room.name}
-                  </MenuItem>
-                )),
-              ];
-            })}
-            {(() => {
-              const unassigned = rooms.filter((r) => r.storeyId === null);
-              if (unassigned.length === 0) return null;
-              return [
-                <ListSubheader key="header-unassigned" sx={{ backgroundColor: 'rgba(15,23,42,0.95)', color: 'text.secondary', fontWeight: 700, fontSize: '0.75rem', lineHeight: '32px' }}>
-                  Other
-                </ListSubheader>,
-                ...unassigned.map((room) => (
-                  <MenuItem key={room.expressId} value={String(room.expressId)} disabled={!room.center} sx={{ pl: 4 }}>
-                    {room.name}
-                  </MenuItem>
-                )),
-              ];
-            })()}
-          </TextField>
-        )}
       </Box>
 
+      <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      {/* 3D viewport (left) */}
       <Box sx={{ flex: 1, minHeight: 0, position: 'relative' }}>
         {/* Navigation legend + view controls */}
         <Paper
@@ -738,11 +989,8 @@ function BimView({ buildingId, onBack }: BimViewProps) {
           }}
         >
           <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-            <Button size="small" variant="outlined" startIcon={<RestartAltRoundedIcon />} onClick={resetView} sx={{ fontSize: '0.7rem' }}>
-              Reset
-            </Button>
-            <Button size="small" variant="outlined" startIcon={<VerticalAlignTopRoundedIcon />} onClick={topView} sx={{ fontSize: '0.7rem' }}>
-              Top
+            <Button size="small" variant="outlined" startIcon={<RestartAltRoundedIcon />} onClick={topView} sx={{ fontSize: '0.7rem' }}>
+              Reset view
             </Button>
           </Stack>
           <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5, color: 'text.secondary' }}>
@@ -824,7 +1072,245 @@ function BimView({ buildingId, onBack }: BimViewProps) {
         {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
 
         <Box ref={containerRef} sx={{ width: '100%', height: '100%' }} />
+
       </Box>
+
+      {/* Side panel (right) */}
+      <BimSidePanel
+        storeys={apiFloors.length > 0
+          ? apiFloors.map((f) => ({ id: f.bimExpressId ?? 0, name: f.name, apiId: f.id }))
+          : storeys.map((s) => ({ id: s.id, name: s.name }))}
+        rooms={apiFloors.length > 0
+          ? apiFloors.flatMap((f) => f.rooms.map((r) => ({
+              expressId: r.bimExpressId ?? 0,
+              name: r.number ? `${r.number} — ${r.name}` : r.name,
+              storeyId: f.bimExpressId ?? 0,
+              apiId: r.id,
+            })))
+          : rooms.map((r) => ({ expressId: r.expressId, name: r.name, storeyId: r.storeyId }))}
+        placedDevices={placedDevices.map((pd) => ({
+          deviceId: pd.device.id,
+          uniqueId: pd.device.uniqueId,
+          name: pd.device.name,
+          type: pd.device.type,
+          lastContact: pd.device.lastContact,
+          roomExpressId: pd.roomExpressId,
+        }))}
+        activeStorey={activeStorey}
+        onSelectStorey={setActiveStorey}
+        onSelectRoom={(room) => {
+          const full = rooms.find((r) => r.expressId === room.expressId);
+          if (full) navigateToRoom(full);
+        }}
+        onLocateDevice={(dev) => {
+          const placed = placedDevices.find((pd) => pd.device.id === dev.deviceId);
+          if (placed) {
+            const camera = cameraRef.current;
+            const controls = controlsRef.current;
+            if (camera && controls) {
+              controls.target.copy(placed.position);
+              // Near-top-down view centered on the device
+              camera.up.set(0, 1, 0);
+              camera.position.set(placed.position.x, placed.position.y + 15, placed.position.z + 0.5);
+              camera.updateProjectionMatrix();
+              controls.update();
+            }
+          }
+        }}
+        onAddDeviceToRoom={(room) => {
+          const full = rooms.find((r) => r.expressId === room.expressId);
+          if (full) {
+            openAddDeviceDialog(full, room.apiId);
+          } else if (room.apiId) {
+            // Room has no IFC geometry but exists in API — open dialog without 3D placement
+            openAddDeviceDialog(null, room.apiId);
+          }
+        }}
+        onRemoveDevice={(dev) => {
+          const idx = placedDevices.findIndex((pd) => pd.device.id === dev.deviceId);
+          if (idx >= 0) {
+            const marker = deviceMarkersRef.current[idx];
+            if (marker) {
+              marker.parent?.remove(marker);
+              marker.geometry.dispose();
+              deviceMarkersRef.current.splice(idx, 1);
+            }
+            assignDeviceToBuilding(dev.deviceId, buildingId, undefined, undefined, undefined)
+              .catch((err) => console.error('Failed to unassign device:', err));
+            setPlacedDevices((prev) => prev.filter((_, i) => i !== idx));
+          }
+        }}
+        onShowSensorData={(uniqueId) => {
+          window.open(`/sensors/${encodeURIComponent(uniqueId)}`, '_blank');
+        }}
+        onAddFloor={handleAddFloor}
+        onEditFloor={handleEditFloor}
+        onDeleteFloor={handleDeleteFloor}
+        onAddRoom={handleAddRoom}
+        onEditRoom={handleEditRoom}
+        onDeleteRoom={handleDeleteRoom}
+      />
+      </Box>
+
+      {/* Add device to room dialog */}
+      <Dialog open={dialogOpen} onClose={cancelDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Add sensor to {dialogRoom?.name ?? dialogApiRoomId ? 'room' : 'building'}</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '16px !important' }}>
+          <ButtonGroup size="small" fullWidth>
+            <Button
+              variant={dialogMode === 'existing' ? 'contained' : 'outlined'}
+              onClick={() => { setDialogMode('existing'); setDialogError(null); }}
+            >
+              Find existing
+            </Button>
+            <Button
+              variant={dialogMode === 'new' ? 'contained' : 'outlined'}
+              onClick={() => { setDialogMode('new'); setDialogError(null); }}
+            >
+              Create new
+            </Button>
+          </ButtonGroup>
+
+          {dialogMode === 'existing' ? (
+            <Autocomplete
+              options={deviceOptions}
+              value={searchDevice}
+              onChange={(_, v) => setSearchDevice(v)}
+              getOptionLabel={(opt) => `${opt.uniqueId}${opt.name ? ` — ${opt.name}` : ''}`}
+              isOptionEqualToValue={(opt, val) => opt.id === val.id}
+              renderInput={(params) => (
+                <TextField {...params} label="Search device" placeholder="Type to search..." autoFocus />
+              )}
+              renderOption={(props, opt) => (
+                <li {...props} key={opt.id}>
+                  <Stack>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{opt.uniqueId}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {[opt.name, opt.manufacturer, opt.type].filter(Boolean).join(' · ')}
+                    </Typography>
+                  </Stack>
+                </li>
+              )}
+            />
+          ) : (
+            <>
+              <TextField
+                label="Unique ID"
+                value={newUniqueId}
+                onChange={(e) => setNewUniqueId(e.target.value)}
+                required
+                autoFocus
+                placeholder="e.g. 00148032"
+              />
+              <TextField
+                label="Manufacturer"
+                value={newManufacturer}
+                onChange={(e) => setNewManufacturer(e.target.value)}
+                required
+                placeholder="e.g. ABB"
+                inputProps={{ minLength: 1 }}
+              />
+              <TextField
+                label="Name (optional)"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="e.g. Office water meter"
+              />
+            </>
+          )}
+
+          {dialogError && (
+            <Typography variant="body2" color="error">{dialogError}</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancelDialog}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handlePlaceDeviceInRoom}
+            disabled={
+              saving ||
+              (!dialogRoom?.center && !dialogApiRoomId) ||
+              (dialogMode === 'existing' && !searchDevice) ||
+              (dialogMode === 'new' && (!newUniqueId.trim() || !newManufacturer.trim()))
+            }
+          >
+            {saving ? 'Adding...' : 'Add to room'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* BIM structure diff dialog */}
+      <Dialog open={diffDialogOpen} onClose={() => setDiffDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>BIM model changes detected</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '16px !important' }}>
+          <Typography variant="body2" color="text.secondary">
+            The uploaded BIM model differs from the current floor/room structure.
+          </Typography>
+
+          {structureDiff && structureDiff.newFloors.length > 0 && (
+            <Box>
+              <Typography variant="subtitle2" color="success.main">New floors ({structureDiff.newFloors.length})</Typography>
+              {structureDiff.newFloors.map((f, i) => (
+                <Typography key={i} variant="body2" sx={{ pl: 2 }}>
+                  {f.name} — {f.roomCount} room{f.roomCount === 1 ? '' : 's'}
+                </Typography>
+              ))}
+            </Box>
+          )}
+
+          {structureDiff && structureDiff.newRooms.length > 0 && (
+            <Box>
+              <Typography variant="subtitle2" color="success.main">New rooms ({structureDiff.newRooms.length})</Typography>
+              {structureDiff.newRooms.map((r, i) => (
+                <Typography key={i} variant="body2" sx={{ pl: 2 }}>
+                  {r.number ? `${r.number} — ` : ''}{r.name} (on {r.floorName})
+                </Typography>
+              ))}
+            </Box>
+          )}
+
+          {structureDiff && structureDiff.removedFloors.length > 0 && (
+            <Box>
+              <Typography variant="subtitle2" color="error.main">Removed floors ({structureDiff.removedFloors.length})</Typography>
+              {structureDiff.removedFloors.map((f, i) => (
+                <Typography key={i} variant="body2" sx={{ pl: 2 }}>
+                  {f.name} — {f.roomCount} room{f.roomCount === 1 ? '' : 's'} (devices will be kept in the building)
+                </Typography>
+              ))}
+            </Box>
+          )}
+
+          {structureDiff && structureDiff.removedRooms.length > 0 && (
+            <Box>
+              <Typography variant="subtitle2" color="error.main">Removed rooms ({structureDiff.removedRooms.length})</Typography>
+              {structureDiff.removedRooms.map((r, i) => (
+                <Typography key={i} variant="body2" sx={{ pl: 2 }}>
+                  {r.name} (on {r.floorName}){r.deviceCount > 0 ? ` — ${r.deviceCount} device${r.deviceCount === 1 ? '' : 's'} will be unassigned` : ''}
+                </Typography>
+              ))}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDiffDialogOpen(false)}>
+            Keep current structure
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={async () => {
+              await applyBuildingStructureChanges(buildingId, ifcStructureRef.current, true, true);
+              const floors = await getBuildingFloors(buildingId);
+              setApiFloors(floors);
+              setDiffDialogOpen(false);
+              setStructureDiff(null);
+            }}
+          >
+            Apply all changes
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 }

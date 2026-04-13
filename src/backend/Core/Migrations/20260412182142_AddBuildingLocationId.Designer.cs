@@ -3,6 +3,7 @@ using System;
 using Core.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Core.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260412182142_AddBuildingLocationId")]
+    partial class AddBuildingLocationId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -138,9 +141,6 @@ namespace Core.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("RoomId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("text");
@@ -154,8 +154,6 @@ namespace Core.Migrations
                     b.HasIndex("BuildingId");
 
                     b.HasIndex("LocationId");
-
-                    b.HasIndex("RoomId");
 
                     b.ToTable("Devices", (string)null);
                 });
@@ -199,35 +197,6 @@ namespace Core.Migrations
                     b.HasIndex("Manufacturer", "DeviceUniqueId");
 
                     b.ToTable("EncryptionKeys", (string)null);
-                });
-
-            modelBuilder.Entity("Core.Models.Floor", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int?>("BimExpressId")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("BuildingId")
-                        .HasColumnType("uuid");
-
-                    b.Property<double>("Elevation")
-                        .HasColumnType("double precision");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BuildingId");
-
-                    b.ToTable("Floors");
                 });
 
             modelBuilder.Entity("Core.Models.GatewayReading", b =>
@@ -382,35 +351,6 @@ namespace Core.Migrations
                     b.ToTable("raw_payloads", (string)null);
                 });
 
-            modelBuilder.Entity("Core.Models.Room", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int?>("BimExpressId")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("FloorId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Number")
-                        .HasColumnType("text");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FloorId");
-
-                    b.ToTable("Rooms");
-                });
-
             modelBuilder.Entity("Core.Models.SensorReading", b =>
                 {
                     b.Property<DateTimeOffset>("Timestamp")
@@ -468,26 +408,9 @@ namespace Core.Migrations
                         .HasForeignKey("LocationId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Core.Models.Room", "Room")
-                        .WithMany("Devices")
-                        .HasForeignKey("RoomId");
-
                     b.Navigation("Building");
 
                     b.Navigation("Location");
-
-                    b.Navigation("Room");
-                });
-
-            modelBuilder.Entity("Core.Models.Floor", b =>
-                {
-                    b.HasOne("Core.Models.Building", "Building")
-                        .WithMany("Floors")
-                        .HasForeignKey("BuildingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Building");
                 });
 
             modelBuilder.Entity("Core.Models.Location", b =>
@@ -511,17 +434,6 @@ namespace Core.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Core.Models.Room", b =>
-                {
-                    b.HasOne("Core.Models.Floor", "Floor")
-                        .WithMany("Rooms")
-                        .HasForeignKey("FloorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Floor");
-                });
-
             modelBuilder.Entity("Core.Models.AppUser", b =>
                 {
                     b.Navigation("MagicLinkTokens");
@@ -530,24 +442,12 @@ namespace Core.Migrations
             modelBuilder.Entity("Core.Models.Building", b =>
                 {
                     b.Navigation("Devices");
-
-                    b.Navigation("Floors");
-                });
-
-            modelBuilder.Entity("Core.Models.Floor", b =>
-                {
-                    b.Navigation("Rooms");
                 });
 
             modelBuilder.Entity("Core.Models.Location", b =>
                 {
                     b.Navigation("Children");
 
-                    b.Navigation("Devices");
-                });
-
-            modelBuilder.Entity("Core.Models.Room", b =>
-                {
                     b.Navigation("Devices");
                 });
 #pragma warning restore 612, 618

@@ -8,4 +8,6 @@ public record BuildingResponse(
     double? Longitude,
     string? IfcFileName,
     int DeviceCount,
+    Guid? LocationId,
+    string? LocationName,
     DateTimeOffset CreatedAtUtc);

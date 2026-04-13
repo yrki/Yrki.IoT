@@ -11,6 +11,7 @@ import {
   DialogTitle,
   IconButton,
   InputAdornment,
+  MenuItem,
   Paper,
   Stack,
   Table,
@@ -35,9 +36,12 @@ import {
   createBuilding,
   deleteBuilding,
   getBuildings,
+  getLocations,
+  LocationDto,
   updateBuilding,
   uploadBuildingIfc,
 } from '../../api/api';
+import { buildLocationOptions } from '../locations/locationTree';
 import { handleCoordinatePaste } from '../map/coordinatePaste';
 
 type SortField = 'name' | 'address' | 'deviceCount' | 'createdAtUtc';
@@ -59,9 +63,13 @@ function BuildingsListView({ onNavigateToBuilding }: BuildingsListViewProps) {
   const [formAddress, setFormAddress] = useState('');
   const [formLat, setFormLat] = useState('');
   const [formLng, setFormLng] = useState('');
+  const [formLocationId, setFormLocationId] = useState('');
+  const [locations, setLocations] = useState<LocationDto[]>([]);
   const [ifcFile, setIfcFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const locationOptions = buildLocationOptions(locations);
 
   const loadBuildings = () => {
     getBuildings()
@@ -70,7 +78,10 @@ function BuildingsListView({ onNavigateToBuilding }: BuildingsListViewProps) {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadBuildings(); }, []);
+  useEffect(() => {
+    loadBuildings();
+    getLocations().then(setLocations).catch(() => {});
+  }, []);
 
   const openCreate = () => {
     setEditing(null);
@@ -78,6 +89,7 @@ function BuildingsListView({ onNavigateToBuilding }: BuildingsListViewProps) {
     setFormAddress('');
     setFormLat('');
     setFormLng('');
+    setFormLocationId('');
     setIfcFile(null);
     setUploadError(null);
     setDialogOpen(true);
@@ -89,6 +101,7 @@ function BuildingsListView({ onNavigateToBuilding }: BuildingsListViewProps) {
     setFormAddress(b.address ?? '');
     setFormLat(b.latitude != null ? String(b.latitude) : '');
     setFormLng(b.longitude != null ? String(b.longitude) : '');
+    setFormLocationId(b.locationId ?? '');
     setIfcFile(null);
     setUploadError(null);
     setDialogOpen(true);
@@ -104,16 +117,18 @@ function BuildingsListView({ onNavigateToBuilding }: BuildingsListViewProps) {
       const lng = formLng.trim() ? Number(formLng) : undefined;
 
       let buildingId: string;
+      const locId = formLocationId || null;
       if (editing) {
         await updateBuilding(editing.id, {
           name: formName.trim(),
           address: formAddress.trim() || undefined,
           latitude: lat ?? null,
           longitude: lng ?? null,
+          locationId: locId,
         });
         buildingId = editing.id;
       } else {
-        const created = await createBuilding(formName.trim(), formAddress.trim() || undefined, lat, lng);
+        const created = await createBuilding(formName.trim(), formAddress.trim() || undefined, lat, lng, formLocationId || undefined);
         buildingId = created.id;
       }
 
@@ -281,6 +296,25 @@ function BuildingsListView({ onNavigateToBuilding }: BuildingsListViewProps) {
               type="number" inputProps={{ step: 'any' }} fullWidth
             />
           </Stack>
+
+          <TextField
+            label="Location"
+            select
+            value={formLocationId}
+            onChange={(e) => setFormLocationId(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            SelectProps={{ displayEmpty: true, renderValue: (v) => {
+              if (!v) return 'None';
+              return locations.find((l) => l.id === v)?.name ?? 'None';
+            }}}
+          >
+            <MenuItem value="">None</MenuItem>
+            {locationOptions.map(({ location, depth }) => (
+              <MenuItem key={location.id} value={location.id} sx={{ pl: 2 + depth * 2 }}>
+                {location.name}
+              </MenuItem>
+            ))}
+          </TextField>
 
           {/* IFC upload */}
           <Box
