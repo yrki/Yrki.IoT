@@ -147,6 +147,7 @@ services:
       dockerfile: src/frontend/dockerfile
       args:
         VITE_API_BASE_URL: /api
+        VITE_ENABLE_BUILDINGS: "true"
     restart: unless-stopped
     ports:
       - "8080:80"
