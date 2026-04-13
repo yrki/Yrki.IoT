@@ -11,11 +11,19 @@ interface BuildingViewProps {
 
 function BuildingView({ buildingId, onBack }: BuildingViewProps) {
   const [hasIfc, setHasIfc] = useState<boolean | null>(null);
+  const [view, setView] = useState<'bim' | 'structure'>('bim');
 
   useEffect(() => {
     getBuilding(buildingId)
-      .then((b) => setHasIfc(!!b.ifcFileName))
-      .catch(() => setHasIfc(false));
+      .then((b) => {
+        const ifc = !!b.ifcFileName;
+        setHasIfc(ifc);
+        setView(ifc ? 'bim' : 'structure');
+      })
+      .catch(() => {
+        setHasIfc(false);
+        setView('structure');
+      });
   }, [buildingId]);
 
   if (hasIfc === null) {
@@ -27,11 +35,23 @@ function BuildingView({ buildingId, onBack }: BuildingViewProps) {
     );
   }
 
-  if (hasIfc) {
-    return <BimView buildingId={buildingId} onBack={onBack} />;
+  if (view === 'bim' && hasIfc) {
+    return (
+      <BimView
+        buildingId={buildingId}
+        onBack={onBack}
+        onSwitchToStructure={() => setView('structure')}
+      />
+    );
   }
 
-  return <BuildingStructureView buildingId={buildingId} onBack={onBack} />;
+  return (
+    <BuildingStructureView
+      buildingId={buildingId}
+      onBack={onBack}
+      onSwitchToBim={hasIfc ? () => setView('bim') : undefined}
+    />
+  );
 }
 
 export default BuildingView;

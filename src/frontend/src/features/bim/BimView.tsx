@@ -17,6 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import GridViewRoundedIcon from '@mui/icons-material/GridViewRounded';
 import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 import BimSidePanel from './BimSidePanel';
 import { getSensorActivityHex } from '../sensors/sensorActivity';
@@ -67,9 +68,10 @@ interface RoomInfo {
 interface BimViewProps {
   buildingId: string;
   onBack: () => void;
+  onSwitchToStructure?: () => void;
 }
 
-function BimView({ buildingId, onBack }: BimViewProps) {
+function BimView({ buildingId, onBack, onSwitchToStructure }: BimViewProps) {
   const ifcUrl = getBuildingIfcUrl(buildingId);
   const [buildingName, setBuildingName] = useState(buildingId);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -277,10 +279,10 @@ function BimView({ buildingId, onBack }: BimViewProps) {
     setSelectedRoom(null);
     setActiveStorey(null);
 
-    // Near-top-down view (slightly angled to avoid gimbal lock with polar limits)
-    const target = controls.target.clone();
+    // Reset to initial camera position and target (model center)
     camera.up.set(0, 1, 0);
-    camera.position.set(target.x, target.y + 50, target.z + 0.5);
+    controls.target.copy(initialTarget.current);
+    camera.position.copy(initialCameraPos.current);
     camera.updateProjectionMatrix();
     controls.update();
   };
@@ -969,6 +971,12 @@ function BimView({ buildingId, onBack }: BimViewProps) {
         <Typography variant="h6" sx={{ lineHeight: 1.2 }}>{buildingName}</Typography>
 
         <Box sx={{ flexGrow: 1 }} />
+
+        {onSwitchToStructure && (
+          <Button size="small" variant="outlined" startIcon={<GridViewRoundedIcon />} onClick={onSwitchToStructure}>
+            Schematic
+          </Button>
+        )}
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>

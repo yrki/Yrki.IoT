@@ -16,6 +16,7 @@ import {
   Typography,
 } from '@mui/material';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import ViewInArRoundedIcon from '@mui/icons-material/ViewInArRounded';
 import BimSidePanel, { RoomInfo, StoreyInfo } from './BimSidePanel';
 import {
   assignDeviceToRoom,
@@ -38,13 +39,14 @@ import {
 interface BuildingStructureViewProps {
   buildingId: string;
   onBack: () => void;
+  onSwitchToBim?: () => void;
 }
 
 // Stable numeric IDs for BimSidePanel (which uses number-based IDs)
 let nextSyntheticId = 1000;
 function makeSyntheticId() { return nextSyntheticId++; }
 
-function BuildingStructureView({ buildingId, onBack }: BuildingStructureViewProps) {
+function BuildingStructureView({ buildingId, onBack, onSwitchToBim }: BuildingStructureViewProps) {
   const [buildingName, setBuildingName] = useState(buildingId);
   const [floors, setFloors] = useState<FloorDto[]>([]);
   const [buildingDevices, setBuildingDevices] = useState<BuildingDeviceDto[]>([]);
@@ -279,6 +281,12 @@ function BuildingStructureView({ buildingId, onBack }: BuildingStructureViewProp
           <ArrowBackRoundedIcon />
         </IconButton>
         <Typography variant="h6" sx={{ lineHeight: 1.2 }}>{buildingName}</Typography>
+        <Box sx={{ flexGrow: 1 }} />
+        {onSwitchToBim && (
+          <Button size="small" variant="outlined" startIcon={<ViewInArRoundedIcon />} onClick={onSwitchToBim}>
+            3D Model
+          </Button>
+        )}
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
@@ -293,7 +301,7 @@ function BuildingStructureView({ buildingId, onBack }: BuildingStructureViewProp
             flexDirection: 'column-reverse', // bottom floor first (like a building)
             gap: 0,
             alignItems: 'center',
-            justifyContent: floors.length === 0 ? 'center' : 'flex-start',
+            justifyContent: 'center',
           }}
         >
           {floors.length === 0 ? (
