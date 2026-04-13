@@ -510,3 +510,8 @@ uploads/
 
 # web-ifc WASM (copied from node_modules at install time)
 src/frontend/public/web-ifc*.wasm
+
+# Core dumps from crashed processes
+core
+**/core
+core.[0-9]*
