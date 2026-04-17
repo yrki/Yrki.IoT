@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Text.Json;
+using Contracts.Mqtt;
 using Contracts.Readings;
 using EasyNetQ;
 using Microsoft.Extensions.Options;

@@ -1,4 +1,4 @@
-namespace service.Mqtt;
+namespace Contracts.Mqtt;
 
 /// <summary>
 /// MQTT payload for raw WMBus telegrams.
