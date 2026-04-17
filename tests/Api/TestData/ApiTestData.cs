@@ -100,6 +100,25 @@ public static class ApiTestData
         };
     }
 
+    public static GatewayPosition CreateGatewayPosition(
+        string gatewayUniqueId,
+        DateTimeOffset timestamp,
+        double? longitude = null,
+        double? latitude = null,
+        double? heading = null,
+        bool driveBy = false)
+    {
+        return new GatewayPosition
+        {
+            GatewayUniqueId = gatewayUniqueId,
+            Timestamp = timestamp,
+            Longitude = longitude,
+            Latitude = latitude,
+            Heading = heading,
+            DriveBy = driveBy,
+        };
+    }
+
     public static AppUser CreateUser(string email = "user@example.com")
     {
         return new AppUser

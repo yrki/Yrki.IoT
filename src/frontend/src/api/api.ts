@@ -638,3 +638,58 @@ export async function updateEncryptionKey(id: string, request: {
 export async function deleteEncryptionKey(id: string): Promise<void> {
   await api.delete(`/encryptionkeys/${id}`);
 }
+
+// --- Gateway Positions ---
+
+export interface GatewayPositionDto {
+  timestamp: string;
+  gatewayUniqueId: string;
+  longitude: number | null;
+  latitude: number | null;
+  heading: number | null;
+  driveBy: boolean;
+}
+
+export interface GatewayActivityBucketDto {
+  hour: string;
+  contactCount: number;
+}
+
+export async function getGatewayActivity(gatewayId: string, hours = 24): Promise<GatewayActivityBucketDto[]> {
+  const response = await api.get<GatewayActivityBucketDto[]>(
+    `/gatewaypositions/${encodeURIComponent(gatewayId)}/activity`,
+    { params: { hours } },
+  );
+  return response.data;
+}
+
+export async function getGatewayPositions(gatewayId: string, hours = 24): Promise<GatewayPositionDto[]> {
+  const response = await api.get<GatewayPositionDto[]>(
+    `/gatewaypositions/${encodeURIComponent(gatewayId)}`,
+    { params: { hours } },
+  );
+  return response.data;
+}
+
+export async function getGatewayLatestPosition(gatewayId: string): Promise<GatewayPositionDto | null> {
+  try {
+    const response = await api.get<GatewayPositionDto>(
+      `/gatewaypositions/${encodeURIComponent(gatewayId)}/latest`,
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+export async function getGatewayDriveByPositions(gatewayId: string, hours = 24): Promise<GatewayPositionDto[]> {
+  const response = await api.get<GatewayPositionDto[]>(
+    `/gatewaypositions/${encodeURIComponent(gatewayId)}/driveby`,
+    { params: { hours } },
+  );
+  return response.data;
+}

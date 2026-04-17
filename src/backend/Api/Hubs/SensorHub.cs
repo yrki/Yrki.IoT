@@ -8,4 +8,9 @@ public class SensorHub : Hub
     {
         await Clients.Others.SendAsync("SensorReadingReceived", reading);
     }
+
+    public async Task SendGatewayPosition(object position)
+    {
+        await Clients.Others.SendAsync("GatewayPositionReceived", position);
+    }
 }

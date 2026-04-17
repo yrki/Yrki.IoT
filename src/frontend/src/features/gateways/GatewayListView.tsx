@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
 import {
   Box,
   Chip,
@@ -13,6 +14,7 @@ import {
   TableRow,
   TableSortLabel,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
@@ -20,6 +22,11 @@ import { getGateways, SensorListItemDto } from '../../api/api';
 
 type SortableField = 'uniqueId' | 'name' | 'locationName' | 'lastContact';
 type SortDirection = 'asc' | 'desc';
+
+const activityFadeDurationMs = 6 * 60 * 60 * 1000;
+const activityBlinkDurationMs = 2500;
+const gatewayRefreshIntervalMs = 5 * 60 * 1000;
+const HUB_URL = import.meta.env.VITE_SIGNALR_URL ?? '/hubs/sensors';
 
 interface GatewayListViewProps {
   onNavigateToGateway: (gatewayId: string) => void;
@@ -41,16 +48,163 @@ function formatDateTime(iso: string) {
   });
 }
 
+function getActivityProgress(lastContact: string, now: number) {
+  const ageMs = Math.max(0, now - new Date(lastContact).getTime());
+  return Math.max(0, 1 - ageMs / activityFadeDurationMs);
+}
+
+function getActivityLabel(lastContact: string, now: number) {
+  const ageMs = Math.max(0, now - new Date(lastContact).getTime());
+  if (ageMs < 60_000) {
+    return 'Receiving now';
+  }
+
+  if (ageMs >= activityFadeDurationMs) {
+    return 'No signal in the last 6 hours';
+  }
+
+  const ageMinutes = Math.round(ageMs / 60_000);
+  if (ageMinutes < 60) {
+    return `Seen ${ageMinutes} minute${ageMinutes === 1 ? '' : 's'} ago`;
+  }
+
+  const ageHours = Math.round(ageMinutes / 60);
+  return `Seen ${ageHours} hour${ageHours === 1 ? '' : 's'} ago`;
+}
+
 function GatewayListView({ onNavigateToGateway }: GatewayListViewProps) {
   const [gateways, setGateways] = useState<SensorListItemDto[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortableField>('lastContact');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const [recentlyUpdated, setRecentlyUpdated] = useState<Record<string, number>>({});
+  const previousContactsRef = useRef<Record<string, string>>({});
+
+  const loadGateways = () => {
+    getGateways()
+      .then((nextGateways) => {
+        const now = Date.now();
+        const nextContacts: Record<string, string> = {};
+
+        for (const gw of nextGateways) {
+          nextContacts[gw.uniqueId] = gw.lastContact;
+        }
+
+        setRecentlyUpdated((previous) => {
+          const next = { ...previous };
+
+          for (const gw of nextGateways) {
+            const previousContact = previousContactsRef.current[gw.uniqueId];
+            if (previousContact && previousContact !== gw.lastContact) {
+              next[gw.uniqueId] = now + activityBlinkDurationMs;
+            }
+          }
+
+          for (const [id, expiresAt] of Object.entries(next)) {
+            if (expiresAt <= now) {
+              delete next[id];
+            }
+          }
+
+          return next;
+        });
+
+        previousContactsRef.current = nextContacts;
+        setGateways(nextGateways);
+      })
+      .catch((err) => console.error('Failed to fetch gateways:', err));
+  };
 
   useEffect(() => {
-    getGateways()
-      .then(setGateways)
-      .catch((err) => console.error('Failed to fetch gateways:', err));
+    loadGateways();
+
+    const refreshInterval = window.setInterval(loadGateways, gatewayRefreshIntervalMs);
+
+    const clockInterval = window.setInterval(() => {
+      setCurrentTime(Date.now());
+      setRecentlyUpdated((previous) => {
+        const now = Date.now();
+        const next = { ...previous };
+
+        for (const [id, expiresAt] of Object.entries(next)) {
+          if (expiresAt <= now) {
+            delete next[id];
+          }
+        }
+
+        return next;
+      });
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(refreshInterval);
+      window.clearInterval(clockInterval);
+    };
+  }, []);
+
+  useEffect(() => {
+    const connection = new HubConnectionBuilder()
+      .withUrl(HUB_URL)
+      .withAutomaticReconnect()
+      .configureLogging(LogLevel.Warning)
+      .build();
+
+    connection.on('GatewayPositionReceived', (position: { gatewayId: string; timestamp: string }) => {
+      const now = Date.now();
+
+      setGateways((previous) => previous.map((gw) => {
+        if (gw.uniqueId !== position.gatewayId) {
+          return gw;
+        }
+
+        if (new Date(gw.lastContact).getTime() >= new Date(position.timestamp).getTime()) {
+          return gw;
+        }
+
+        return { ...gw, lastContact: position.timestamp };
+      }));
+
+      setCurrentTime(now);
+      setRecentlyUpdated((previous) => ({
+        ...previous,
+        [position.gatewayId]: now + activityBlinkDurationMs,
+      }));
+      previousContactsRef.current[position.gatewayId] = position.timestamp;
+    });
+
+    connection.on('SensorReadingReceived', (reading: { sensorId: string; timestamp: string; gatewayId?: string }) => {
+      if (!reading.gatewayId) return;
+
+      const now = Date.now();
+
+      setGateways((previous) => previous.map((gw) => {
+        if (gw.uniqueId !== reading.gatewayId) {
+          return gw;
+        }
+
+        if (new Date(gw.lastContact).getTime() >= new Date(reading.timestamp).getTime()) {
+          return gw;
+        }
+
+        return { ...gw, lastContact: reading.timestamp };
+      }));
+
+      setCurrentTime(now);
+      setRecentlyUpdated((previous) => ({
+        ...previous,
+        [reading.gatewayId!]: now + activityBlinkDurationMs,
+      }));
+      previousContactsRef.current[reading.gatewayId] = reading.timestamp;
+    });
+
+    connection.start().catch((err) => console.error('SignalR connect failed:', err));
+
+    return () => {
+      if (connection.state !== HubConnectionState.Disconnected) {
+        connection.stop();
+      }
+    };
   }, []);
 
   const filteredGateways = useMemo(() => {
@@ -186,7 +340,47 @@ function GatewayListView({ onNavigateToGateway }: GatewayListViewProps) {
                 }}
                 onClick={() => onNavigateToGateway(gateway.uniqueId)}
               >
-                <TableCell sx={{ fontFamily: 'monospace' }}>{gateway.uniqueId}</TableCell>
+                <TableCell>
+                  <Stack direction="row" spacing={1.25} alignItems="center">
+                    <Tooltip title={getActivityLabel(gateway.lastContact, currentTime)}>
+                      <Box
+                        sx={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: '999px',
+                          flexShrink: 0,
+                          backgroundColor: (() => {
+                            const progress = getActivityProgress(gateway.lastContact, currentTime);
+                            if (progress <= 0) {
+                              return 'rgba(148, 163, 184, 0.55)';
+                            }
+
+                            const green = Math.round(120 + progress * 90);
+                            const red = Math.round(148 - progress * 88);
+                            return `rgba(${red}, ${green}, 105, ${0.35 + progress * 0.65})`;
+                          })(),
+                          boxShadow: (() => {
+                            const progress = getActivityProgress(gateway.lastContact, currentTime);
+                            if (progress <= 0) {
+                              return '0 0 0 1px rgba(148, 163, 184, 0.2)';
+                            }
+
+                            return `0 0 ${6 + progress * 10}px rgba(34, 197, 94, ${0.2 + progress * 0.5})`;
+                          })(),
+                          animation: recentlyUpdated[gateway.uniqueId]
+                            ? 'gatewayActivityPulse 0.9s ease-in-out 2'
+                            : 'none',
+                          '@keyframes gatewayActivityPulse': {
+                            '0%': { transform: 'scale(1)', opacity: 0.75 },
+                            '45%': { transform: 'scale(1.8)', opacity: 1 },
+                            '100%': { transform: 'scale(1)', opacity: 0.8 },
+                          },
+                        }}
+                      />
+                    </Tooltip>
+                    <Typography sx={{ fontFamily: 'monospace' }}>{gateway.uniqueId}</Typography>
+                  </Stack>
+                </TableCell>
                 <TableCell>{gateway.name ?? '-'}</TableCell>
                 <TableCell>{gateway.locationName ?? '-'}</TableCell>
                 <TableCell>{formatDateTime(gateway.lastContact)}</TableCell>

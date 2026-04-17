@@ -13,6 +13,7 @@ using Core.Features.Buildings.Query;
 using Core.Features.Locations.Command;
 using Core.Features.Locations.Query;
 using Core.Features.RawPayloads.Query;
+using Core.Features.GatewayData.Query;
 using Core.Features.SensorData.Query;
 using Core.Features.Sensors.Command;
 using Core.Features.Sensors.Query;
@@ -42,6 +43,7 @@ builder.Services.Configure<MagicLinkOptions>(builder.Configuration.GetSection("M
 builder.Services.AddDbContext<DatabaseContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DatabaseConnectionString")));
 
+builder.Services.AddScoped<GatewayPositionsQueryHandler>();
 builder.Services.AddScoped<SensorReadingsQueryHandler>();
 builder.Services.AddScoped<NewDevicesQueryHandler>();
 builder.Services.AddScoped<UpdateDeviceCommandHandler>();

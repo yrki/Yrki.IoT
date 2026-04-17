@@ -72,5 +72,17 @@ public class SensorReadingReceivedConsumerTests
         {
             return Task.CompletedTask;
         }
+
+        public Task NotifyGatewayPositionAsync(
+            string gatewayId,
+            DateTimeOffset timestamp,
+            double? longitude,
+            double? latitude,
+            double? heading,
+            bool driveBy,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
     }
 }

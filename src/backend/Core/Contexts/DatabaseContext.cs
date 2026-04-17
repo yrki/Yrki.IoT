@@ -18,6 +18,7 @@ public class DatabaseContext : DbContext
     public DbSet<EncryptionKey> EncryptionKeys { get; set; }
     public DbSet<RawPayload> RawPayloads { get; set; }
     public DbSet<GatewayReading> GatewayReadings { get; set; }
+    public DbSet<GatewayPosition> GatewayPositions { get; set; }
     public DbSet<Building> Buildings { get; set; }
     public DbSet<Floor> Floors { get; set; }
     public DbSet<Room> Rooms { get; set; }
@@ -120,6 +121,19 @@ public class DatabaseContext : DbContext
             entity.HasIndex(r => r.GatewayUniqueId);
             entity.HasIndex(r => r.SensorUniqueId);
             entity.HasIndex(r => r.ReceivedAt);
+        });
+        modelBuilder.Entity<GatewayPosition>(entity =>
+        {
+            entity.ToTable("gateway_positions");
+            entity.HasKey(r => new { r.Timestamp, r.GatewayUniqueId });
+            entity.Property(r => r.Timestamp).HasColumnName("timestamp");
+            entity.Property(r => r.GatewayUniqueId).HasColumnName("gateway_unique_id").IsRequired();
+            entity.Property(r => r.Longitude).HasColumnName("longitude");
+            entity.Property(r => r.Latitude).HasColumnName("latitude");
+            entity.Property(r => r.Heading).HasColumnName("heading");
+            entity.Property(r => r.DriveBy).HasColumnName("drive_by");
+            entity.HasIndex(r => r.GatewayUniqueId);
+            entity.HasIndex(r => r.DriveBy);
         });
     }
 }

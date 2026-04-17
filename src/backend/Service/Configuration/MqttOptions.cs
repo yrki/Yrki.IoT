@@ -8,5 +8,6 @@ public class MqttOptions
     public string? Username { get; set; }
     public string? Password { get; set; }
     public string Topic { get; set; } = "wmbus/raw";
+    public string GatewayTopic { get; set; } = "gateway/position";
     public string ClientId { get; set; } = "yrki-iot-service";
 }

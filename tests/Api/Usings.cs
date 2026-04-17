@@ -12,6 +12,7 @@ global using Core.Features.EncryptionKeys.Query;
 global using Core.Features.Locations.Command;
 global using Core.Features.Locations.Query;
 global using Core.Features.RawPayloads.Query;
+global using Core.Features.GatewayData.Query;
 global using Core.Features.SensorData.Query;
 global using Core.Features.Sensors.Command;
 global using Core.Features.Sensors.Query;

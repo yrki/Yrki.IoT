@@ -34,6 +34,17 @@ public class RabbitMqSubscriptionWorker(
             config => config.WithPrefetchCount(5),
             stoppingToken);
 
+        await bus.PubSub.SubscribeAsync<GatewayPositionReceived>(
+            "service",
+            async (msg, ct) =>
+            {
+                using var scope = scopeFactory.CreateScope();
+                var consumer = scope.ServiceProvider.GetRequiredService<GatewayPositionConsumer>();
+                await consumer.HandleAsync(msg, ct);
+            },
+            config => config.WithPrefetchCount(5),
+            stoppingToken);
+
         logger.LogInformation("RabbitMQ subscriptions active");
     }
 }

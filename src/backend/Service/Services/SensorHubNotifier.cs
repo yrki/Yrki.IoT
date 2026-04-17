@@ -7,6 +7,7 @@ namespace service.Services;
 public interface ISensorHubNotifier
 {
     Task NotifyReadingAsync(string sensorId, string sensorType, decimal value, DateTimeOffset timestamp, CancellationToken cancellationToken = default);
+    Task NotifyGatewayPositionAsync(string gatewayId, DateTimeOffset timestamp, double? longitude, double? latitude, double? heading, bool driveBy, CancellationToken cancellationToken = default);
 }
 
 public class SensorHubNotifier : ISensorHubNotifier, IAsyncDisposable
@@ -59,6 +60,31 @@ public class SensorHubNotifier : ISensorHubNotifier, IAsyncDisposable
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to send reading to SignalR hub");
+        }
+    }
+
+    public async Task NotifyGatewayPositionAsync(string gatewayId, DateTimeOffset timestamp, double? longitude, double? latitude, double? heading, bool driveBy, CancellationToken cancellationToken)
+    {
+        await EnsureConnectedAsync(cancellationToken);
+
+        if (_connection.State != HubConnectionState.Connected)
+            return;
+
+        try
+        {
+            await _connection.InvokeAsync("SendGatewayPosition", new
+            {
+                GatewayId = gatewayId,
+                Timestamp = timestamp.ToString("O"),
+                Longitude = longitude,
+                Latitude = latitude,
+                Heading = heading,
+                DriveBy = driveBy,
+            }, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send gateway position to SignalR hub");
         }
     }
 

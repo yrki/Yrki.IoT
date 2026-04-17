@@ -49,8 +49,10 @@ try
 
             services.AddScoped<SensorReadingConsumer>();
             services.AddScoped<SensorReadingReceivedConsumer>();
+            services.AddScoped<GatewayPositionConsumer>();
             services.AddHostedService<RabbitMqSubscriptionWorker>();
             services.AddHostedService<MqttWMBusWorker>();
+            services.AddHostedService<MqttGatewayWorker>();
             services.AddHostedService<DeviceDiscoveryWorker>();
         })
         .Build();

@@ -230,6 +230,41 @@ namespace Core.Migrations
                     b.ToTable("Floors");
                 });
 
+            modelBuilder.Entity("Core.Models.GatewayPosition", b =>
+                {
+                    b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("timestamp");
+
+                    b.Property<string>("GatewayUniqueId")
+                        .HasColumnType("text")
+                        .HasColumnName("gateway_unique_id");
+
+                    b.Property<bool>("DriveBy")
+                        .HasColumnType("boolean")
+                        .HasColumnName("drive_by");
+
+                    b.Property<double?>("Heading")
+                        .HasColumnType("double precision")
+                        .HasColumnName("heading");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("latitude");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("longitude");
+
+                    b.HasKey("Timestamp", "GatewayUniqueId");
+
+                    b.HasIndex("DriveBy");
+
+                    b.HasIndex("GatewayUniqueId");
+
+                    b.ToTable("gateway_positions", (string)null);
+                });
+
             modelBuilder.Entity("Core.Models.GatewayReading", b =>
                 {
                     b.Property<Guid>("Id")
