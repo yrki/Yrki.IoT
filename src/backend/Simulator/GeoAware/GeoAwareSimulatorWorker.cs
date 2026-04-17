@@ -15,6 +15,7 @@ public sealed class GeoAwareSimulatorWorker(
     private const int BatchSize = 50;
     private readonly Random _random = new();
     private readonly List<SimulatedGeoSensor> _sensors = [];
+    private readonly Dictionary<string, decimal> _accumulatedVolume = new();
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -53,14 +54,18 @@ public sealed class GeoAwareSimulatorWorker(
                 if (sensor.ReachableGateways.Count == 0)
                     continue;
 
+                // Compute volume once per sensor per tick so all gateways report the same value
+                var readings = CreateWaterMeterReadings(sensor, _accumulatedVolume, timestamp, tick);
+
                 // Each gateway in range picks up the sensor signal independently
                 foreach (var gateway in sensor.ReachableGateways)
                 {
                     var rssi = DistanceCalculator.CalculateRssi(gateway.DistanceMeters, _random);
 
-                    foreach (var reading in CreateWaterMeterReadings(sensor, gateway, rssi, timestamp, tick))
+                    foreach (var reading in readings)
                     {
-                        await bus.PubSub.PublishAsync(reading, stoppingToken);
+                        var gatewayReading = reading with { GatewayId = gateway.GatewayId, Rssi = rssi };
+                        await bus.PubSub.PublishAsync(gatewayReading, stoppingToken);
                         published++;
                     }
                 }
@@ -137,8 +142,7 @@ public sealed class GeoAwareSimulatorWorker(
 
     private static IReadOnlyList<SensorReadingReceived> CreateWaterMeterReadings(
         SimulatedGeoSensor sensor,
-        GatewayLink gateway,
-        int rssi,
+        Dictionary<string, decimal> accumulatedVolume,
         DateTimeOffset timestamp,
         int tick)
     {
@@ -153,19 +157,26 @@ public sealed class GeoAwareSimulatorWorker(
             flow += flowVariance;
         flow = Math.Round(flow, 3, MidpointRounding.AwayFromZero);
 
-        var positiveIncrement = Math.Round(flow / 72000m * tick, 3, MidpointRounding.AwayFromZero);
-        var totalVolume = Math.Round(baseVolume + positiveIncrement, 3, MidpointRounding.AwayFromZero);
+        // Accumulate volume as a running sum so it never decreases
+        var increment = Math.Round(flow / 72000m * IntervalSeconds, 3, MidpointRounding.AwayFromZero);
+
+        if (!accumulatedVolume.TryGetValue(sensor.SensorId, out var previous))
+            previous = baseVolume;
+
+        var totalVolume = Math.Round(previous + increment, 3, MidpointRounding.AwayFromZero);
+        accumulatedVolume[sensor.SensorId] = totalVolume;
+
         var negativeVolume = Math.Round(((seed / 7) % 350) / 1000m, 3, MidpointRounding.AwayFromZero);
         var positiveVolume = totalVolume + negativeVolume;
         var onDate = new decimal(timestamp.ToUnixTimeSeconds());
 
         return
         [
-            new(sensor.SensorId, "Flow", "AXI", flow, timestamp, gateway.GatewayId, rssi),
-            new(sensor.SensorId, "NegativeVolume", "AXI", negativeVolume, timestamp, gateway.GatewayId, rssi),
-            new(sensor.SensorId, "OnDate", "AXI", onDate, timestamp, gateway.GatewayId, rssi),
-            new(sensor.SensorId, "PositiveVolume", "AXI", positiveVolume, timestamp, gateway.GatewayId, rssi),
-            new(sensor.SensorId, "TotalVolume", "AXI", totalVolume, timestamp, gateway.GatewayId, rssi),
+            new(sensor.SensorId, "Flow", "AXI", flow, timestamp, null, null),
+            new(sensor.SensorId, "NegativeVolume", "AXI", negativeVolume, timestamp, null, null),
+            new(sensor.SensorId, "OnDate", "AXI", onDate, timestamp, null, null),
+            new(sensor.SensorId, "PositiveVolume", "AXI", positiveVolume, timestamp, null, null),
+            new(sensor.SensorId, "TotalVolume", "AXI", totalVolume, timestamp, null, null),
         ];
     }
 }
