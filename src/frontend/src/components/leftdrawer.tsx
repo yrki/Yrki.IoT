@@ -20,14 +20,16 @@ import type { SvgIconComponent } from '@mui/icons-material';
 export type NavigationSection = 'Sensors' | 'Gateways' | 'New Sensors' | 'Locations' | 'Map' | 'Drive-By' | 'Buildings' | 'Import Data' | 'Export Data' | 'Users' | 'Live View' | 'Gateway View' | 'Building View' | 'Sensor Detail';
 
 const enableBuildings = import.meta.env.DEV || import.meta.env.VITE_ENABLE_BUILDINGS === 'true';
+const enableDriveBy = import.meta.env.DEV || import.meta.env.VITE_ENABLE_DRIVEBY === 'true';
+const enableMap = import.meta.env.DEV || import.meta.env.VITE_ENABLE_MAP === 'true';
 
 const primaryItems: Array<{ label: NavigationSection; icon: SvgIconComponent }> = [
   { label: 'Sensors', icon: SensorsRoundedIcon },
   { label: 'Gateways', icon: RouterRoundedIcon },
   { label: 'New Sensors', icon: FiberNewRoundedIcon },
   { label: 'Locations', icon: PlaceRoundedIcon },
-  { label: 'Map', icon: MapRoundedIcon },
-  { label: 'Drive-By', icon: DirectionsCarRoundedIcon },
+  ...(enableMap ? [{ label: 'Map' as const, icon: MapRoundedIcon }] : []),
+  ...(enableDriveBy ? [{ label: 'Drive-By' as const, icon: DirectionsCarRoundedIcon }] : []),
   ...(enableBuildings ? [{ label: 'Buildings' as const, icon: ViewInArRoundedIcon }] : []),
   { label: 'Import Data', icon: UploadFileRoundedIcon },
   { label: 'Export Data', icon: DownloadRoundedIcon },
