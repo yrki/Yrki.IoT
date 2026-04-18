@@ -113,7 +113,7 @@ read -rp "$confirm_prompt" confirm
 # --- Build ---
 print_step "Building backend images locally..."
 rm -rf src/backend/Api/bin/Release src/backend/Service/bin/Release
-dotnet publish src/backend/Api/Api.csproj /t:PublishContainer -p:ContainerRuntimeIdentifier=linux-musl-x64 -v:q
+dotnet publish src/backend/Api/Api.csproj /t:PublishContainer -p:ContainerRuntimeIdentifier=linux-x64 -v:q
 dotnet publish src/backend/Service/Service.csproj /t:PublishContainer -p:ContainerRuntimeIdentifier=linux-musl-x64 -v:q
 
 print_step "Building frontend image (linux/amd64)..."

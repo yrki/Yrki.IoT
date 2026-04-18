@@ -22,9 +22,19 @@ services:
       api:
         condition: service_started
 
+  api-init:
+    image: yrkiiot-api
+    user: "0:0"
+    volumes:
+      - api-uploads:/data/uploads
+    entrypoint: ["sh", "-c", "mkdir -p /data/uploads/ifc && chown -R 1654:1654 /data/uploads"]
+    restart: "no"
+
   api:
     image: yrkiiot-api
     restart: unless-stopped
+    volumes:
+      - api-uploads:/data/uploads
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
@@ -33,9 +43,12 @@ services:
       Encryption__MasterKey: ${ENCRYPTION_MASTER_KEY}
       Email__ConnectionString: ${EMAIL_CONNECTION_STRING}
       Email__SenderAddress: ${EMAIL_SENDER_ADDRESS}
+      Uploads__BasePath: /data
       Prophet__BaseUrl: http://prophet:8000
       Admin__Email: ${ADMIN_EMAIL}
     depends_on:
+      api-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       prophet:
@@ -123,4 +136,5 @@ volumes:
   caddy-config:
   postgres-data:
   rabbitmq-data:
+  api-uploads:
   mosquitto-data:

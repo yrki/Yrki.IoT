@@ -15,8 +15,13 @@ public class BuildingsController(
     CreateBuildingCommandHandler createHandler,
     UpdateBuildingCommandHandler updateHandler,
     DeleteBuildingCommandHandler deleteHandler,
-    AssignDeviceToBuildingCommandHandler assignHandler) : ControllerBase
+    AssignDeviceToBuildingCommandHandler assignHandler,
+    IConfiguration configuration,
+    ILogger<BuildingsController> logger) : ControllerBase
 {
+    private string GetUploadsDir() =>
+        Path.Combine(configuration["Uploads:BasePath"] ?? Directory.GetCurrentDirectory(), "uploads", "ifc");
+
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
@@ -421,35 +426,51 @@ public class BuildingsController(
         IFormFile file,
         CancellationToken cancellationToken)
     {
+        logger.LogInformation("UploadIfc called for building {BuildingId}, file: {FileName}, size: {Size} bytes",
+            id, file.FileName, file.Length);
+
         var building = await queryHandler.GetByIdAsync(id, cancellationToken);
-        if (building is null) return NotFound();
+        if (building is null)
+        {
+            logger.LogWarning("Building {BuildingId} not found", id);
+            return NotFound();
+        }
 
         if (!file.FileName.EndsWith(".ifc", StringComparison.OrdinalIgnoreCase))
             return BadRequest("Only .ifc files are accepted.");
 
-        var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "ifc");
-        Directory.CreateDirectory(uploadsDir);
-
-        var fileName = $"{id}_{Guid.NewGuid():N}.ifc";
-        var filePath = Path.Combine(uploadsDir, fileName);
-
-        await using (var stream = new FileStream(filePath, FileMode.Create))
+        try
         {
-            await file.CopyToAsync(stream, cancellationToken);
-        }
+            var uploadsDir = GetUploadsDir();
+            logger.LogInformation("Creating uploads directory: {UploadsDir}", uploadsDir);
+            Directory.CreateDirectory(uploadsDir);
 
-        // Update building with filename
-        await updateHandler.HandleAsync(id, new UpdateBuildingRequest(null, null, null, null, null), cancellationToken);
-        // Direct DB update for IFC filename
-        var db = HttpContext.RequestServices.GetRequiredService<Core.Contexts.DatabaseContext>();
-        var entity = await db.Buildings.FindAsync([id], cancellationToken);
-        if (entity is not null)
+            var fileName = $"{id}_{Guid.NewGuid():N}.ifc";
+            var filePath = Path.Combine(uploadsDir, fileName);
+
+            logger.LogInformation("Writing IFC file to {FilePath}", filePath);
+            await using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream, cancellationToken);
+            }
+            logger.LogInformation("IFC file written successfully, {Size} bytes", new FileInfo(filePath).Length);
+
+            var db = HttpContext.RequestServices.GetRequiredService<Core.Contexts.DatabaseContext>();
+            var entity = await db.Buildings.FindAsync([id], cancellationToken);
+            if (entity is not null)
+            {
+                entity.IfcFileName = fileName;
+                await db.SaveChangesAsync(cancellationToken);
+                logger.LogInformation("Building {BuildingId} updated with IFC filename {FileName}", id, fileName);
+            }
+
+            return Ok(new { fileName });
+        }
+        catch (Exception ex)
         {
-            entity.IfcFileName = fileName;
-            await db.SaveChangesAsync(cancellationToken);
+            logger.LogError(ex, "Failed to upload IFC file for building {BuildingId}", id);
+            throw;
         }
-
-        return Ok(new { fileName });
     }
 
     [HttpGet("{id:guid}/ifc")]
@@ -459,7 +480,7 @@ public class BuildingsController(
         var building = await queryHandler.GetByIdAsync(id, cancellationToken);
         if (building?.IfcFileName is null) return NotFound();
 
-        var filePath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "ifc", building.IfcFileName);
+        var filePath = Path.Combine(GetUploadsDir(), building.IfcFileName);
         if (!System.IO.File.Exists(filePath)) return NotFound();
 
         return PhysicalFile(filePath, "application/octet-stream", $"{building.Name}.ifc");

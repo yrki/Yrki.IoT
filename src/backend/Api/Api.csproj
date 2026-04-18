@@ -8,8 +8,8 @@
     <EnableSdkContainerSupport>true</EnableSdkContainerSupport>
     <ContainerRepository>yrkiiot-api</ContainerRepository>
     <ContainerImageTag>latest</ContainerImageTag>
-    <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0-alpine</ContainerBaseImage>
-    <ContainerRuntimeIdentifier>linux-musl-x64</ContainerRuntimeIdentifier>
+    <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0</ContainerBaseImage>
+    <ContainerRuntimeIdentifier>linux-x64</ContainerRuntimeIdentifier>
     <ContainerImageFormat>Docker</ContainerImageFormat>
     <UserSecretsId>Yrki.Iot.Api</UserSecretsId>
   </PropertyGroup>
