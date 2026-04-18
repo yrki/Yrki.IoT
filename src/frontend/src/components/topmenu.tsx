@@ -30,6 +30,7 @@ const BuildingView = lazy(() => import('../features/bim/BuildingView'));
 const BuildingsListView = lazy(() => import('../features/buildings/BuildingsListView'));
 const ImportDataView = lazy(() => import('../features/import/ImportDataView'));
 const ExportDataView = lazy(() => import('../features/export/ExportDataView'));
+const DriveByMapView = lazy(() => import('../features/driveby/DriveByMapView'));
 
 const drawerWidth = 220;
 
@@ -61,6 +62,10 @@ function getSectionFromPath(pathname: string): NavigationSection {
 
   if (pathname.startsWith('/map')) {
     return 'Map';
+  }
+
+  if (pathname.startsWith('/driveby')) {
+    return 'Drive-By';
   }
 
   if (matchPath('/buildings/:buildingId', pathname)) {
@@ -100,6 +105,8 @@ function getPrimaryPath(section: NavigationSection) {
       return '/new-sensors';
     case 'Map':
       return '/map';
+    case 'Drive-By':
+      return '/driveby';
     case 'Buildings':
       return '/buildings';
     case 'Import Data':
@@ -134,6 +141,7 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
       '/users',
       '/new-sensors',
       '/map',
+      '/driveby',
       '/buildings',
       '/import',
       '/export',
@@ -281,6 +289,8 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
             onNavigateToGateway={navigateToGatewayView}
           />
         );
+      case 'Drive-By':
+        return <DriveByMapView />;
       case 'Buildings':
         return <BuildingsListView onNavigateToBuilding={navigateToBuildingView} />;
       case 'Import Data':

@@ -414,10 +414,7 @@ function GatewayView({ gatewayId, onBack, onNavigateToSensor }: GatewayViewProps
 
       const pointFeatures = driveByWithCoords.map((p) => ({
         type: 'Feature' as const,
-        properties: {
-          timestamp: formatDateTime(p.timestamp),
-          heading: p.heading != null ? `${p.heading.toFixed(0)}°` : '-',
-        },
+        properties: {},
         geometry: {
           type: 'Point' as const,
           coordinates: [p.longitude!, p.latitude!],
@@ -437,32 +434,9 @@ function GatewayView({ gatewayId, onBack, onNavigateToSensor }: GatewayViewProps
         type: 'circle',
         source: 'driveby-points',
         paint: {
-          'circle-radius': 5,
+          'circle-radius': 1,
           'circle-color': '#3b82f6',
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#ffffff',
         },
-      });
-
-      const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false });
-
-      map.on('mouseenter', 'driveby-points-circle', (e) => {
-        map.getCanvas().style.cursor = 'pointer';
-        const feature = e.features?.[0];
-        if (!feature || feature.geometry.type !== 'Point') return;
-
-        const coords = feature.geometry.coordinates.slice() as [number, number];
-        const props = feature.properties;
-
-        popup
-          .setLngLat(coords)
-          .setHTML(`<strong>${props.timestamp}</strong><br/>Heading: ${props.heading}`)
-          .addTo(map);
-      });
-
-      map.on('mouseleave', 'driveby-points-circle', () => {
-        map.getCanvas().style.cursor = '';
-        popup.remove();
       });
     });
 

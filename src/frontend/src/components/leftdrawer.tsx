@@ -13,10 +13,11 @@ import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
 import MapRoundedIcon from '@mui/icons-material/MapRounded';
 import UploadFileRoundedIcon from '@mui/icons-material/UploadFileRounded';
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
+import DirectionsCarRoundedIcon from '@mui/icons-material/DirectionsCarRounded';
 import ViewInArRoundedIcon from '@mui/icons-material/ViewInArRounded';
 import type { SvgIconComponent } from '@mui/icons-material';
 
-export type NavigationSection = 'Sensors' | 'Gateways' | 'New Sensors' | 'Locations' | 'Map' | 'Buildings' | 'Import Data' | 'Export Data' | 'Users' | 'Live View' | 'Gateway View' | 'Building View';
+export type NavigationSection = 'Sensors' | 'Gateways' | 'New Sensors' | 'Locations' | 'Map' | 'Drive-By' | 'Buildings' | 'Import Data' | 'Export Data' | 'Users' | 'Live View' | 'Gateway View' | 'Building View';
 
 const enableBuildings = import.meta.env.DEV || import.meta.env.VITE_ENABLE_BUILDINGS === 'true';
 
@@ -26,6 +27,7 @@ const primaryItems: Array<{ label: NavigationSection; icon: SvgIconComponent }> 
   { label: 'New Sensors', icon: FiberNewRoundedIcon },
   { label: 'Locations', icon: PlaceRoundedIcon },
   { label: 'Map', icon: MapRoundedIcon },
+  { label: 'Drive-By', icon: DirectionsCarRoundedIcon },
   ...(enableBuildings ? [{ label: 'Buildings' as const, icon: ViewInArRoundedIcon }] : []),
   { label: 'Import Data', icon: UploadFileRoundedIcon },
   { label: 'Export Data', icon: DownloadRoundedIcon },
