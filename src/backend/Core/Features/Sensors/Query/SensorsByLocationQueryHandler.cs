@@ -2,10 +2,11 @@ using Contracts.Responses;
 using Core.Contexts;
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.Sensors.Query;
 
-public class SensorsByLocationQueryHandler(DatabaseContext db)
+public class SensorsByLocationQueryHandler(DatabaseContext db, ILogger<SensorsByLocationQueryHandler> logger)
 {
     private static readonly Guid UnknownLocationId = new("00000000-0000-0000-0000-000000000001");
 
@@ -13,6 +14,8 @@ public class SensorsByLocationQueryHandler(DatabaseContext db)
         Guid locationId,
         CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying sensors for location {LocationId}", locationId);
+
         return await db.Devices
             .AsNoTracking()
             .Where(d => !d.IsNew && !d.IsDeleted && d.LocationId == locationId)

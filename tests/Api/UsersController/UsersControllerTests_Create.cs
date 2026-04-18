@@ -53,10 +53,10 @@ public sealed class UsersControllerTests_Create : IClassFixture<ApiDatabaseFixtu
 
     private UsersController CreateController() =>
         new(
-            new UsersQueryHandler(_dbContext),
-            new CreateUserCommandHandler(_dbContext),
-            new UpdateUserCommandHandler(_dbContext),
-            new DeleteUserCommandHandler(_dbContext));
+            new UsersQueryHandler(_dbContext, NullLogger<UsersQueryHandler>.Instance),
+            new CreateUserCommandHandler(_dbContext, NullLogger<CreateUserCommandHandler>.Instance),
+            new UpdateUserCommandHandler(_dbContext, NullLogger<UpdateUserCommandHandler>.Instance),
+            new DeleteUserCommandHandler(_dbContext, NullLogger<DeleteUserCommandHandler>.Instance));
 
     public void Dispose()
     {

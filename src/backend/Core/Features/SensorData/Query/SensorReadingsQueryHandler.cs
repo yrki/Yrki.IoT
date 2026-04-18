@@ -1,15 +1,18 @@
 using Contracts.Responses;
 using Core.Contexts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.SensorData.Query;
 
-public class SensorReadingsQueryHandler(DatabaseContext db)
+public class SensorReadingsQueryHandler(DatabaseContext db, ILogger<SensorReadingsQueryHandler> logger)
 {
     public async Task<IReadOnlyList<SensorReadingResponse>> HandleAsync(
         SensorReadingQuery query,
         CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying sensor readings for {SensorId}", query.SensorId);
+
         var from = query.From ?? DateTimeOffset.UtcNow.AddHours(-query.Hours);
         var to = query.To ?? DateTimeOffset.UtcNow;
 
@@ -31,6 +34,8 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
         string sensorId,
         CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying latest readings for sensor {SensorId}", sensorId);
+
         var sensorTypes = await db.SensorReadings
             .AsNoTracking()
             .Where(r => r.SensorId == sensorId)
@@ -64,6 +69,8 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
     public async Task<IReadOnlyList<string>> GetDistinctSensorIdsAsync(
         CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying distinct sensor IDs");
+
         return await db.SensorReadings
             .AsNoTracking()
             .Select(r => r.SensorId)
@@ -77,6 +84,8 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
         int? hours = null,
         CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying gateway statistics for sensor {SensorId}", sensorId);
+
         IQueryable<Core.Models.GatewayReading> query = db.GatewayReadings
             .AsNoTracking()
             .Where(reading => reading.SensorUniqueId == sensorId);
@@ -107,6 +116,8 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
         string gatewayId,
         CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying sensor statistics for gateway {GatewayId}", gatewayId);
+
         var readings = await db.GatewayReadings
             .AsNoTracking()
             .Where(reading => reading.GatewayUniqueId == gatewayId)
@@ -127,6 +138,8 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
         int hours,
         CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying coverage connections over {Hours} hours", hours);
+
         var since = DateTimeOffset.UtcNow.AddHours(-hours);
 
         var readings = await db.GatewayReadings
@@ -154,6 +167,8 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
         IReadOnlyList<string>? sensorIds = null,
         CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying distinct sensor types");
+
         var query = db.SensorReadings.AsNoTracking();
 
         if (sensorIds is { Count: > 0 })
@@ -176,6 +191,8 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
         DateTimeOffset to,
         CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Exporting sensor readings from {From} to {To}", from, to);
+
         var query = db.SensorReadings
             .AsNoTracking()
             .Where(r => r.Timestamp >= from && r.Timestamp <= to);

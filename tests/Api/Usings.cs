@@ -26,4 +26,5 @@ global using Microsoft.EntityFrameworkCore;
 global using Tests.Api.Fakes;
 global using Tests.Api.Fixtures;
 global using Tests.Api.TestData;
+global using Microsoft.Extensions.Logging.Abstractions;
 global using Xunit;

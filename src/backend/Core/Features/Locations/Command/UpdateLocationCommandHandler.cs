@@ -4,10 +4,11 @@ using Core.Contexts;
 using Core.Features.Locations.Query;
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.Locations.Command;
 
-public class UpdateLocationCommandHandler(DatabaseContext db)
+public class UpdateLocationCommandHandler(DatabaseContext db, ILogger<UpdateLocationCommandHandler> logger)
 {
     public async Task<LocationResponse?> HandleAsync(
         Guid id,
@@ -19,7 +20,10 @@ public class UpdateLocationCommandHandler(DatabaseContext db)
             .FirstOrDefaultAsync(l => l.Id == id, cancellationToken);
 
         if (location is null)
+        {
+            logger.LogWarning("Location {LocationId} not found", id);
             return null;
+        }
 
         location.Name = request.Name ?? location.Name;
         location.Description = request.Description ?? location.Description;
@@ -41,6 +45,7 @@ public class UpdateLocationCommandHandler(DatabaseContext db)
 
         await db.SaveChangesAsync(cancellationToken);
 
+        logger.LogInformation("Updated location {LocationId}", id);
         return new LocationResponse(
             location.Id,
             location.Name,

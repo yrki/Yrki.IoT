@@ -1,13 +1,16 @@
 using Contracts.Responses;
 using Core.Contexts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.Users.Query;
 
-public class UsersQueryHandler(DatabaseContext db)
+public class UsersQueryHandler(DatabaseContext db, ILogger<UsersQueryHandler> logger)
 {
     public async Task<IReadOnlyList<UserResponse>> HandleAsync(CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying all users");
+
         return await db.Users
             .AsNoTracking()
             .OrderBy(user => user.Email)

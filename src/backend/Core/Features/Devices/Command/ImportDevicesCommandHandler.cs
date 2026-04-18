@@ -2,10 +2,11 @@ using Contracts.Requests;
 using Core.Contexts;
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.Devices.Command;
 
-public class ImportDevicesCommandHandler(DatabaseContext db)
+public class ImportDevicesCommandHandler(DatabaseContext db, ILogger<ImportDevicesCommandHandler> logger)
 {
     public async Task<ImportDevicesResponse> HandleAsync(
         ImportDevicesRequest request,
@@ -108,6 +109,7 @@ public class ImportDevicesCommandHandler(DatabaseContext db)
 
         await db.SaveChangesAsync(cancellationToken);
 
+        logger.LogInformation("Imported devices: {Inserted} inserted, {Updated} updated, {Deleted} deleted", inserted, updated, deleted);
         return new ImportDevicesResponse(inserted, updated, deleted);
     }
 

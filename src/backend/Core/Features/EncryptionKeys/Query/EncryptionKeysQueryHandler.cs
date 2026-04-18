@@ -2,13 +2,16 @@ using Contracts.Responses;
 using Core.Contexts;
 using Core.Services.Encryption;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.EncryptionKeys.Query;
 
-public class EncryptionKeysQueryHandler(DatabaseContext db, IKeyEncryptionService encryptionService)
+public class EncryptionKeysQueryHandler(DatabaseContext db, IKeyEncryptionService encryptionService, ILogger<EncryptionKeysQueryHandler> logger)
 {
     public async Task<IReadOnlyList<EncryptionKeyResponse>> HandleAsync(CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying all encryption keys");
+
         var keys = await db.EncryptionKeys
             .AsNoTracking()
             .OrderBy(k => k.DeviceUniqueId)
@@ -34,6 +37,8 @@ public class EncryptionKeysQueryHandler(DatabaseContext db, IKeyEncryptionServic
         string? manufacturer = null,
         CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying encryption key for device {DeviceUniqueId}", deviceUniqueId);
+
         var normalizedManufacturer = EncryptionKeyIdentity.NormalizeManufacturer(manufacturer);
         var normalizedDeviceUniqueId = EncryptionKeyIdentity.NormalizeDeviceUniqueId(deviceUniqueId);
 
@@ -45,7 +50,10 @@ public class EncryptionKeysQueryHandler(DatabaseContext db, IKeyEncryptionServic
             .FirstOrDefaultAsync(cancellationToken);
 
         if (key is null)
+        {
+            logger.LogWarning("Encryption key not found for device {DeviceUniqueId}", normalizedDeviceUniqueId);
             return null;
+        }
 
         return new EncryptionKeyResponse(
             key.Id,

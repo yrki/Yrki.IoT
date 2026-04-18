@@ -3,10 +3,11 @@ using Contracts.Responses;
 using Core.Contexts;
 using Core.Features.Locations.Query;
 using Core.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.Locations.Command;
 
-public class CreateLocationCommandHandler(DatabaseContext db)
+public class CreateLocationCommandHandler(DatabaseContext db, ILogger<CreateLocationCommandHandler> logger)
 {
     public async Task<LocationResponse> HandleAsync(
         CreateLocationRequest request,
@@ -27,6 +28,7 @@ public class CreateLocationCommandHandler(DatabaseContext db)
         db.Locations.Add(location);
         await db.SaveChangesAsync(cancellationToken);
 
+        logger.LogInformation("Created location {LocationName} with id {LocationId}", location.Name, location.Id);
         return new LocationResponse(
             location.Id,
             location.Name,

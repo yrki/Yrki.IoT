@@ -1,16 +1,18 @@
 using Contracts.Responses;
 using Core.Contexts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.RawPayloads.Query;
 
-public class RawPayloadsQueryHandler(DatabaseContext db)
+public class RawPayloadsQueryHandler(DatabaseContext db, ILogger<RawPayloadsQueryHandler> logger)
 {
     public async Task<IReadOnlyList<RawPayloadResponse>> HandleAsync(
         string deviceId,
         int limit,
         CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying raw payloads for device {DeviceId} with limit {Limit}", deviceId, limit);
         if (string.IsNullOrWhiteSpace(deviceId))
             return [];
 

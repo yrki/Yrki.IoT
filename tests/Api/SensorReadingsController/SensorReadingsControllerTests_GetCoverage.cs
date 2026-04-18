@@ -21,7 +21,7 @@ public sealed class SensorReadingsControllerTests_GetCoverage : IClassFixture<Ap
             ApiTestData.CreateGatewayReading("gw-2", "sensor-1", now.AddMinutes(-15), -55));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance), null!);
 
         // Act
         var result = await controller.GetCoverage(168, CancellationToken.None);
@@ -46,7 +46,7 @@ public sealed class SensorReadingsControllerTests_GetCoverage : IClassFixture<Ap
     public async Task Shall_return_empty_list_when_no_gateway_readings_exist()
     {
         // Arrange
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance), null!);
 
         // Act
         var result = await controller.GetCoverage(168, CancellationToken.None);
@@ -67,7 +67,7 @@ public sealed class SensorReadingsControllerTests_GetCoverage : IClassFixture<Ap
             ApiTestData.CreateGatewayReading("gw-1", "sensor-1", now.AddDays(-30), -90));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance), null!);
 
         // Act
         var result = await controller.GetCoverage(24, CancellationToken.None);

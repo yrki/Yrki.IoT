@@ -20,7 +20,7 @@ public sealed class GatewayPositionsControllerTests_GetDriveBy : IClassFixture<A
             ApiTestData.CreateGatewayPosition("GW-001", now.AddMinutes(-10), 10.3, 59.3, driveBy: true));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext));
+        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext, NullLogger<GatewayPositionsQueryHandler>.Instance));
 
         // Act
         var result = await controller.GetDriveBy("GW-001", hours: 24, CancellationToken.None);
@@ -42,7 +42,7 @@ public sealed class GatewayPositionsControllerTests_GetDriveBy : IClassFixture<A
             ApiTestData.CreateGatewayPosition("GW-001", now.AddHours(-25), 10.2, 59.2, driveBy: true));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext));
+        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext, NullLogger<GatewayPositionsQueryHandler>.Instance));
 
         // Act
         var result = await controller.GetDriveBy("GW-001", hours: 24, CancellationToken.None);
@@ -64,7 +64,7 @@ public sealed class GatewayPositionsControllerTests_GetDriveBy : IClassFixture<A
             ApiTestData.CreateGatewayPosition("GW-002", now.AddMinutes(-10), 11.0, 60.0, driveBy: true));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext));
+        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext, NullLogger<GatewayPositionsQueryHandler>.Instance));
 
         // Act
         var result = await controller.GetDriveBy("GW-001", hours: 24, CancellationToken.None);

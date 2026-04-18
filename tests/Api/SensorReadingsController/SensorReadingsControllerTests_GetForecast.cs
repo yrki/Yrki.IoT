@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging.Abstractions;
-
 namespace Tests.Api.SensorReadingsControllerTests;
 
 public sealed class SensorReadingsControllerTests_GetForecast : IClassFixture<ApiDatabaseFixture>, IDisposable
@@ -16,7 +14,7 @@ public sealed class SensorReadingsControllerTests_GetForecast : IClassFixture<Ap
     {
         // Arrange
         var controller = new SensorReadingsController(
-            new SensorReadingsQueryHandler(_dbContext),
+            new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance),
             new ForecastQueryHandler(_dbContext, null!, null!, NullLogger<ForecastQueryHandler>.Instance));
 
         // Act — requesting more than 30 days should clamp

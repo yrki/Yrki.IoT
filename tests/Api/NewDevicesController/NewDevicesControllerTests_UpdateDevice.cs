@@ -20,8 +20,8 @@ public sealed class NewDevicesControllerTests_UpdateDevice : IClassFixture<ApiDa
         await _dbContext.SaveChangesAsync();
 
         var controller = new NewDevicesController(
-            new NewDevicesQueryHandler(_dbContext),
-            new UpdateDeviceCommandHandler(_dbContext));
+            new NewDevicesQueryHandler(_dbContext, NullLogger<NewDevicesQueryHandler>.Instance),
+            new UpdateDeviceCommandHandler(_dbContext, NullLogger<UpdateDeviceCommandHandler>.Instance));
         var request = new UpdateDeviceRequest("Installed sensor", "Installed in lobby", location.Id, null, null);
 
         // Act
@@ -42,8 +42,8 @@ public sealed class NewDevicesControllerTests_UpdateDevice : IClassFixture<ApiDa
     {
         // Arrange
         var controller = new NewDevicesController(
-            new NewDevicesQueryHandler(_dbContext),
-            new UpdateDeviceCommandHandler(_dbContext));
+            new NewDevicesQueryHandler(_dbContext, NullLogger<NewDevicesQueryHandler>.Instance),
+            new UpdateDeviceCommandHandler(_dbContext, NullLogger<UpdateDeviceCommandHandler>.Instance));
         var request = new UpdateDeviceRequest("Installed sensor", "Installed in lobby", Guid.NewGuid(), null, null);
 
         // Act

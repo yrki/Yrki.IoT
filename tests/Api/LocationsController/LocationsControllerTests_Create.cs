@@ -14,10 +14,10 @@ public sealed class LocationsControllerTests_Create : IClassFixture<ApiDatabaseF
     {
         // Arrange
         var controller = new LocationsController(
-            new LocationsQueryHandler(_dbContext),
-            new CreateLocationCommandHandler(_dbContext),
-            new UpdateLocationCommandHandler(_dbContext),
-            new DeleteLocationCommandHandler(_dbContext));
+            new LocationsQueryHandler(_dbContext, NullLogger<LocationsQueryHandler>.Instance),
+            new CreateLocationCommandHandler(_dbContext, NullLogger<CreateLocationCommandHandler>.Instance),
+            new UpdateLocationCommandHandler(_dbContext, NullLogger<UpdateLocationCommandHandler>.Instance),
+            new DeleteLocationCommandHandler(_dbContext, NullLogger<DeleteLocationCommandHandler>.Instance));
         var request = new CreateLocationRequest("Alpha site", "Main campus", null, null, null, null, null);
 
         // Act

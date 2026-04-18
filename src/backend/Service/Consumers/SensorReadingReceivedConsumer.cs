@@ -43,7 +43,17 @@ public class SensorReadingReceivedConsumer(
         {
             logger.LogDebug("Duplicate reading ignored for {SensorId}/{SensorType} at {Timestamp}",
                 msg.SensorId, msg.SensorType, msg.Timestamp);
+            return;
         }
+        catch (DbUpdateException ex)
+        {
+            logger.LogError(ex, "Failed to store sensor reading for {SensorId}/{SensorType} at {Timestamp}",
+                msg.SensorId, msg.SensorType, msg.Timestamp);
+            throw;
+        }
+
+        logger.LogInformation("Processed sensor reading for {SensorId}/{SensorType} at {Timestamp}",
+            msg.SensorId, msg.SensorType, msg.Timestamp);
 
         await hubNotifier.NotifyReadingAsync(
             msg.SensorId, msg.SensorType, msg.Value, msg.Timestamp, cancellationToken);

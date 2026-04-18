@@ -3,10 +3,11 @@ using Contracts.Responses;
 using Core.Contexts;
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.Devices.Command;
 
-public class CreateDeviceCommandHandler(DatabaseContext db)
+public class CreateDeviceCommandHandler(DatabaseContext db, ILogger<CreateDeviceCommandHandler> logger)
 {
     public async Task<SensorListItemResponse?> HandleAsync(
         CreateDeviceRequest request,
@@ -15,7 +16,10 @@ public class CreateDeviceCommandHandler(DatabaseContext db)
         var existing = await db.Devices.FirstOrDefaultAsync(
             d => d.UniqueId == request.UniqueId && !d.IsDeleted, cancellationToken);
         if (existing is not null)
-            return null; // already exists
+        {
+            logger.LogWarning("Device with unique id {UniqueId} already exists", request.UniqueId);
+            return null;
+        }
 
         var device = new Device
         {
@@ -35,6 +39,7 @@ public class CreateDeviceCommandHandler(DatabaseContext db)
         db.Devices.Add(device);
         await db.SaveChangesAsync(cancellationToken);
 
+        logger.LogInformation("Created device {UniqueId} with id {DeviceId}", device.UniqueId, device.Id);
         return new SensorListItemResponse(
             device.Id, device.UniqueId, device.Name, device.Manufacturer,
             device.Type, device.Kind.ToString(), null, null,

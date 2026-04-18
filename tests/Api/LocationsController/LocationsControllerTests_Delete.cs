@@ -18,10 +18,10 @@ public sealed class LocationsControllerTests_Delete : IClassFixture<ApiDatabaseF
         await _dbContext.SaveChangesAsync();
 
         var controller = new LocationsController(
-            new LocationsQueryHandler(_dbContext),
-            new CreateLocationCommandHandler(_dbContext),
-            new UpdateLocationCommandHandler(_dbContext),
-            new DeleteLocationCommandHandler(_dbContext));
+            new LocationsQueryHandler(_dbContext, NullLogger<LocationsQueryHandler>.Instance),
+            new CreateLocationCommandHandler(_dbContext, NullLogger<CreateLocationCommandHandler>.Instance),
+            new UpdateLocationCommandHandler(_dbContext, NullLogger<UpdateLocationCommandHandler>.Instance),
+            new DeleteLocationCommandHandler(_dbContext, NullLogger<DeleteLocationCommandHandler>.Instance));
 
         // Act
         var result = await controller.Delete(location.Id, CancellationToken.None);
@@ -36,10 +36,10 @@ public sealed class LocationsControllerTests_Delete : IClassFixture<ApiDatabaseF
     {
         // Arrange
         var controller = new LocationsController(
-            new LocationsQueryHandler(_dbContext),
-            new CreateLocationCommandHandler(_dbContext),
-            new UpdateLocationCommandHandler(_dbContext),
-            new DeleteLocationCommandHandler(_dbContext));
+            new LocationsQueryHandler(_dbContext, NullLogger<LocationsQueryHandler>.Instance),
+            new CreateLocationCommandHandler(_dbContext, NullLogger<CreateLocationCommandHandler>.Instance),
+            new UpdateLocationCommandHandler(_dbContext, NullLogger<UpdateLocationCommandHandler>.Instance),
+            new DeleteLocationCommandHandler(_dbContext, NullLogger<DeleteLocationCommandHandler>.Instance));
 
         // Act
         var result = await controller.Delete(Guid.NewGuid(), CancellationToken.None);

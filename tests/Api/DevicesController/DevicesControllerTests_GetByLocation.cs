@@ -23,15 +23,15 @@ public sealed class DevicesControllerTests_GetByLocation : IClassFixture<ApiData
         await _dbContext.SaveChangesAsync();
 
         var controller = new DevicesController(
-            new AllSensorsQueryHandler(_dbContext),
-            new AllGatewaysQueryHandler(_dbContext),
-            new SensorsByLocationQueryHandler(_dbContext),
-            new SensorsBySensorLocationQueryHandler(_dbContext),
-            new SensorByUniqueIdQueryHandler(_dbContext),
-            new UpdateDeviceCommandHandler(_dbContext),
-            new AssignDevicesToLocationCommandHandler(_dbContext),
-            new ImportDevicesCommandHandler(_dbContext),
-            new CreateDeviceCommandHandler(_dbContext),
+            new AllSensorsQueryHandler(_dbContext, NullLogger<AllSensorsQueryHandler>.Instance),
+            new AllGatewaysQueryHandler(_dbContext, NullLogger<AllGatewaysQueryHandler>.Instance),
+            new SensorsByLocationQueryHandler(_dbContext, NullLogger<SensorsByLocationQueryHandler>.Instance),
+            new SensorsBySensorLocationQueryHandler(_dbContext, NullLogger<SensorsBySensorLocationQueryHandler>.Instance),
+            new SensorByUniqueIdQueryHandler(_dbContext, NullLogger<SensorByUniqueIdQueryHandler>.Instance),
+            new UpdateDeviceCommandHandler(_dbContext, NullLogger<UpdateDeviceCommandHandler>.Instance),
+            new AssignDevicesToLocationCommandHandler(_dbContext, NullLogger<AssignDevicesToLocationCommandHandler>.Instance),
+            new ImportDevicesCommandHandler(_dbContext, NullLogger<ImportDevicesCommandHandler>.Instance),
+            new CreateDeviceCommandHandler(_dbContext, NullLogger<CreateDeviceCommandHandler>.Instance),
             new DeleteSensorCommandHandler(_dbContext));
 
         // Act

@@ -33,10 +33,10 @@ public sealed class EncryptionKeysControllerTests_Create : IClassFixture<ApiData
     private EncryptionKeysController CreateController()
     {
         return new EncryptionKeysController(
-            new EncryptionKeysQueryHandler(_dbContext, _encryptionService),
-            new CreateEncryptionKeyCommandHandler(_dbContext),
-            new UpdateEncryptionKeyCommandHandler(_dbContext),
-            new DeleteEncryptionKeyCommandHandler(_dbContext));
+            new EncryptionKeysQueryHandler(_dbContext, _encryptionService, NullLogger<EncryptionKeysQueryHandler>.Instance),
+            new CreateEncryptionKeyCommandHandler(_dbContext, NullLogger<CreateEncryptionKeyCommandHandler>.Instance),
+            new UpdateEncryptionKeyCommandHandler(_dbContext, NullLogger<UpdateEncryptionKeyCommandHandler>.Instance),
+            new DeleteEncryptionKeyCommandHandler(_dbContext, NullLogger<DeleteEncryptionKeyCommandHandler>.Instance));
     }
 
     public void Dispose()

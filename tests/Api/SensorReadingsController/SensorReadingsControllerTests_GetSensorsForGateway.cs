@@ -21,7 +21,7 @@ public sealed class SensorReadingsControllerTests_GetSensorsForGateway : IClassF
             ApiTestData.CreateGatewayReading("gw-2", "sensor-3", now.AddMinutes(-1), -50));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance), null!);
 
         // Act
         var result = await controller.GetSensorsForGateway("gw-1", CancellationToken.None);
@@ -44,7 +44,7 @@ public sealed class SensorReadingsControllerTests_GetSensorsForGateway : IClassF
     public async Task Shall_return_empty_list_when_gateway_has_no_readings()
     {
         // Arrange
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance), null!);
 
         // Act
         var result = await controller.GetSensorsForGateway("gw-unknown", CancellationToken.None);

@@ -25,7 +25,7 @@ public sealed class SensorReadingsControllerTests_GetRecentWithFromTo : IClassFi
             ApiTestData.CreateSensorReading("sensor-1", "co2", 700m, t4));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance), null!);
         var from = new DateTimeOffset(2026, 4, 10, 11, 0, 0, TimeSpan.Zero);
         var to = new DateTimeOffset(2026, 4, 10, 15, 0, 0, TimeSpan.Zero);
 
@@ -50,7 +50,7 @@ public sealed class SensorReadingsControllerTests_GetRecentWithFromTo : IClassFi
             ApiTestData.CreateSensorReading("sensor-1", "temp", 22.0m, now.AddHours(-5)));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance), null!);
 
         // Act
         var result = await controller.GetRecent("sensor-1", 3, null, null, CancellationToken.None);

@@ -12,6 +12,7 @@ public class RabbitMqSubscriptionWorker(
     {
         logger.LogInformation("Starting RabbitMQ subscriptions...");
 
+        logger.LogInformation("Subscribing to {MessageType}", nameof(SensorPayload));
         await bus.PubSub.SubscribeAsync<SensorPayload>(
             "service",
             async (msg, ct) =>
@@ -23,6 +24,7 @@ public class RabbitMqSubscriptionWorker(
             config => config.WithPrefetchCount(5),
             stoppingToken);
 
+        logger.LogInformation("Subscribing to {MessageType}", nameof(SensorReadingReceived));
         await bus.PubSub.SubscribeAsync<SensorReadingReceived>(
             "service",
             async (msg, ct) =>
@@ -34,6 +36,7 @@ public class RabbitMqSubscriptionWorker(
             config => config.WithPrefetchCount(5),
             stoppingToken);
 
+        logger.LogInformation("Subscribing to {MessageType}", nameof(GatewayPositionReceived));
         await bus.PubSub.SubscribeAsync<GatewayPositionReceived>(
             "service",
             async (msg, ct) =>

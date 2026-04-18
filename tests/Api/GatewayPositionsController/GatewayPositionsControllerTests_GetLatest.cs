@@ -20,7 +20,7 @@ public sealed class GatewayPositionsControllerTests_GetLatest : IClassFixture<Ap
             ApiTestData.CreateGatewayPosition("GW-001", now.AddHours(-1), 10.3, 59.3));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext));
+        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext, NullLogger<GatewayPositionsQueryHandler>.Instance));
 
         // Act
         var result = await controller.GetLatest("GW-001", CancellationToken.None);
@@ -37,7 +37,7 @@ public sealed class GatewayPositionsControllerTests_GetLatest : IClassFixture<Ap
     public async Task Shall_return_not_found_when_no_positions_exist()
     {
         // Arrange
-        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext));
+        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext, NullLogger<GatewayPositionsQueryHandler>.Instance));
 
         // Act
         var result = await controller.GetLatest("GW-NONEXISTENT", CancellationToken.None);

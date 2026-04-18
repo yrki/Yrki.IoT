@@ -22,7 +22,7 @@ public sealed class SensorReadingsControllerTests_Export : IClassFixture<ApiData
         await _dbContext.SaveChangesAsync();
 
         var request = new ExportReadingsRequest(null, null, now.AddHours(-4), now);
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance), null!);
 
         // Act
         var result = await controller.Export(request, CancellationToken.None);
@@ -46,7 +46,7 @@ public sealed class SensorReadingsControllerTests_Export : IClassFixture<ApiData
         await _dbContext.SaveChangesAsync();
 
         var request = new ExportReadingsRequest(["sensor-1", "sensor-3"], null, now.AddHours(-3), now);
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance), null!);
 
         // Act
         var result = await controller.Export(request, CancellationToken.None);
@@ -72,7 +72,7 @@ public sealed class SensorReadingsControllerTests_Export : IClassFixture<ApiData
         await _dbContext.SaveChangesAsync();
 
         var request = new ExportReadingsRequest(null, ["co2", "temperature"], now.AddHours(-3), now);
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance), null!);
 
         // Act
         var result = await controller.Export(request, CancellationToken.None);
@@ -96,7 +96,7 @@ public sealed class SensorReadingsControllerTests_Export : IClassFixture<ApiData
         await _dbContext.SaveChangesAsync();
 
         var request = new ExportReadingsRequest(null, null, now.AddHours(-2), now);
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance), null!);
 
         // Act
         var result = await controller.Export(request, CancellationToken.None);

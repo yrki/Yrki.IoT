@@ -3,10 +3,11 @@ using Contracts.Responses;
 using Core.Contexts;
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.Users.Command;
 
-public class CreateUserCommandHandler(DatabaseContext db)
+public class CreateUserCommandHandler(DatabaseContext db, ILogger<CreateUserCommandHandler> logger)
 {
     public async Task<UserResponse?> HandleAsync(
         CreateUserRequest request,
@@ -19,6 +20,7 @@ public class CreateUserCommandHandler(DatabaseContext db)
 
         if (existingUser)
         {
+            logger.LogWarning("User with email {Email} already exists", request.Email);
             return null;
         }
 
@@ -33,6 +35,7 @@ public class CreateUserCommandHandler(DatabaseContext db)
         db.Users.Add(user);
         await db.SaveChangesAsync(cancellationToken);
 
+        logger.LogInformation("Created user {Email} with id {UserId}", user.Email, user.Id);
         return new UserResponse(user.Id, user.Email, user.CreatedAtUtc, user.LastLoginAtUtc);
     }
 }

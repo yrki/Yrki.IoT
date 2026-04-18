@@ -3,10 +3,11 @@ using Contracts.Responses;
 using Core.Contexts;
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.Buildings.Command;
 
-public class UpdateBuildingCommandHandler(DatabaseContext db)
+public class UpdateBuildingCommandHandler(DatabaseContext db, ILogger<UpdateBuildingCommandHandler> logger)
 {
     public async Task<BuildingResponse?> HandleAsync(
         Guid id,
@@ -18,7 +19,11 @@ public class UpdateBuildingCommandHandler(DatabaseContext db)
             .Include(b => b.Location)
             .FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
 
-        if (building is null) return null;
+        if (building is null)
+        {
+            logger.LogWarning("Building {BuildingId} not found", id);
+            return null;
+        }
 
         if (request.Name is not null) building.Name = request.Name;
         if (request.Address is not null) building.Address = request.Address;
@@ -29,6 +34,7 @@ public class UpdateBuildingCommandHandler(DatabaseContext db)
 
         await db.SaveChangesAsync(cancellationToken);
 
+        logger.LogInformation("Updated building {BuildingId}", id);
         return new BuildingResponse(
             building.Id, building.Name, building.Address,
             building.Latitude, building.Longitude, building.IfcFileName,

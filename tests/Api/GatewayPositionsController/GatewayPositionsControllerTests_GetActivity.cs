@@ -22,7 +22,7 @@ public sealed class GatewayPositionsControllerTests_GetActivity : IClassFixture<
             ApiTestData.CreateGatewayPosition("GW-001", hour2.AddMinutes(10), 10.3, 59.3));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext));
+        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext, NullLogger<GatewayPositionsQueryHandler>.Instance));
 
         // Act
         var result = await controller.GetActivity("GW-001", hours: 24 * 90, CancellationToken.None);
@@ -45,7 +45,7 @@ public sealed class GatewayPositionsControllerTests_GetActivity : IClassFixture<
             ApiTestData.CreateGatewayPosition("GW-001", hour.AddMinutes(30), 10.2, 59.2));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext));
+        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext, NullLogger<GatewayPositionsQueryHandler>.Instance));
 
         // Act
         var result = await controller.GetActivity("GW-001", hours: 24 * 90, CancellationToken.None);
@@ -67,7 +67,7 @@ public sealed class GatewayPositionsControllerTests_GetActivity : IClassFixture<
             ApiTestData.CreateGatewayPosition("GW-002", now.AddMinutes(-10), 11.0, 60.0));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext));
+        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext, NullLogger<GatewayPositionsQueryHandler>.Instance));
 
         // Act
         var result = await controller.GetActivity("GW-001", hours: 24, CancellationToken.None);
@@ -89,7 +89,7 @@ public sealed class GatewayPositionsControllerTests_GetActivity : IClassFixture<
             ApiTestData.CreateGatewayPosition("GW-001", now.AddHours(-25), 10.2, 59.2));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext));
+        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext, NullLogger<GatewayPositionsQueryHandler>.Instance));
 
         // Act
         var result = await controller.GetActivity("GW-001", hours: 24, CancellationToken.None);

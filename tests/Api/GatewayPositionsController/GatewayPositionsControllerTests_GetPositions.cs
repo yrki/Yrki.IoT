@@ -20,7 +20,7 @@ public sealed class GatewayPositionsControllerTests_GetPositions : IClassFixture
             ApiTestData.CreateGatewayPosition("GW-002", now.AddMinutes(-10), 11.0, 60.0));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext));
+        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext, NullLogger<GatewayPositionsQueryHandler>.Instance));
 
         // Act
         var result = await controller.GetPositions("GW-001", hours: 24, CancellationToken.None);
@@ -44,7 +44,7 @@ public sealed class GatewayPositionsControllerTests_GetPositions : IClassFixture
             ApiTestData.CreateGatewayPosition("GW-001", now.AddMinutes(-20), 10.3, 59.3));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext));
+        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext, NullLogger<GatewayPositionsQueryHandler>.Instance));
 
         // Act
         var result = await controller.GetPositions("GW-001", hours: 1, CancellationToken.None);
@@ -61,7 +61,7 @@ public sealed class GatewayPositionsControllerTests_GetPositions : IClassFixture
     public async Task Shall_return_empty_list_when_no_positions()
     {
         // Arrange
-        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext));
+        var controller = new GatewayPositionsController(new GatewayPositionsQueryHandler(_dbContext, NullLogger<GatewayPositionsQueryHandler>.Instance));
 
         // Act
         var result = await controller.GetPositions("GW-NONEXISTENT", hours: 24, CancellationToken.None);

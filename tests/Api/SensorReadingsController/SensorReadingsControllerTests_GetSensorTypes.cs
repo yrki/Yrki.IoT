@@ -21,7 +21,7 @@ public sealed class SensorReadingsControllerTests_GetSensorTypes : IClassFixture
             ApiTestData.CreateSensorReading("sensor-2", "temperature", 22m, now.AddMinutes(-1)));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance), null!);
 
         // Act
         var result = await controller.GetSensorTypes(null, CancellationToken.None);
@@ -46,7 +46,7 @@ public sealed class SensorReadingsControllerTests_GetSensorTypes : IClassFixture
             ApiTestData.CreateSensorReading("sensor-2", "temperature", 22m, now.AddMinutes(-1)));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance), null!);
 
         // Act
         var result = await controller.GetSensorTypes("sensor-1", CancellationToken.None);
@@ -64,7 +64,7 @@ public sealed class SensorReadingsControllerTests_GetSensorTypes : IClassFixture
     public async Task Shall_return_empty_list_when_no_readings_exist()
     {
         // Arrange
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance), null!);
 
         // Act
         var result = await controller.GetSensorTypes(null, CancellationToken.None);

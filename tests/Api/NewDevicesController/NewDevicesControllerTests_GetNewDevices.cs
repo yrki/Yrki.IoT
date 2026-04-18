@@ -19,8 +19,8 @@ public sealed class NewDevicesControllerTests_GetNewDevices : IClassFixture<ApiD
         await _dbContext.SaveChangesAsync();
 
         var controller = new NewDevicesController(
-            new NewDevicesQueryHandler(_dbContext),
-            new UpdateDeviceCommandHandler(_dbContext));
+            new NewDevicesQueryHandler(_dbContext, NullLogger<NewDevicesQueryHandler>.Instance),
+            new UpdateDeviceCommandHandler(_dbContext, NullLogger<UpdateDeviceCommandHandler>.Instance));
 
         // Act
         var result = await controller.GetNewDevices(CancellationToken.None);

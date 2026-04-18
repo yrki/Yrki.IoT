@@ -19,7 +19,7 @@ public sealed class SensorReadingsControllerTests_GetSensorIds : IClassFixture<A
             ApiTestData.CreateSensorReading("sensor-a", "humidity", 45m, DateTimeOffset.UtcNow.AddMinutes(-3)));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext, NullLogger<SensorReadingsQueryHandler>.Instance), null!);
 
         // Act
         var result = await controller.GetSensorIds(CancellationToken.None);

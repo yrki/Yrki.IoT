@@ -2,10 +2,11 @@ using Contracts.Responses;
 using Core.Contexts;
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.Sensors.Query;
 
-public class SensorsBySensorLocationQueryHandler(DatabaseContext db)
+public class SensorsBySensorLocationQueryHandler(DatabaseContext db, ILogger<SensorsBySensorLocationQueryHandler> logger)
 {
     private static readonly Guid UnknownLocationId = new("00000000-0000-0000-0000-000000000001");
 
@@ -13,6 +14,8 @@ public class SensorsBySensorLocationQueryHandler(DatabaseContext db)
         string sensorId,
         CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying sensors by sensor location for {SensorId}", sensorId);
+
         var targetDevice = await db.Devices
             .AsNoTracking()
             .Where(d => d.Kind == DeviceKind.Sensor && !d.IsNew && !d.IsDeleted && d.UniqueId == sensorId)
@@ -25,6 +28,7 @@ public class SensorsBySensorLocationQueryHandler(DatabaseContext db)
 
         if (targetDevice is null)
         {
+            logger.LogWarning("Sensor not found for {SensorId} when querying co-located sensors", sensorId);
             return [];
         }
 

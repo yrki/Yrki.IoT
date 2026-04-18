@@ -101,7 +101,7 @@ public sealed class RawPayloadsControllerTests_GetByDevice : IClassFixture<ApiDa
     }
 
     private RawPayloadsController BuildController()
-        => new(new RawPayloadsQueryHandler(_dbContext));
+        => new(new RawPayloadsQueryHandler(_dbContext, NullLogger<RawPayloadsQueryHandler>.Instance));
 
     private static RawPayload CreatePayload(string deviceId, string payloadHex, DateTimeOffset receivedAt)
         => new()

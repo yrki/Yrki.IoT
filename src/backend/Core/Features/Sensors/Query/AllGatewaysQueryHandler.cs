@@ -2,15 +2,18 @@ using Contracts.Responses;
 using Core.Contexts;
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.Sensors.Query;
 
-public class AllGatewaysQueryHandler(DatabaseContext db)
+public class AllGatewaysQueryHandler(DatabaseContext db, ILogger<AllGatewaysQueryHandler> logger)
 {
     private static readonly Guid UnknownLocationId = new("00000000-0000-0000-0000-000000000001");
 
     public async Task<IReadOnlyList<SensorListItemResponse>> HandleAsync(CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying all gateways");
+
         return await db.Devices
             .AsNoTracking()
             .Where(d => d.Kind == DeviceKind.Gateway && !d.IsDeleted)

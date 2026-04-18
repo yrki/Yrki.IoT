@@ -3,13 +3,16 @@ using Contracts.Responses;
 using Core.Contexts;
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.Locations.Query;
 
-public class LocationsQueryHandler(DatabaseContext db)
+public class LocationsQueryHandler(DatabaseContext db, ILogger<LocationsQueryHandler> logger)
 {
     public async Task<IReadOnlyList<LocationResponse>> HandleAsync(CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying all locations");
+
         var rows = await db.Locations
             .AsNoTracking()
             .OrderBy(l => l.Name)

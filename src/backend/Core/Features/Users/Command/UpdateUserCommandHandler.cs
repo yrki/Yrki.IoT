@@ -2,10 +2,11 @@ using Contracts.Requests;
 using Contracts.Responses;
 using Core.Contexts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.Users.Command;
 
-public class UpdateUserCommandHandler(DatabaseContext db)
+public class UpdateUserCommandHandler(DatabaseContext db, ILogger<UpdateUserCommandHandler> logger)
 {
     public async Task<UpdateUserCommandResult> HandleAsync(
         Guid id,
@@ -16,6 +17,7 @@ public class UpdateUserCommandHandler(DatabaseContext db)
 
         if (user is null)
         {
+            logger.LogWarning("User {UserId} not found", id);
             return UpdateUserCommandResult.NotFound();
         }
 
@@ -26,6 +28,7 @@ public class UpdateUserCommandHandler(DatabaseContext db)
 
         if (duplicateEmailExists)
         {
+            logger.LogWarning("Duplicate email {Email} for user {UserId}", request.Email, id);
             return UpdateUserCommandResult.Conflict();
         }
 
@@ -34,6 +37,7 @@ public class UpdateUserCommandHandler(DatabaseContext db)
 
         await db.SaveChangesAsync(cancellationToken);
 
+        logger.LogInformation("Updated user {UserId}", id);
         return UpdateUserCommandResult.Success(
             new UserResponse(user.Id, user.Email, user.CreatedAtUtc, user.LastLoginAtUtc));
     }

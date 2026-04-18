@@ -1,10 +1,11 @@
 using Contracts.Requests;
 using Core.Contexts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.Devices.Command;
 
-public class AssignDevicesToLocationCommandHandler(DatabaseContext db)
+public class AssignDevicesToLocationCommandHandler(DatabaseContext db, ILogger<AssignDevicesToLocationCommandHandler> logger)
 {
     public async Task<int> HandleAsync(
         AssignDevicesToLocationRequest request,
@@ -17,7 +18,10 @@ public class AssignDevicesToLocationCommandHandler(DatabaseContext db)
             .AnyAsync(l => l.Id == request.LocationId, cancellationToken);
 
         if (!locationExists)
+        {
+            logger.LogWarning("Location {LocationId} not found", request.LocationId);
             return -1;
+        }
 
         var devices = await db.Devices
             .Where(d => request.DeviceIds.Contains(d.Id))
@@ -28,6 +32,7 @@ public class AssignDevicesToLocationCommandHandler(DatabaseContext db)
 
         await db.SaveChangesAsync(cancellationToken);
 
+        logger.LogInformation("Assigned {Count} devices to location {LocationId}", devices.Count, request.LocationId);
         return devices.Count;
     }
 }

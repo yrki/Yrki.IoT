@@ -49,6 +49,15 @@ public class GatewayPositionConsumer(
                 msg.GatewayId, msg.Timestamp);
             return;
         }
+        catch (DbUpdateException ex)
+        {
+            logger.LogError(ex, "Failed to store gateway position for {GatewayId} at {Timestamp}",
+                msg.GatewayId, msg.Timestamp);
+            throw;
+        }
+
+        logger.LogInformation("Stored gateway position for {GatewayId} at {Timestamp}",
+            msg.GatewayId, msg.Timestamp);
 
         await hubNotifier.NotifyGatewayPositionAsync(
             msg.GatewayId, msg.Timestamp, msg.Longitude, msg.Latitude, msg.Heading, msg.DriveBy, cancellationToken);

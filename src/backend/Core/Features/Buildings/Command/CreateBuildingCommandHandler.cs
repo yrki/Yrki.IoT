@@ -2,10 +2,11 @@ using Contracts.Requests;
 using Contracts.Responses;
 using Core.Contexts;
 using Core.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.Buildings.Command;
 
-public class CreateBuildingCommandHandler(DatabaseContext db)
+public class CreateBuildingCommandHandler(DatabaseContext db, ILogger<CreateBuildingCommandHandler> logger)
 {
     public async Task<BuildingResponse> HandleAsync(
         CreateBuildingRequest request,
@@ -25,6 +26,7 @@ public class CreateBuildingCommandHandler(DatabaseContext db)
         db.Buildings.Add(building);
         await db.SaveChangesAsync(cancellationToken);
 
+        logger.LogInformation("Created building {BuildingName} with id {BuildingId}", building.Name, building.Id);
         return new BuildingResponse(
             building.Id, building.Name, building.Address,
             building.Latitude, building.Longitude, building.IfcFileName,

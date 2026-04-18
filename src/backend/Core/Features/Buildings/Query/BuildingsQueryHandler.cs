@@ -2,13 +2,16 @@ using Contracts.Responses;
 using Core.Contexts;
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Features.Buildings.Query;
 
-public class BuildingsQueryHandler(DatabaseContext db)
+public class BuildingsQueryHandler(DatabaseContext db, ILogger<BuildingsQueryHandler> logger)
 {
     public async Task<IReadOnlyList<BuildingResponse>> HandleAsync(CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Querying all buildings");
+
         return await db.Buildings
             .AsNoTracking()
             .OrderBy(b => b.Name)
@@ -28,7 +31,9 @@ public class BuildingsQueryHandler(DatabaseContext db)
 
     public async Task<BuildingResponse?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await db.Buildings
+        logger.LogDebug("Querying building {BuildingId}", id);
+
+        var result = await db.Buildings
             .AsNoTracking()
             .Where(b => b.Id == id)
             .Select(b => new BuildingResponse(
@@ -43,5 +48,10 @@ public class BuildingsQueryHandler(DatabaseContext db)
                 b.Location != null ? b.Location.Name : null,
                 b.CreatedAtUtc))
             .FirstOrDefaultAsync(cancellationToken);
+
+        if (result is null)
+            logger.LogWarning("Building not found for {BuildingId}", id);
+
+        return result;
     }
 }
