@@ -8,6 +8,7 @@ import {
   CircularProgress,
   Dialog,
   DialogActions,
+  IconButton,
   DialogContent,
   DialogTitle,
   Paper,
@@ -965,9 +966,9 @@ function BimView({ buildingId, onBack, onSwitchToStructure }: BimViewProps) {
           flexWrap: 'wrap',
         }}
       >
-        <Button size="small" variant="outlined" startIcon={<ArrowBackRoundedIcon />} onClick={onBack}>
-          Back
-        </Button>
+        <IconButton aria-label="Back" onClick={onBack} sx={{ alignSelf: 'flex-start', mt: 0.25 }}>
+          <ArrowBackRoundedIcon />
+        </IconButton>
         <Typography variant="h6" sx={{ lineHeight: 1.2 }}>{buildingName}</Typography>
 
         <Box sx={{ flexGrow: 1 }} />
