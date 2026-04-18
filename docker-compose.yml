@@ -70,11 +70,14 @@ services:
       Encryption__MasterKey: ${ENCRYPTION_MASTER_KEY:-Ae+/cx56gf9Zg5ECKYl67cOnP4QpiGdQczqrSU7MYbg=}
       Email__ConnectionString: ${EMAIL_CONNECTION_STRING:-}
       Email__SenderAddress: ${EMAIL_SENDER_ADDRESS:-donotreply@yrki.net}
+      Prophet__BaseUrl: http://prophet:8000
       Admin__Email: ${ADMIN_EMAIL:-thomas@yrki.no}
     ports:
       - "8081:8080"
     depends_on:
       postgres:
+        condition: service_healthy
+      prophet:
         condition: service_healthy
 
   service:
@@ -141,6 +144,20 @@ services:
     profiles:
       - simulator
 
+  prophet:
+    build:
+      context: src/prophet
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8090:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   frontend:
     build:
       context: .
@@ -148,6 +165,7 @@ services:
       args:
         VITE_API_BASE_URL: /api
         VITE_ENABLE_BUILDINGS: "true"
+        VITE_ENABLE_FORECAST: "true"
     restart: unless-stopped
     ports:
       - "8080:80"

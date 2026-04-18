@@ -8,7 +8,9 @@ namespace Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("[controller]")]
-public class SensorReadingsController(SensorReadingsQueryHandler queryHandler) : ControllerBase
+public class SensorReadingsController(
+    SensorReadingsQueryHandler queryHandler,
+    ForecastQueryHandler forecastHandler) : ControllerBase
 {
     [HttpGet("sensors")]
     public async Task<IActionResult> GetSensorIds(CancellationToken cancellationToken)
@@ -21,9 +23,11 @@ public class SensorReadingsController(SensorReadingsQueryHandler queryHandler) :
     public async Task<IActionResult> GetRecent(
         string sensorId,
         [FromQuery] int hours = 3,
+        [FromQuery] DateTimeOffset? from = null,
+        [FromQuery] DateTimeOffset? to = null,
         CancellationToken cancellationToken = default)
     {
-        var readings = await queryHandler.HandleAsync(new SensorReadingQuery(sensorId, hours), cancellationToken);
+        var readings = await queryHandler.HandleAsync(new SensorReadingQuery(sensorId, hours, from, to), cancellationToken);
         return Ok(readings);
     }
 
@@ -92,5 +96,17 @@ public class SensorReadingsController(SensorReadingsQueryHandler queryHandler) :
         var clampedHours = Math.Clamp(hours, 1, 24 * 90);
         var connections = await queryHandler.GetCoverageConnectionsAsync(clampedHours, cancellationToken);
         return Ok(connections);
+    }
+
+    [HttpGet("{sensorId}/{sensorType}/forecast")]
+    public async Task<IActionResult> GetForecast(
+        string sensorId,
+        string sensorType,
+        [FromQuery] int hours = 72,
+        CancellationToken cancellationToken = default)
+    {
+        var clampedHours = Math.Clamp(hours, 1, 24 * 30);
+        var forecast = await forecastHandler.HandleAsync(sensorId, sensorType, clampedHours, cancellationToken);
+        return Ok(forecast);
     }
 }

@@ -21,7 +21,7 @@ public sealed class SensorReadingsControllerTests_GetGateways : IClassFixture<Ap
             ApiTestData.CreateGatewayReading("gw-9", "sensor-2", now.AddMinutes(-1), -50));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext));
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
 
         // Act
         var result = await controller.GetGateways("sensor-1", null, CancellationToken.None);

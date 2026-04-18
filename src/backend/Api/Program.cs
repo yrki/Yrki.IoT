@@ -43,7 +43,9 @@ builder.Services.Configure<MagicLinkOptions>(builder.Configuration.GetSection("M
 builder.Services.AddDbContext<DatabaseContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DatabaseConnectionString")));
 
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<GatewayPositionsQueryHandler>();
+builder.Services.AddScoped<ForecastQueryHandler>();
 builder.Services.AddScoped<SensorReadingsQueryHandler>();
 builder.Services.AddScoped<NewDevicesQueryHandler>();
 builder.Services.AddScoped<UpdateDeviceCommandHandler>();

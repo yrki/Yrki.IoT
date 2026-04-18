@@ -9,7 +9,7 @@ REMOTE_USER="${REMOTE_USER:-root}"
 REMOTE_HOST="${REMOTE_HOST:?Set REMOTE_HOST to your Hetzner server IP or hostname}"
 REMOTE_DIR="/opt/yrki-iot"
 
-IMAGES=(yrkiiot-api yrkiiot-service yrkiiot-frontend)
+IMAGES=(yrkiiot-api yrkiiot-service yrkiiot-frontend yrkiiot-prophet)
 
 # --- ANSI colors (only when stdout is a TTY) ---
 if [[ -t 1 ]]; then
@@ -82,9 +82,16 @@ dotnet publish src/backend/Service/Service.csproj /t:PublishContainer -p:Contain
 print_step "Building frontend image locally for linux/amd64..."
 docker build \
   --platform linux/amd64 \
+  --build-arg VITE_ENABLE_FORECAST=true \
   -t yrkiiot-frontend:latest \
   -f src/frontend/dockerfile \
   .
+
+print_step "Building prophet image locally for linux/amd64..."
+docker build \
+  --platform linux/amd64 \
+  -t yrkiiot-prophet:latest \
+  src/prophet
 
 # --- Transfer ---
 print_step "Transferring images to ${REMOTE_HOST}..."

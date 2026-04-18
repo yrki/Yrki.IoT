@@ -95,9 +95,21 @@ export async function getSensorIds(): Promise<string[]> {
   return response.data;
 }
 
-export async function getRecentReadings(sensorId: string, hours = 3): Promise<SensorReadingDto[]> {
+export async function getRecentReadings(
+  sensorId: string,
+  hours = 3,
+  from?: string,
+  to?: string,
+): Promise<SensorReadingDto[]> {
+  const params: Record<string, string | number> = {};
+  if (from && to) {
+    params.from = from;
+    params.to = to;
+  } else {
+    params.hours = hours;
+  }
   const response = await api.get<SensorReadingDto[]>(`/sensorreadings/${encodeURIComponent(sensorId)}/recent`, {
-    params: { hours },
+    params,
   });
   return response.data;
 }
@@ -554,6 +566,25 @@ export async function exportReadings(
     from,
     to,
   });
+  return response.data;
+}
+
+export interface ForecastPointDto {
+  timestamp: string;
+  value: number;
+  lower: number;
+  upper: number;
+}
+
+export async function getSensorForecast(
+  sensorId: string,
+  sensorType: string,
+  hours = 72,
+): Promise<ForecastPointDto[]> {
+  const response = await api.get<ForecastPointDto[]>(
+    `/sensorreadings/${encodeURIComponent(sensorId)}/${encodeURIComponent(sensorType)}/forecast`,
+    { params: { hours } },
+  );
   return response.data;
 }
 

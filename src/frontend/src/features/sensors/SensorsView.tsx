@@ -1,4 +1,5 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useState, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Alert,
   Box,
@@ -39,6 +40,7 @@ import {
   getDevices,
   getDevicesByLocation,
   getEncryptionKeyByDevice,
+  getSensorForecast,
   getSensorGateways,
   getLocations,
   LocationDto,
@@ -137,12 +139,23 @@ function formatAverageRssi(value: number) {
   return value.toFixed(1);
 }
 
+const forecastColor = '#a855f7';
+
+interface ChartDataPoint {
+  time: number;
+  value?: number;
+  forecast?: number;
+  forecastLower?: number;
+  forecastUpper?: number;
+}
+
 function SensorHistoryChart({
   sensorType,
   label,
   unit,
   decimals,
   history,
+  forecast,
   color,
   hours,
   height,
@@ -152,24 +165,53 @@ function SensorHistoryChart({
   unit: string;
   decimals: number;
   history: SensorDataPoint[];
+  forecast?: SensorDataPoint[];
   color: string;
   hours: number;
   height: number | string;
 }) {
-  const showDate = hours > 24;
+  const showDate = hours > 24 || (forecast && forecast.length > 0);
   const tickFormatter = showDate ? formatDateTime : formatTime;
   const gradientId = useId();
+  const forecastGradientId = gradientId + '-forecast';
   const yAxisWidth = sensorType === 'OnDate' ? 88 : decimals >= 3 ? 64 : decimals >= 2 ? 56 : 48;
+
+  const hasForecast = forecast && forecast.length > 0;
+
+  const chartData: ChartDataPoint[] = [];
+
+  for (const p of history) {
+    chartData.push({ time: p.time, value: p.value });
+  }
+
+  if (hasForecast && history.length > 0) {
+    const lastHistorical = history[history.length - 1];
+    chartData.push({
+      time: lastHistorical.time,
+      value: lastHistorical.value,
+      forecast: lastHistorical.value,
+    });
+
+    for (const p of forecast) {
+      chartData.push({ time: p.time, forecast: p.value });
+    }
+  }
+
+  chartData.sort((a, b) => a.time - b.time);
 
   return (
     <Box sx={{ width: '100%', height }}>
       {history.length > 1 ? (
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={history} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+          <AreaChart data={chartData} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={color} stopOpacity={0.3} />
                 <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+              </linearGradient>
+              <linearGradient id={forecastGradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={forecastColor} stopOpacity={0.2} />
+                <stop offset="100%" stopColor={forecastColor} stopOpacity={0.02} />
               </linearGradient>
             </defs>
             <XAxis
@@ -200,9 +242,12 @@ function SensorHistoryChart({
                 fontSize: 12,
               }}
               labelFormatter={(v) => new Date(v as number).toLocaleString([], { hour12: false })}
-              formatter={(v) => [sensorType === 'OnDate'
-                ? formatSensorValue(sensorType, v as number, decimals)
-                : `${formatSensorValue(sensorType, v as number, decimals)} ${unit}`, label]}
+              formatter={(v: number, name: string) => {
+                const formatted = sensorType === 'OnDate'
+                  ? formatSensorValue(sensorType, v, decimals)
+                  : `${formatSensorValue(sensorType, v, decimals)} ${unit}`;
+                return [formatted, name === 'forecast' ? 'Forecast' : label];
+              }}
             />
             <Area
               type="monotone"
@@ -212,7 +257,21 @@ function SensorHistoryChart({
               fill={`url(#${gradientId})`}
               isAnimationActive={false}
               dot={false}
+              connectNulls={false}
             />
+            {hasForecast && (
+              <Area
+                type="monotone"
+                dataKey="forecast"
+                stroke={forecastColor}
+                strokeWidth={1.5}
+                strokeDasharray="6 3"
+                fill={`url(#${forecastGradientId})`}
+                isAnimationActive={false}
+                dot={false}
+                connectNulls={false}
+              />
+            )}
           </AreaChart>
         </ResponsiveContainer>
       ) : (
@@ -664,45 +723,57 @@ function EditSensorLocationDialog({
   );
 }
 
-interface SensorFullscreenDialogProps {
-  open: boolean;
-  sensorId: string;
-  sensorType: string | null;
-  sensorName: string;
-  sensorLocation: string;
-  firstReadingAt: string;
-  lastReadingAt: string;
-  label: string;
-  unit: string;
-  decimals: number;
-  icon: React.ReactNode;
-  color: string;
-  onClose: () => void;
-}
+// Fullscreen dialog moved to SensorFullscreenPage (own route)
 
-function SensorFullscreenDialog({
-  open,
-  sensorId,
-  sensorType,
-  sensorName,
-  sensorLocation,
-  firstReadingAt,
-  lastReadingAt,
-  label,
-  unit,
-  decimals,
-  icon,
-  color,
-  onClose,
-}: SensorFullscreenDialogProps) {
+const enableForecast = import.meta.env.DEV || import.meta.env.VITE_ENABLE_FORECAST === 'true';
+
+const forecastRanges = [
+  { label: '+3d', hours: 72 },
+  { label: '+1w', hours: 168 },
+  { label: '+1m', hours: 720 },
+] as const;
+
+function _removedDialogPlaceholder(_props: never) {
   const [hours, setHours] = useState(3);
+  const [forecastHours, setForecastHours] = useState<number | null>(null);
+  const [forecastData, setForecastData] = useState<SensorDataPoint[]>([]);
+  const [forecastLoading, setForecastLoading] = useState(false);
   const { readings, history } = useSensorHub(sensorId, hours, open && sensorType !== null);
 
   useEffect(() => {
     if (open) {
       setHours(3);
+      setForecastHours(null);
+      setForecastData([]);
     }
   }, [open, sensorType]);
+
+  useEffect(() => {
+    if (!forecastHours || !sensorType || !sensorId) {
+      setForecastData([]);
+      return;
+    }
+
+    let cancelled = false;
+    setForecastLoading(true);
+
+    getSensorForecast(sensorId, sensorType, forecastHours)
+      .then((points) => {
+        if (cancelled) return;
+        setForecastData(points.map((p) => ({
+          time: new Date(p.timestamp).getTime(),
+          value: p.value,
+        })));
+      })
+      .catch((err) => {
+        if (!cancelled) console.error('Failed to fetch forecast:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setForecastLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [sensorId, sensorType, forecastHours]);
 
   if (!sensorType) {
     return null;
@@ -787,17 +858,39 @@ function SensorFullscreenDialog({
                 Last reading: {formatDateLabel(lastReadingAt)}
               </Typography>
             </Box>
-            <ButtonGroup size="small" variant="outlined">
-              {timeRanges.map((range) => (
-                <Button
-                  key={range.label}
-                  onClick={() => setHours(range.hours)}
-                  variant={hours === range.hours ? 'contained' : 'outlined'}
-                >
-                  {range.label}
-                </Button>
-              ))}
-            </ButtonGroup>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <ButtonGroup size="small" variant="outlined">
+                {timeRanges.map((range) => (
+                  <Button
+                    key={range.label}
+                    onClick={() => setHours(range.hours)}
+                    variant={hours === range.hours ? 'contained' : 'outlined'}
+                  >
+                    {range.label}
+                  </Button>
+                ))}
+              </ButtonGroup>
+              {enableForecast && (
+                <ButtonGroup size="small" variant="outlined">
+                  {forecastRanges.map((range) => (
+                    <Button
+                      key={range.label}
+                      onClick={() => setForecastHours(forecastHours === range.hours ? null : range.hours)}
+                      variant={forecastHours === range.hours ? 'contained' : 'outlined'}
+                      sx={{
+                        borderColor: 'rgba(168, 85, 247, 0.4)',
+                        color: forecastHours === range.hours ? '#fff' : 'rgba(168, 85, 247, 0.85)',
+                        '&.MuiButton-contained': { backgroundColor: 'rgba(168, 85, 247, 0.7)' },
+                        '&:hover': { borderColor: 'rgba(168, 85, 247, 0.6)', backgroundColor: 'rgba(168, 85, 247, 0.1)' },
+                      }}
+                      disabled={forecastLoading}
+                    >
+                      {range.label}
+                    </Button>
+                  ))}
+                </ButtonGroup>
+              )}
+            </Stack>
           </Stack>
 
           <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
@@ -823,14 +916,35 @@ function SensorFullscreenDialog({
               backgroundColor: 'rgba(36, 42, 51, 0.82)',
               border: '1px solid rgba(255,255,255,0.06)',
               boxShadow: '0 28px 80px rgba(0, 0, 0, 0.24)',
+              position: 'relative',
             }}
           >
+            {forecastData.length > 0 && (
+              <Chip
+                label="BETA"
+                size="small"
+                sx={{
+                  position: 'absolute',
+                  top: 12,
+                  right: 12,
+                  zIndex: 1,
+                  backgroundColor: 'rgba(168, 85, 247, 0.2)',
+                  color: '#a855f7',
+                  fontWeight: 700,
+                  fontSize: '0.7rem',
+                  letterSpacing: '0.05em',
+                  border: '1px solid rgba(168, 85, 247, 0.3)',
+                  height: 22,
+                }}
+              />
+            )}
             <SensorHistoryChart
               sensorType={sensorType}
               label={label}
               unit={unit}
               decimals={decimals}
               history={sensorHistory}
+              forecast={forecastData.length > 0 ? forecastData : undefined}
               color={color}
               hours={hours}
               height="100%"
@@ -896,16 +1010,23 @@ interface SensorsViewProps {
 }
 
 function SensorsView({ initialSensorId, locationId, locationName, onBack, onNavigateToGateway }: SensorsViewProps) {
+  const navigate = useNavigate();
+  const routerLocation = useLocation();
   const [devices, setDevices] = useState<SensorListItemDto[]>([]);
   const [locations, setLocations] = useState<LocationDto[]>([]);
   const [gatewayStats, setGatewayStats] = useState<SensorGatewayDto[]>([]);
   const [selectedSensorId, setSelectedSensorId] = useState(initialSensorId ?? '');
   const [hours, setHours] = useState(3);
-  const [fullscreenSensorType, setFullscreenSensorType] = useState<string | null>(null);
   const [editLocationOpen, setEditLocationOpen] = useState(false);
   const [editSettingsOpen, setEditSettingsOpen] = useState(false);
   const [lastReadingHighlightUntil, setLastReadingHighlightUntil] = useState(0);
   const { readings, history, connected } = useSensorHub(selectedSensorId, hours);
+
+  const openFullscreen = useCallback((sensorType: string) => {
+    navigate(`/sensors/${encodeURIComponent(selectedSensorId)}/${encodeURIComponent(sensorType)}`, {
+      state: { from: routerLocation.pathname },
+    });
+  }, [navigate, selectedSensorId, routerLocation.pathname]);
 
   useEffect(() => {
     const loadDevices = async () => {
@@ -991,10 +1112,6 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack, onNavi
       : latest;
   }, null);
   const displayedLastReading = latestReadingTimestamp ?? selectedDevice?.lastContact ?? null;
-  const fullscreenConfig = fullscreenSensorType
-    ? sensorTypeConfig[fullscreenSensorType] ?? { ...defaultConfig, label: fullscreenSensorType }
-    : defaultConfig;
-
   const handleDeviceUpdated = (updatedDevice: SensorListItemDto) => {
     setDevices((prev) => prev.map((device) => device.id === updatedDevice.id ? updatedDevice : device));
   };
@@ -1159,7 +1276,7 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack, onNavi
                 history={history[sensorType] ?? []}
                 color={config.color}
                 hours={hours}
-                onOpenFullscreen={setFullscreenSensorType}
+                onOpenFullscreen={openFullscreen}
               />
             );
           })}
@@ -1238,22 +1355,6 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack, onNavi
           </Stack>
         )}
       </Paper>
-
-      <SensorFullscreenDialog
-        open={fullscreenSensorType !== null}
-        sensorId={selectedSensorId}
-        sensorType={fullscreenSensorType}
-        sensorName={selectedDevice?.name ?? selectedSensorId}
-        sensorLocation={selectedDevice?.locationName ?? locationName ?? ''}
-        firstReadingAt={selectedDevice?.installationDate ?? new Date().toISOString()}
-        lastReadingAt={selectedDevice?.lastContact ?? new Date().toISOString()}
-        label={fullscreenConfig.label}
-        unit={fullscreenConfig.unit}
-        decimals={fullscreenConfig.decimals}
-        icon={fullscreenConfig.icon}
-        color={fullscreenConfig.color}
-        onClose={() => setFullscreenSensorType(null)}
-      />
 
       <EditSensorLocationDialog
         open={editLocationOpen}

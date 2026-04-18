@@ -20,10 +20,10 @@ public sealed class SensorReadingsControllerTests_GetRecent : IClassFixture<ApiD
             ApiTestData.CreateSensorReading("sensor-2", "co2", 800m, now.AddMinutes(-20)));
         await _dbContext.SaveChangesAsync();
 
-        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext));
+        var controller = new SensorReadingsController(new SensorReadingsQueryHandler(_dbContext), null!);
 
         // Act
-        var result = await controller.GetRecent("sensor-1", 3, CancellationToken.None);
+        var result = await controller.GetRecent("sensor-1", 3, null, null, CancellationToken.None);
 
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);

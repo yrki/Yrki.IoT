@@ -27,7 +27,7 @@ function toDataPoint(r: SensorReadingDto): SensorDataPoint {
   return { time: new Date(r.timestamp).getTime(), value: r.value };
 }
 
-export function useSensorHub(sensorId: string, hours: number, enabled = true) {
+export function useSensorHub(sensorId: string, hours: number, enabled = true, from?: string, to?: string) {
   const [readings, setReadings] = useState<SensorValues>({});
   const [history, setHistory] = useState<SensorHistory>({});
   const [connected, setConnected] = useState(false);
@@ -38,7 +38,7 @@ export function useSensorHub(sensorId: string, hours: number, enabled = true) {
     if (reading.sensorId !== sensorId) return;
 
     const time = new Date(reading.timestamp).getTime();
-    const cutoff = Date.now() - hours * 60 * 60 * 1000;
+    const cutoff = from ? new Date(from).getTime() : Date.now() - hours * 60 * 60 * 1000;
 
     setReadings((prev) => {
       const next = {
@@ -72,7 +72,7 @@ export function useSensorHub(sensorId: string, hours: number, enabled = true) {
 
       return next;
     });
-  }, [sensorId, hours]);
+  }, [sensorId, hours, from]);
 
   // Fetch historical data from API when sensorId or hours changes
   useEffect(() => {
@@ -85,7 +85,7 @@ export function useSensorHub(sensorId: string, hours: number, enabled = true) {
       setHistory({});
 
       const [recentResult, latestResult] = await Promise.allSettled([
-        getRecentReadings(sensorId, hours),
+        getRecentReadings(sensorId, hours, from, to),
         getLatestReadings(sensorId),
       ]);
 
@@ -142,7 +142,7 @@ export function useSensorHub(sensorId: string, hours: number, enabled = true) {
 
     fetchData();
     return () => { cancelled = true; };
-  }, [sensorId, hours, enabled]);
+  }, [sensorId, hours, enabled, from, to]);
 
   // Connect to SignalR for live updates
   useEffect(() => {

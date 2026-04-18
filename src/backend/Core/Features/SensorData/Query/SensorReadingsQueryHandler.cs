@@ -10,11 +10,12 @@ public class SensorReadingsQueryHandler(DatabaseContext db)
         SensorReadingQuery query,
         CancellationToken cancellationToken = default)
     {
-        var since = DateTimeOffset.UtcNow.AddHours(-query.Hours);
+        var from = query.From ?? DateTimeOffset.UtcNow.AddHours(-query.Hours);
+        var to = query.To ?? DateTimeOffset.UtcNow;
 
         return await db.SensorReadings
             .AsNoTracking()
-            .Where(r => r.SensorId == query.SensorId && r.Timestamp >= since)
+            .Where(r => r.SensorId == query.SensorId && r.Timestamp >= from && r.Timestamp <= to)
             .OrderBy(r => r.Timestamp)
             .Select(r => new SensorReadingResponse(
                 r.SensorId,

@@ -33,10 +33,23 @@ services:
       Encryption__MasterKey: ${ENCRYPTION_MASTER_KEY}
       Email__ConnectionString: ${EMAIL_CONNECTION_STRING}
       Email__SenderAddress: ${EMAIL_SENDER_ADDRESS}
+      Prophet__BaseUrl: http://prophet:8000
       Admin__Email: ${ADMIN_EMAIL}
     depends_on:
       postgres:
         condition: service_healthy
+      prophet:
+        condition: service_healthy
+
+  prophet:
+    image: yrkiiot-prophet
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   service:
     image: yrkiiot-service

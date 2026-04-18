@@ -17,7 +17,7 @@ import DirectionsCarRoundedIcon from '@mui/icons-material/DirectionsCarRounded';
 import ViewInArRoundedIcon from '@mui/icons-material/ViewInArRounded';
 import type { SvgIconComponent } from '@mui/icons-material';
 
-export type NavigationSection = 'Sensors' | 'Gateways' | 'New Sensors' | 'Locations' | 'Map' | 'Drive-By' | 'Buildings' | 'Import Data' | 'Export Data' | 'Users' | 'Live View' | 'Gateway View' | 'Building View';
+export type NavigationSection = 'Sensors' | 'Gateways' | 'New Sensors' | 'Locations' | 'Map' | 'Drive-By' | 'Buildings' | 'Import Data' | 'Export Data' | 'Users' | 'Live View' | 'Gateway View' | 'Building View' | 'Sensor Detail';
 
 const enableBuildings = import.meta.env.DEV || import.meta.env.VITE_ENABLE_BUILDINGS === 'true';
 

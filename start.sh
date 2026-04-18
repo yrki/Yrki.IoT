@@ -77,6 +77,7 @@ EOF
   printf '    %s%-16s%s %s%s%s\n' "${BOLD}" "RabbitMQ AMQP" "${RESET}" "${ORANGE}"  "localhost:5672"                 "${RESET}"
   printf '    %s%-16s%s %s%s%s\n' "${BOLD}" "RabbitMQ UI"   "${RESET}" "${PINK}"    "http://localhost:15672"         "${RESET}"
   printf '    %s%-16s%s %s%s%s\n' "${BOLD}" "Mosquitto"     "${RESET}" "${TEAL}"    "localhost:1883"                 "${RESET}"
+  printf '    %s%-16s%s %s%s%s\n' "${BOLD}" "Prophet"       "${RESET}" "${PURPLE}"  "http://localhost:8090"          "${RESET}"
   printf '\n'
   printf '    %s%s%s\n' "${CYAN}" "${DIVIDER}" "${RESET}"
   printf '\n'
@@ -100,6 +101,6 @@ print_step "Building frontend..."
 )
 
 print_step "Starting docker compose..."
-docker-compose up --build -d --force-recreate api service simulator frontend
+docker-compose up --build -d --force-recreate api service simulator frontend prophet
 
 print_services

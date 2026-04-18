@@ -30,6 +30,7 @@ const BuildingView = lazy(() => import('../features/bim/BuildingView'));
 const BuildingsListView = lazy(() => import('../features/buildings/BuildingsListView'));
 const ImportDataView = lazy(() => import('../features/import/ImportDataView'));
 const ExportDataView = lazy(() => import('../features/export/ExportDataView'));
+const SensorFullscreenPage = lazy(() => import('../features/sensors/SensorFullscreenPage'));
 const DriveByMapView = lazy(() => import('../features/driveby/DriveByMapView'));
 
 const drawerWidth = 220;
@@ -40,6 +41,10 @@ interface TopmenuProps {
 }
 
 function getSectionFromPath(pathname: string): NavigationSection {
+  if (matchPath('/sensors/:sensorId/:sensorType', pathname)) {
+    return 'Sensor Detail';
+  }
+
   if (matchPath('/sensors/:sensorId', pathname) || matchPath('/locations/:locationId', pathname)) {
     return 'Live View';
   }
@@ -146,6 +151,7 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
       '/import',
       '/export',
     ].some((path) => location.pathname === path)
+      || matchPath('/sensors/:sensorId/:sensorType', location.pathname)
       || matchPath('/sensors/:sensorId', location.pathname)
       || matchPath('/locations/:locationId', location.pathname)
       || matchPath('/gateways/:gatewayId', location.pathname)
@@ -212,6 +218,7 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
   );
 
   const renderMainContent = () => {
+    const sensorDetailMatch = matchPath('/sensors/:sensorId/:sensorType', location.pathname);
     const sensorMatch = matchPath('/sensors/:sensorId', location.pathname);
     const locationMatch = matchPath('/locations/:locationId', location.pathname);
     const gatewayMatch = matchPath('/gateways/:gatewayId', location.pathname);
@@ -220,6 +227,16 @@ function Topmenu({ currentUser, onLogout }: TopmenuProps) {
     const fromPath = typeof location.state === 'object' && location.state && 'from' in location.state
       ? String(location.state.from)
       : null;
+
+    if (sensorDetailMatch?.params.sensorId && sensorDetailMatch?.params.sensorType) {
+      return (
+        <SensorFullscreenPage
+          sensorId={decodeURIComponent(sensorDetailMatch.params.sensorId)}
+          sensorType={decodeURIComponent(sensorDetailMatch.params.sensorType)}
+          onBack={() => navigate(fromPath || `/sensors/${encodeURIComponent(sensorDetailMatch.params.sensorId!)}`)}
+        />
+      );
+    }
 
     if (buildingMatch?.params.buildingId) {
       const bid = decodeURIComponent(buildingMatch.params.buildingId);
