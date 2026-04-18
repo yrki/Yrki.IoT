@@ -391,6 +391,7 @@ function SensorListView() {
             value={filterLocationId}
             onChange={(e) => setFilterLocationId(e.target.value)}
             sx={{ minWidth: { sm: 240 } }}
+            InputLabelProps={{ shrink: true }}
             SelectProps={{
               displayEmpty: true,
               renderValue: (value) => {

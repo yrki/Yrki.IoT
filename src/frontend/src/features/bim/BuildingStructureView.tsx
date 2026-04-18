@@ -277,7 +277,7 @@ function BuildingStructureView({ buildingId, onBack, onSwitchToBim }: BuildingSt
           borderColor: 'divider',
         }}
       >
-        <IconButton size="small" onClick={onBack}>
+        <IconButton aria-label="Back" onClick={onBack} sx={{ alignSelf: 'flex-start', mt: 0.25 }}>
           <ArrowBackRoundedIcon />
         </IconButton>
         <Typography variant="h6" sx={{ lineHeight: 1.2 }}>{buildingName}</Typography>

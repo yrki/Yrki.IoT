@@ -125,14 +125,9 @@ function RawPayloadsView({ deviceId, onBack }: RawPayloadsViewProps) {
         alignItems={{ xs: 'flex-start', sm: 'center' }}
         sx={{ mb: 2 }}
       >
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<ArrowBackRoundedIcon />}
-          onClick={onBack}
-        >
-          Back
-        </Button>
+        <IconButton aria-label="Back" onClick={onBack} sx={{ alignSelf: 'flex-start', mt: 0.25 }}>
+          <ArrowBackRoundedIcon />
+        </IconButton>
         <Box sx={{ flex: 1 }}>
           <Typography variant="h6" sx={{ lineHeight: 1.2 }}>
             Raw payloads

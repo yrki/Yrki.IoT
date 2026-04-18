@@ -1,13 +1,16 @@
-import { lazy, Suspense, useCallback, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Box,
   CircularProgress,
+  IconButton,
   Paper,
   ToggleButton,
   ToggleButtonGroup,
 } from '@mui/material';
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import CellTowerRoundedIcon from '@mui/icons-material/CellTowerRounded';
+import FullscreenRoundedIcon from '@mui/icons-material/FullscreenRounded';
+import FullscreenExitRoundedIcon from '@mui/icons-material/FullscreenExitRounded';
 
 const MapView = lazy(() => import('./MapView'));
 const CoverageMapView = lazy(() => import('./CoverageMapView'));
@@ -30,6 +33,8 @@ function MapContainer({ onNavigateToSensor, onNavigateToGateway }: MapContainerP
   const [mode, setMode] = useState<MapMode>('locations');
   const positionRef = useRef<MapPosition>(defaultPosition);
   const [positionForChild, setPositionForChild] = useState<MapPosition>(defaultPosition);
+  const [fullscreen, setFullscreen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const handlePositionChange = useCallback((pos: MapPosition) => {
     positionRef.current = pos;
@@ -41,17 +46,35 @@ function MapContainer({ onNavigateToSensor, onNavigateToGateway }: MapContainerP
     setMode(next);
   }, []);
 
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().then(() => setFullscreen(true)).catch(() => {});
+    } else {
+      document.exitFullscreen().then(() => setFullscreen(false)).catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    const handler = () => setFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
+
   return (
     <Paper
+      ref={containerRef}
       sx={{
-        borderRadius: '6px',
+        position: 'relative',
+        borderRadius: fullscreen ? 0 : '6px',
         backgroundColor: 'rgba(36, 42, 51, 0.82)',
         border: '1px solid rgba(255,255,255,0.06)',
         boxShadow: '0 28px 80px rgba(0, 0, 0, 0.24)',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        height: 'calc(100vh - 120px)',
+        height: fullscreen ? '100vh' : 'calc(100vh - 120px)',
       }}
     >
       <Box
@@ -61,6 +84,7 @@ function MapContainer({ onNavigateToSensor, onNavigateToGateway }: MapContainerP
           backgroundColor: 'rgba(15, 23, 42, 0.36)',
           display: 'flex',
           justifyContent: 'center',
+          position: 'relative',
         }}
       >
         <ToggleButtonGroup
@@ -79,6 +103,24 @@ function MapContainer({ onNavigateToSensor, onNavigateToGateway }: MapContainerP
             Coverage
           </ToggleButton>
         </ToggleButtonGroup>
+
+        <IconButton
+          onClick={toggleFullscreen}
+          sx={{
+            position: 'absolute',
+            right: 12,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            backgroundColor: 'rgba(36, 42, 51, 0.92)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(8px)',
+            color: 'text.primary',
+            '&:hover': { backgroundColor: 'rgba(36, 42, 51, 1)' },
+          }}
+          size="small"
+        >
+          {fullscreen ? <FullscreenExitRoundedIcon /> : <FullscreenRoundedIcon />}
+        </IconButton>
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, position: 'relative' }}>

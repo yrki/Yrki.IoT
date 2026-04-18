@@ -4,6 +4,7 @@ import {
   Button,
   ButtonGroup,
   Chip,
+  IconButton,
   Dialog,
   DialogActions,
   DialogContent,
@@ -518,9 +519,9 @@ function GatewayView({ gatewayId, onBack, onNavigateToSensor }: GatewayViewProps
         }}
       >
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', md: 'center' }} sx={{ mb: 3 }}>
-          <Button startIcon={<ArrowBackRoundedIcon />} onClick={onBack}>
-            Back
-          </Button>
+          <IconButton aria-label="Back" onClick={onBack} sx={{ alignSelf: 'flex-start', mt: 0.25 }}>
+            <ArrowBackRoundedIcon />
+          </IconButton>
           <Box sx={{ flex: 1 }}>
             <Typography variant="h4" sx={{ mb: 0.75 }}>
               {gateway?.name?.trim() || gatewayId}
