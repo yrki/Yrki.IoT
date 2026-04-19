@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import SensorsView from './SensorsView';
 
 const {
@@ -16,6 +17,7 @@ const {
   updateEncryptionKey,
   createEncryptionKey,
   useSensorHub,
+  mockNavigate,
 } = vi.hoisted(() => ({
   getDevices: vi.fn(),
   getDeviceByUniqueId: vi.fn(),
@@ -27,6 +29,7 @@ const {
   updateEncryptionKey: vi.fn(),
   createEncryptionKey: vi.fn(),
   useSensorHub: vi.fn(),
+  mockNavigate: vi.fn(),
 }));
 
 vi.mock('../../api/api', () => ({
@@ -44,6 +47,11 @@ vi.mock('../../api/api', () => ({
 vi.mock('./useSensorHub', () => ({
   useSensorHub,
 }));
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return { ...actual, useNavigate: () => mockNavigate };
+});
 
 vi.mock('recharts', () => {
   const ResponsiveContainer = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
@@ -177,7 +185,7 @@ describe('SensorsView', () => {
     const user = userEvent.setup();
 
     // Act
-    render(<SensorsView initialSensorId="sensor-1" />);
+    render(<MemoryRouter><SensorsView initialSensorId="sensor-1" /></MemoryRouter>);
 
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Office sensor (sensor-1)' })).toBeInTheDocument());
     expect(screen.getByText('Gateways')).toBeInTheDocument();
@@ -190,25 +198,10 @@ describe('SensorsView', () => {
     await user.click(screen.getByRole('button', { name: 'Open Temperature in fullscreen' }));
 
     // Assert
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByRole('heading', { name: 'Office sensor' })).toBeInTheDocument();
-    expect(within(dialog).getByText('Temperature - HQ')).toBeInTheDocument();
-    expect(within(dialog).getByText(/First reading:/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Last reading:/)).toBeInTheDocument();
-    expect(within(dialog).getByText('Lowest')).toBeInTheDocument();
-    expect(within(dialog).getByText('Highest')).toBeInTheDocument();
-    expect(within(dialog).getByText('Median')).toBeInTheDocument();
-    expect(within(dialog).getByText('Average')).toBeInTheDocument();
-    expect(within(dialog).getByText('18.00 °C')).toBeInTheDocument();
-    expect(within(dialog).getAllByText('22.00 °C')).toHaveLength(2);
-
-    await user.click(within(dialog).getByRole('button', { name: '12h' }));
-
-    await waitFor(() => {
-      expect(useSensorHub).toHaveBeenCalledWith('sensor-1', 12, true);
-    });
-    expect(within(dialog).getByText('20.00 °C')).toBeInTheDocument();
-    expect(within(dialog).getAllByText('24.00 °C')).toHaveLength(2);
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/sensors/sensor-1/Temperature',
+      expect.objectContaining({ state: expect.objectContaining({ from: '/' }) }),
+    );
   });
 
   it('Shall_update_sensor_location_from_live_view', async () => {
@@ -231,7 +224,7 @@ describe('SensorsView', () => {
     });
 
     // Act
-    render(<SensorsView initialSensorId="sensor-1" />);
+    render(<MemoryRouter><SensorsView initialSensorId="sensor-1" /></MemoryRouter>);
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Edit location' })).toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: 'Edit location' }));
@@ -293,7 +286,7 @@ describe('SensorsView', () => {
     });
 
     // Act
-    render(<SensorsView initialSensorId="sensor-1" />);
+    render(<MemoryRouter><SensorsView initialSensorId="sensor-1" /></MemoryRouter>);
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Edit sensor settings' })).toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: 'Edit sensor settings' }));
@@ -330,7 +323,7 @@ describe('SensorsView', () => {
     const user = userEvent.setup();
 
     // Act
-    render(<SensorsView initialSensorId="sensor-1" />);
+    render(<MemoryRouter><SensorsView initialSensorId="sensor-1" /></MemoryRouter>);
 
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Office sensor (sensor-1)' })).toBeInTheDocument());
     expect(getDeviceByUniqueId).toHaveBeenCalledWith('sensor-1');
@@ -385,7 +378,7 @@ describe('SensorsView', () => {
     });
 
     // Act
-    render(<SensorsView initialSensorId="sensor-1" />);
+    render(<MemoryRouter><SensorsView initialSensorId="sensor-1" /></MemoryRouter>);
 
     // Assert
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Office sensor (sensor-1)' })).toBeInTheDocument());
@@ -402,7 +395,7 @@ describe('SensorsView', () => {
     getDevicesByLocation.mockResolvedValue([]);
 
     // Act
-    render(<SensorsView initialSensorId="sensor-1" />);
+    render(<MemoryRouter><SensorsView initialSensorId="sensor-1" /></MemoryRouter>);
 
     // Assert
     await waitFor(() => expect(getDeviceByUniqueId).toHaveBeenCalledWith('sensor-1'));
