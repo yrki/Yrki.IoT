@@ -1,5 +1,4 @@
 using EasyNetQ;
-using EasyNetQ.Serialization.SystemTextJson;
 using Core.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Simulator.GeoAware;
@@ -12,7 +11,7 @@ var host = Host.CreateDefaultBuilder(args)
         var rabbitHost = config["RabbitMq:Host"] ?? "localhost";
         var rabbitUser = config["RabbitMq:Username"] ?? "guest";
         var rabbitPassword = config["RabbitMq:Password"] ?? "guest";
-        services.RegisterEasyNetQ($"host={rabbitHost};username={rabbitUser};password={rabbitPassword}")
+        services.AddEasyNetQ($"host={rabbitHost};username={rabbitUser};password={rabbitPassword}")
             .UseSystemTextJson();
 
         services.AddDbContext<DatabaseContext>(options =>

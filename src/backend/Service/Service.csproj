@@ -13,17 +13,16 @@
     <ContainerImageFormat>Docker</ContainerImageFormat>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="EasyNetQ" Version="8.0.1" />
-    <PackageReference Include="EasyNetQ.Serialization.SystemTextJson" Version="8.0.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.5" />
+    <PackageReference Include="EasyNetQ" Version="8.1.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.6" />
     <PackageReference Include="MQTTnet" Version="5.1.0.1559" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.6" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.6" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Core/Core.csproj" />

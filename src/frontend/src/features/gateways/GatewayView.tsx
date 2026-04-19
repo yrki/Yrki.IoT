@@ -30,6 +30,7 @@ import {
 } from '@mui/material';
 import BackButton from '../../components/BackButton';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
+import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, Cell } from 'recharts';
 import maplibregl from 'maplibre-gl';
@@ -47,6 +48,7 @@ import {
   getGateways,
   getLocations,
   updateExistingDevice,
+  deleteDevice,
 } from '../../api/api';
 import { buildLocationOptions } from '../locations/locationTree';
 import { handleCoordinatePaste } from '../map/coordinatePaste';
@@ -285,6 +287,7 @@ function GatewayView({ gatewayId, onBack, onNavigateToSensor }: GatewayViewProps
   const [gateway, setGateway] = useState<SensorListItemDto | null>(null);
   const [locations, setLocations] = useState<LocationDto[]>([]);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortableField>('lastSeenAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -532,6 +535,9 @@ function GatewayView({ gatewayId, onBack, onNavigateToSensor }: GatewayViewProps
           <Button startIcon={<EditRoundedIcon />} onClick={() => setEditOpen(true)} disabled={!gateway}>
             Edit gateway
           </Button>
+          <Button startIcon={<DeleteRoundedIcon />} onClick={() => setDeleteConfirmOpen(true)} disabled={!gateway} color="error">
+            Delete
+          </Button>
           <TextField
             placeholder="Search sensors"
             value={searchTerm}
@@ -683,6 +689,30 @@ function GatewayView({ gatewayId, onBack, onNavigateToSensor }: GatewayViewProps
           onClose={() => setEditOpen(false)}
           onSaved={setGateway}
         />
+
+        <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
+          <DialogTitle>Delete gateway</DialogTitle>
+          <DialogContent>
+            <Typography>
+              Are you sure you want to delete gateway <strong>{gateway?.name?.trim() || gatewayId}</strong>? This action cannot be undone.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+            <Button
+              color="error"
+              variant="contained"
+              onClick={async () => {
+                if (!gateway) return;
+                await deleteDevice(gateway.id);
+                setDeleteConfirmOpen(false);
+                onBack();
+              }}
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Paper>
 
       {driveByPositions.length > 0 && (

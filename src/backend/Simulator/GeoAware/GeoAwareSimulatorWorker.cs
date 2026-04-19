@@ -13,8 +13,10 @@ public sealed class GeoAwareSimulatorWorker(
 {
     private const int IntervalSeconds = 10;
     private const int BatchSize = 50;
+    private const int GatewayHeartbeatEveryNTicks = 6; // ~60 seconds
     private readonly Random _random = new();
     private readonly List<SimulatedGeoSensor> _sensors = [];
+    private readonly List<GatewayInfo> _gateways = [];
     private readonly Dictionary<string, decimal> _accumulatedVolume = new();
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -78,6 +80,17 @@ public sealed class GeoAwareSimulatorWorker(
                     published, batchStart);
             }
 
+            if (tick % GatewayHeartbeatEveryNTicks == 0)
+            {
+                foreach (var gw in _gateways)
+                {
+                    await bus.PubSub.PublishAsync(new GatewayPositionReceived(
+                        gw.UniqueId, timestamp, gw.Longitude, gw.Latitude), stoppingToken);
+                }
+
+                logger.LogDebug("Published heartbeat for {Count} gateways", _gateways.Count);
+            }
+
             batchStart = (batchStart + BatchSize) % _sensors.Count;
             tick++;
             await Task.Delay(TimeSpan.FromSeconds(IntervalSeconds), stoppingToken);
@@ -99,6 +112,7 @@ public sealed class GeoAwareSimulatorWorker(
         {
             logger.LogInformation("  Gateway {Id}: lat={Lat}, lon={Lon}",
                 gw.UniqueId, gw.Latitude, gw.Longitude);
+            _gateways.Add(new GatewayInfo(gw.UniqueId, gw.Latitude, gw.Longitude));
         }
 
         var sensors = await db.Devices
@@ -179,4 +193,6 @@ public sealed class GeoAwareSimulatorWorker(
             new(sensor.SensorId, "TotalVolume", "AXI", totalVolume, timestamp, null, null),
         ];
     }
+
+    private record GatewayInfo(string UniqueId, double? Latitude, double? Longitude);
 }

@@ -59,6 +59,7 @@ This repository should evolve as a modern, production-quality codebase across bo
 
 ## Testing
 
+- Always create unit tests alongside new functionality — never skip tests.
 - Add or update unit tests for every behavior change.
 - Add tests for all API calls.
 - Use descriptive test names in the format `Shall_open_a_file`.
