@@ -16,7 +16,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
@@ -125,9 +125,7 @@ function RawPayloadsView({ deviceId, onBack }: RawPayloadsViewProps) {
         alignItems={{ xs: 'flex-start', sm: 'center' }}
         sx={{ mb: 2 }}
       >
-        <IconButton aria-label="Back" onClick={onBack} sx={{ alignSelf: 'flex-start', mt: 0.25 }}>
-          <ArrowBackRoundedIcon />
-        </IconButton>
+        <BackButton onClick={onBack} />
         <Box sx={{ flex: 1 }}>
           <Typography variant="h6" sx={{ lineHeight: 1.2 }}>
             Raw payloads

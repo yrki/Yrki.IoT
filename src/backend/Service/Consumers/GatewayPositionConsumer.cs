@@ -56,7 +56,7 @@ public class GatewayPositionConsumer(
             throw;
         }
 
-        logger.LogInformation("Stored gateway position for {GatewayId} at {Timestamp}",
+        logger.LogDebug("Stored gateway position for {GatewayId} at {Timestamp}",
             msg.GatewayId, msg.Timestamp);
 
         await hubNotifier.NotifyGatewayPositionAsync(

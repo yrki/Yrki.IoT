@@ -9,13 +9,12 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton,
   Paper,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import BackButton from '../../components/BackButton';
 import ViewInArRoundedIcon from '@mui/icons-material/ViewInArRounded';
 import BimSidePanel, { RoomInfo, StoreyInfo } from './BimSidePanel';
 import {
@@ -277,9 +276,7 @@ function BuildingStructureView({ buildingId, onBack, onSwitchToBim }: BuildingSt
           borderColor: 'divider',
         }}
       >
-        <IconButton aria-label="Back" onClick={onBack} sx={{ alignSelf: 'flex-start', mt: 0.25 }}>
-          <ArrowBackRoundedIcon />
-        </IconButton>
+        <BackButton onClick={onBack} />
         <Typography variant="h6" sx={{ lineHeight: 1.2 }}>{buildingName}</Typography>
         <Box sx={{ flexGrow: 1 }} />
         {onSwitchToBim && (

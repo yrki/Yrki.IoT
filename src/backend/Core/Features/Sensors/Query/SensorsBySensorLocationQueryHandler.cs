@@ -27,10 +27,7 @@ public class SensorsBySensorLocationQueryHandler(DatabaseContext db, ILogger<Sen
             .SingleOrDefaultAsync(cancellationToken);
 
         if (targetDevice is null)
-        {
-            logger.LogWarning("Sensor not found for {SensorId} when querying co-located sensors", sensorId);
             return [];
-        }
 
         if (targetDevice.LocationId is Guid targetLocationId && targetLocationId != UnknownLocationId)
         {

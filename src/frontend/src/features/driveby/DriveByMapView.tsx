@@ -15,6 +15,7 @@ import {
 import FullscreenRoundedIcon from '@mui/icons-material/FullscreenRounded';
 import FullscreenExitRoundedIcon from '@mui/icons-material/FullscreenExitRounded';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
+import { useFullscreen } from '../../components/useFullscreen';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
@@ -109,8 +110,7 @@ function DriveByMapView() {
   const gatewayMarkersRef = useRef<Record<string, maplibregl.Marker>>({});
   const [thresholdDays, setThresholdDays] = useState(3);
   const thresholdDaysRef = useRef(thresholdDays);
-  const [fullscreen, setFullscreen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const { fullscreen, containerRef, toggleFullscreen } = useFullscreen();
   const [gatewayList, setGatewayList] = useState<SensorListItemDto[]>([]);
   const [focusGatewayId, setFocusGatewayId] = useState('');
   const focusGatewayIdRef = useRef('');
@@ -123,22 +123,6 @@ function DriveByMapView() {
   useEffect(() => {
     thresholdDaysRef.current = thresholdDays;
   }, [thresholdDays]);
-
-  const toggleFullscreen = () => {
-    if (!containerRef.current) return;
-
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().then(() => setFullscreen(true)).catch(() => {});
-    } else {
-      document.exitFullscreen().then(() => setFullscreen(false)).catch(() => {});
-    }
-  };
-
-  useEffect(() => {
-    const handler = () => setFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', handler);
-    return () => document.removeEventListener('fullscreenchange', handler);
-  }, []);
 
   // When user picks a gateway to focus, zoom in immediately
   useEffect(() => {

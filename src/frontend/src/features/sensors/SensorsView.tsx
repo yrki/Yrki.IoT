@@ -29,10 +29,10 @@ import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
 import OpenInFullRoundedIcon from '@mui/icons-material/OpenInFullRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import EditLocationAltRoundedIcon from '@mui/icons-material/EditLocationAltRounded';
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import RouterRoundedIcon from '@mui/icons-material/RouterRounded';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
+import BackButton from '../../components/BackButton';
 import { useSensorHub, SensorReading, SensorDataPoint } from './useSensorHub';
 import {
   createEncryptionKey,
@@ -1165,11 +1165,7 @@ function SensorsView({ initialSensorId, locationId, locationName, onBack, onNavi
         }}
       >
         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3 }}>
-          {onBack ? (
-            <IconButton aria-label="Back" onClick={onBack} sx={{ alignSelf: 'flex-start', mt: 0.25 }}>
-              <ArrowBackRoundedIcon />
-            </IconButton>
-          ) : null}
+          {onBack ? <BackButton onClick={onBack} /> : null}
           <Box>
             <Typography variant="h4" sx={{ mb: 0.75 }}>
               {formatSensorHeading(selectedDevice?.name, selectedSensorId)}

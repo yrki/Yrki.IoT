@@ -33,7 +33,7 @@ public class BuildingsQueryHandler(DatabaseContext db, ILogger<BuildingsQueryHan
     {
         logger.LogDebug("Querying building {BuildingId}", id);
 
-        var result = await db.Buildings
+        return await db.Buildings
             .AsNoTracking()
             .Where(b => b.Id == id)
             .Select(b => new BuildingResponse(
@@ -48,10 +48,5 @@ public class BuildingsQueryHandler(DatabaseContext db, ILogger<BuildingsQueryHan
                 b.Location != null ? b.Location.Name : null,
                 b.CreatedAtUtc))
             .FirstOrDefaultAsync(cancellationToken);
-
-        if (result is null)
-            logger.LogWarning("Building not found for {BuildingId}", id);
-
-        return result;
     }
 }

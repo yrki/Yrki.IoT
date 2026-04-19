@@ -16,7 +16,7 @@ public class SensorByUniqueIdQueryHandler(DatabaseContext db, ILogger<SensorByUn
     {
         logger.LogDebug("Querying sensor by unique ID {SensorId}", sensorId);
 
-        var result = await db.Devices
+        return await db.Devices
             .AsNoTracking()
             .Where(d => d.Kind == DeviceKind.Sensor && !d.IsNew && !d.IsDeleted && d.UniqueId == sensorId)
             .Include(d => d.Location)
@@ -36,10 +36,5 @@ public class SensorByUniqueIdQueryHandler(DatabaseContext db, ILogger<SensorByUn
                 d.Latitude,
                 d.Longitude))
             .SingleOrDefaultAsync(cancellationToken);
-
-        if (result is null)
-            logger.LogWarning("Sensor not found for unique ID {SensorId}", sensorId);
-
-        return result;
     }
 }

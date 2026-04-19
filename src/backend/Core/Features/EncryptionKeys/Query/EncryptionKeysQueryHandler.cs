@@ -50,10 +50,7 @@ public class EncryptionKeysQueryHandler(DatabaseContext db, IKeyEncryptionServic
             .FirstOrDefaultAsync(cancellationToken);
 
         if (key is null)
-        {
-            logger.LogWarning("Encryption key not found for device {DeviceUniqueId}", normalizedDeviceUniqueId);
             return null;
-        }
 
         return new EncryptionKeyResponse(
             key.Id,

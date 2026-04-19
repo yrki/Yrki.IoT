@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useRef, useState } from 'react';
 import {
   Box,
   CircularProgress,
@@ -11,6 +11,7 @@ import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import CellTowerRoundedIcon from '@mui/icons-material/CellTowerRounded';
 import FullscreenRoundedIcon from '@mui/icons-material/FullscreenRounded';
 import FullscreenExitRoundedIcon from '@mui/icons-material/FullscreenExitRounded';
+import { useFullscreen } from '../../components/useFullscreen';
 
 const MapView = lazy(() => import('./MapView'));
 const CoverageMapView = lazy(() => import('./CoverageMapView'));
@@ -33,8 +34,7 @@ function MapContainer({ onNavigateToSensor, onNavigateToGateway }: MapContainerP
   const [mode, setMode] = useState<MapMode>('locations');
   const positionRef = useRef<MapPosition>(defaultPosition);
   const [positionForChild, setPositionForChild] = useState<MapPosition>(defaultPosition);
-  const [fullscreen, setFullscreen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const { fullscreen, containerRef, toggleFullscreen } = useFullscreen();
 
   const handlePositionChange = useCallback((pos: MapPosition) => {
     positionRef.current = pos;
@@ -44,22 +44,6 @@ function MapContainer({ onNavigateToSensor, onNavigateToGateway }: MapContainerP
     if (!next) return;
     setPositionForChild({ ...positionRef.current });
     setMode(next);
-  }, []);
-
-  const toggleFullscreen = () => {
-    if (!containerRef.current) return;
-
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().then(() => setFullscreen(true)).catch(() => {});
-    } else {
-      document.exitFullscreen().then(() => setFullscreen(false)).catch(() => {});
-    }
-  };
-
-  useEffect(() => {
-    const handler = () => setFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', handler);
-    return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
 
   return (

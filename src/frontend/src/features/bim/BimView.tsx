@@ -17,7 +17,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import BackButton from '../../components/BackButton';
 import GridViewRoundedIcon from '@mui/icons-material/GridViewRounded';
 import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 import BimSidePanel from './BimSidePanel';
@@ -966,9 +966,7 @@ function BimView({ buildingId, onBack, onSwitchToStructure }: BimViewProps) {
           flexWrap: 'wrap',
         }}
       >
-        <IconButton aria-label="Back" onClick={onBack} sx={{ alignSelf: 'flex-start', mt: 0.25 }}>
-          <ArrowBackRoundedIcon />
-        </IconButton>
+        <BackButton onClick={onBack} />
         <Typography variant="h6" sx={{ lineHeight: 1.2 }}>{buildingName}</Typography>
 
         <Box sx={{ flexGrow: 1 }} />

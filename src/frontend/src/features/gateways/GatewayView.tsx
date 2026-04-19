@@ -4,7 +4,6 @@ import {
   Button,
   ButtonGroup,
   Chip,
-  IconButton,
   Dialog,
   DialogActions,
   DialogContent,
@@ -29,7 +28,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import BackButton from '../../components/BackButton';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, Cell } from 'recharts';
@@ -519,9 +518,7 @@ function GatewayView({ gatewayId, onBack, onNavigateToSensor }: GatewayViewProps
         }}
       >
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', md: 'center' }} sx={{ mb: 3 }}>
-          <IconButton aria-label="Back" onClick={onBack} sx={{ alignSelf: 'flex-start', mt: 0.25 }}>
-            <ArrowBackRoundedIcon />
-          </IconButton>
+          <BackButton onClick={onBack} />
           <Box sx={{ flex: 1 }}>
             <Typography variant="h4" sx={{ mb: 0.75 }}>
               {gateway?.name?.trim() || gatewayId}

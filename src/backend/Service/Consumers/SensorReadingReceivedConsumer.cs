@@ -52,7 +52,7 @@ public class SensorReadingReceivedConsumer(
             throw;
         }
 
-        logger.LogInformation("Processed sensor reading for {SensorId}/{SensorType} at {Timestamp}",
+        logger.LogDebug("Processed sensor reading for {SensorId}/{SensorType} at {Timestamp}",
             msg.SensorId, msg.SensorType, msg.Timestamp);
 
         await hubNotifier.NotifyReadingAsync(

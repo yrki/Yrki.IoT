@@ -11,7 +11,6 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import ThermostatRoundedIcon from '@mui/icons-material/ThermostatRounded';
 import WaterDropRoundedIcon from '@mui/icons-material/WaterDropRounded';
 import Co2RoundedIcon from '@mui/icons-material/Co2Rounded';
@@ -20,6 +19,7 @@ import WaterRoundedIcon from '@mui/icons-material/WaterRounded';
 import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
 import RouterRoundedIcon from '@mui/icons-material/RouterRounded';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
+import BackButton from '../../components/BackButton';
 import { useSensorHub, SensorDataPoint } from './useSensorHub';
 import { getSensorForecast, getDeviceByUniqueId, SensorListItemDto } from '../../api/api';
 import { calculateSensorStatistics } from './sensorStats';
@@ -244,9 +244,7 @@ function SensorFullscreenPage({ sensorId, sensorType, onBack }: SensorFullscreen
     <Box sx={{ px: { xs: 2, md: 4 }, py: { xs: 2, md: 3 } }}>
       <Stack spacing={3}>
         <Stack direction="row" spacing={1.5} alignItems="center">
-          <IconButton onClick={onBack}>
-            <ArrowBackRoundedIcon />
-          </IconButton>
+          <BackButton onClick={onBack} />
           <Box sx={{ display: 'grid', placeItems: 'center', width: 48, height: 48, borderRadius: '8px', backgroundColor: `${color}20`, color }}>
             {icon}
           </Box>

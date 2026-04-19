@@ -442,18 +442,15 @@ public class BuildingsController(
         try
         {
             var uploadsDir = GetUploadsDir();
-            logger.LogInformation("Creating uploads directory: {UploadsDir}", uploadsDir);
             Directory.CreateDirectory(uploadsDir);
 
             var fileName = $"{id}_{Guid.NewGuid():N}.ifc";
             var filePath = Path.Combine(uploadsDir, fileName);
 
-            logger.LogInformation("Writing IFC file to {FilePath}", filePath);
             await using (var stream = new FileStream(filePath, FileMode.Create))
             {
                 await file.CopyToAsync(stream, cancellationToken);
             }
-            logger.LogInformation("IFC file written successfully, {Size} bytes", new FileInfo(filePath).Length);
 
             var db = HttpContext.RequestServices.GetRequiredService<Core.Contexts.DatabaseContext>();
             var entity = await db.Buildings.FindAsync([id], cancellationToken);
@@ -461,8 +458,9 @@ public class BuildingsController(
             {
                 entity.IfcFileName = fileName;
                 await db.SaveChangesAsync(cancellationToken);
-                logger.LogInformation("Building {BuildingId} updated with IFC filename {FileName}", id, fileName);
             }
+
+            logger.LogInformation("IFC file uploaded for building {BuildingId}, {Size} bytes", id, file.Length);
 
             return Ok(new { fileName });
         }
