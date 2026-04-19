@@ -417,6 +417,7 @@ function EditSensorSettingsDialog({
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [encryptionKeyId, setEncryptionKeyId] = useState<string | null>(null);
+  const [hasStoredKey, setHasStoredKey] = useState(false);
   const [encryptionKey, setEncryptionKey] = useState('');
   const [loadingKey, setLoadingKey] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -435,13 +436,14 @@ function EditSensorSettingsDialog({
     setLongitude(device.longitude != null ? String(device.longitude) : '');
     setEncryptionKey('');
     setEncryptionKeyId(null);
+    setHasStoredKey(false);
     setError('');
     setLoadingKey(true);
 
     getEncryptionKeyByDevice(device.uniqueId, device.manufacturer ?? undefined)
       .then((key) => {
         setEncryptionKeyId(key?.id ?? null);
-        setEncryptionKey(key?.keyValue ?? '');
+        setHasStoredKey(key?.hasKey ?? false);
       })
       .catch((err) => {
         console.error('Failed to fetch encryption key:', err);
@@ -593,18 +595,18 @@ function EditSensorSettingsDialog({
             />
           </Stack>
           <TextField
-            label="Encryption Key (AES-128 hex)"
+            label={hasStoredKey ? 'Replace Encryption Key (AES-128 hex)' : 'Encryption Key (AES-128 hex)'}
             type="text"
             value={encryptionKey}
             onChange={(e) => setEncryptionKey(e.target.value)}
             fullWidth
             size="small"
-            placeholder="Enter key if this sensor is encrypted"
+            placeholder={hasStoredKey ? 'Enter new key to replace existing' : 'Enter key if this sensor is encrypted'}
             helperText={
               loadingKey
                 ? 'Loading key metadata...'
-                : encryptionKeyId
-                  ? 'Stored key loaded. You can edit it directly.'
+                : hasStoredKey
+                  ? 'Key is stored securely. Enter a new value to replace it.'
                   : 'No key stored for this sensor yet.'
             }
             slotProps={{

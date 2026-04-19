@@ -1,12 +1,16 @@
 using Contracts.Requests;
 using Contracts.Responses;
 using Core.Contexts;
+using Core.Services.Encryption;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Core.Features.EncryptionKeys.Command;
 
-public class UpdateEncryptionKeyCommandHandler(DatabaseContext db, ILogger<UpdateEncryptionKeyCommandHandler> logger)
+public class UpdateEncryptionKeyCommandHandler(
+    DatabaseContext db,
+    IKeyEncryptionService encryptionService,
+    ILogger<UpdateEncryptionKeyCommandHandler> logger)
 {
     public async Task<EncryptionKeyResponse?> HandleAsync(
         Guid id,
@@ -21,7 +25,7 @@ public class UpdateEncryptionKeyCommandHandler(DatabaseContext db, ILogger<Updat
         }
 
         if (request.KeyValue is not null)
-            key.EncryptedKeyValue = request.KeyValue.Trim().ToUpperInvariant();
+            key.EncryptedKeyValue = encryptionService.Encrypt(request.KeyValue.Trim().ToUpperInvariant());
 
         key.Manufacturer = request.Manufacturer is null
             ? key.Manufacturer
@@ -38,6 +42,6 @@ public class UpdateEncryptionKeyCommandHandler(DatabaseContext db, ILogger<Updat
         logger.LogInformation("Updated encryption key {KeyId}", id);
         return new EncryptionKeyResponse(
             key.Id, key.Manufacturer, key.DeviceUniqueId, key.GroupName,
-            key.Description, key.EncryptedKeyValue, key.CreatedAt, key.UpdatedAt);
+            key.Description, null, true, key.CreatedAt, key.UpdatedAt);
     }
 }

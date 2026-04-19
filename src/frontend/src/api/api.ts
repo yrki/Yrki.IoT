@@ -620,6 +620,7 @@ export interface EncryptionKeyDto {
   groupName: string | null;
   description: string | null;
   keyValue: string | null;
+  hasKey: boolean;
   createdAt: string;
   updatedAt: string | null;
 }

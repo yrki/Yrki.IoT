@@ -7,5 +7,6 @@ public record EncryptionKeyResponse(
     string? GroupName,
     string? Description,
     string? KeyValue,
+    bool HasKey,
     DateTimeOffset CreatedAt,
     DateTimeOffset? UpdatedAt);

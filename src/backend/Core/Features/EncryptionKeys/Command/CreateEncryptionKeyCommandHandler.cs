@@ -2,11 +2,15 @@ using Contracts.Requests;
 using Contracts.Responses;
 using Core.Contexts;
 using Core.Models;
+using Core.Services.Encryption;
 using Microsoft.Extensions.Logging;
 
 namespace Core.Features.EncryptionKeys.Command;
 
-public class CreateEncryptionKeyCommandHandler(DatabaseContext db, ILogger<CreateEncryptionKeyCommandHandler> logger)
+public class CreateEncryptionKeyCommandHandler(
+    DatabaseContext db,
+    IKeyEncryptionService encryptionService,
+    ILogger<CreateEncryptionKeyCommandHandler> logger)
 {
     public async Task<EncryptionKeyResponse> HandleAsync(
         CreateEncryptionKeyRequest request,
@@ -18,7 +22,7 @@ public class CreateEncryptionKeyCommandHandler(DatabaseContext db, ILogger<Creat
             Manufacturer = EncryptionKeyIdentity.NormalizeManufacturer(request.Manufacturer),
             DeviceUniqueId = EncryptionKeyIdentity.NormalizeDeviceUniqueId(request.DeviceUniqueId),
             GroupName = request.GroupName,
-            EncryptedKeyValue = request.KeyValue.Trim().ToUpperInvariant(),
+            EncryptedKeyValue = encryptionService.Encrypt(request.KeyValue.Trim().ToUpperInvariant()),
             Description = request.Description,
             CreatedAt = DateTimeOffset.UtcNow,
         };
@@ -29,6 +33,6 @@ public class CreateEncryptionKeyCommandHandler(DatabaseContext db, ILogger<Creat
         logger.LogInformation("Created encryption key {KeyId} for {Manufacturer}/{DeviceUniqueId}", key.Id, key.Manufacturer, key.DeviceUniqueId);
         return new EncryptionKeyResponse(
             key.Id, key.Manufacturer, key.DeviceUniqueId, key.GroupName,
-            key.Description, key.EncryptedKeyValue, key.CreatedAt, key.UpdatedAt);
+            key.Description, null, true, key.CreatedAt, key.UpdatedAt);
     }
 }

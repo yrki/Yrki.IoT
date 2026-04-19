@@ -6,6 +6,7 @@ using Api.Services;
 using Core.Contexts;
 using Core.Features.Devices.Command;
 using Core.Features.Devices.Query;
+using Core.Features.EncryptionKeys;
 using Core.Features.EncryptionKeys.Command;
 using Core.Features.EncryptionKeys.Query;
 using Core.Features.Buildings.Command;
@@ -41,7 +42,9 @@ builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<MagicLinkOptions>(builder.Configuration.GetSection("MagicLink"));
 
 builder.Services.AddDbContext<DatabaseContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DatabaseConnectionString")));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DatabaseConnectionString"),
+        npgsql => npgsql.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorCodesToAdd: null)));
 
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<GatewayPositionsQueryHandler>();
@@ -131,6 +134,11 @@ using (var scope = app.Services.CreateScope())
 {
     var databaseContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
     databaseContext.Database.Migrate();
+
+    await EncryptionKeyMigrationService.MigratePlaintextKeysAsync(
+        databaseContext,
+        scope.ServiceProvider.GetRequiredService<IKeyEncryptionService>(),
+        scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("EncryptionKeyMigration"));
 
     var adminEmail = app.Configuration["Admin:Email"];
     if (!string.IsNullOrWhiteSpace(adminEmail))

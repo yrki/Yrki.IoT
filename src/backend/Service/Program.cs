@@ -36,7 +36,9 @@ try
             services.AddSingleton<IKeyEncryptionService>(new AesKeyEncryptionService(encryptionMasterKey));
 
             services.AddDbContext<DatabaseContext>(options =>
-                options.UseNpgsql(config.GetConnectionString("DatabaseConnectionString")));
+                options.UseNpgsql(
+                    config.GetConnectionString("DatabaseConnectionString"),
+                    npgsql => npgsql.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorCodesToAdd: null)));
 
             services.Configure<ApiOptions>(config.GetSection("Api"));
             services.AddSingleton<ISensorHubNotifier, SensorHubNotifier>();

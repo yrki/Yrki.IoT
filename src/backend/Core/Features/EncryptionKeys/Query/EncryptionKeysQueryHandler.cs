@@ -1,35 +1,32 @@
 using Contracts.Responses;
 using Core.Contexts;
-using Core.Services.Encryption;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Core.Features.EncryptionKeys.Query;
 
-public class EncryptionKeysQueryHandler(DatabaseContext db, IKeyEncryptionService encryptionService, ILogger<EncryptionKeysQueryHandler> logger)
+public class EncryptionKeysQueryHandler(DatabaseContext db, ILogger<EncryptionKeysQueryHandler> logger)
 {
     public async Task<IReadOnlyList<EncryptionKeyResponse>> HandleAsync(CancellationToken cancellationToken = default)
     {
         logger.LogDebug("Querying all encryption keys");
 
-        var keys = await db.EncryptionKeys
+        return await db.EncryptionKeys
             .AsNoTracking()
             .OrderBy(k => k.DeviceUniqueId)
             .ThenBy(k => k.Manufacturer)
             .ThenBy(k => k.GroupName)
-            .ToListAsync(cancellationToken);
-
-        return keys
             .Select(k => new EncryptionKeyResponse(
                 k.Id,
                 k.Manufacturer,
                 k.DeviceUniqueId,
                 k.GroupName,
                 k.Description,
-                EncryptionKeyValueResolver.ResolveForDisplay(k.EncryptedKeyValue, encryptionService),
+                null,
+                !string.IsNullOrWhiteSpace(k.EncryptedKeyValue),
                 k.CreatedAt,
                 k.UpdatedAt))
-            .ToList();
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<EncryptionKeyResponse?> HandleByDeviceAsync(
@@ -58,7 +55,8 @@ public class EncryptionKeysQueryHandler(DatabaseContext db, IKeyEncryptionServic
             key.DeviceUniqueId,
             key.GroupName,
             key.Description,
-            EncryptionKeyValueResolver.ResolveForDisplay(key.EncryptedKeyValue, encryptionService),
+            null,
+            !string.IsNullOrWhiteSpace(key.EncryptedKeyValue),
             key.CreatedAt,
             key.UpdatedAt);
     }
