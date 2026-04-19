@@ -117,11 +117,22 @@ dotnet publish src/backend/Api/Api.csproj /t:PublishContainer -p:ContainerRuntim
 dotnet publish src/backend/Service/Service.csproj /t:PublishContainer -p:ContainerRuntimeIdentifier=linux-musl-x64 -v:q
 
 print_step "Building frontend image (linux/amd64)..."
-docker build --platform linux/amd64 -t yrkiiot-frontend:latest -f src/frontend/dockerfile . --quiet
+docker build \
+  --platform linux/amd64 \
+  --build-arg VITE_ENABLE_FORECAST=true \
+  --build-arg VITE_ENABLE_BUILDINGS=true \
+  --build-arg VITE_ENABLE_DRIVEBY=true \
+  --build-arg VITE_ENABLE_MAP=true \
+  -t yrkiiot-frontend:latest \
+  -f src/frontend/dockerfile \
+  . --quiet
+
+print_step "Building prophet image (linux/amd64)..."
+docker build --platform linux/amd64 -t yrkiiot-prophet:latest src/prophet --quiet
 
 # --- Transfer ---
 print_step "Transferring images to ${TARGET_IP}..."
-docker save yrkiiot-api yrkiiot-service yrkiiot-frontend | ssh "root@${TARGET_IP}" 'docker load'
+docker save yrkiiot-api yrkiiot-service yrkiiot-frontend yrkiiot-prophet | ssh "root@${TARGET_IP}" 'docker load'
 
 # --- Sync config ---
 print_step "Syncing config..."
@@ -151,7 +162,7 @@ print_step "Restarting services..."
 ssh "root@${TARGET_IP}" <<DEPLOY
   set -euo pipefail
   cd ${REMOTE_DIR}
-  docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+  docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --force-recreate
   docker compose -f docker-compose.prod.yml --env-file .env.prod ps
 DEPLOY
 

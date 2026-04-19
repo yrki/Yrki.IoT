@@ -379,11 +379,22 @@ dotnet publish src/backend/Api/Api.csproj /t:PublishContainer -p:ContainerRuntim
 dotnet publish src/backend/Service/Service.csproj /t:PublishContainer -p:ContainerRuntimeIdentifier=linux-musl-x64 -v:q
 
 printf '  Building frontend image (linux/amd64)...\n'
-docker build --platform linux/amd64 -t yrkiiot-frontend:latest -f src/frontend/dockerfile . --quiet
+docker build \
+  --platform linux/amd64 \
+  --build-arg VITE_ENABLE_FORECAST=true \
+  --build-arg VITE_ENABLE_BUILDINGS=true \
+  --build-arg VITE_ENABLE_DRIVEBY=true \
+  --build-arg VITE_ENABLE_MAP=true \
+  -t yrkiiot-frontend:latest \
+  -f src/frontend/dockerfile \
+  . --quiet
+
+printf '  Building prophet image (linux/amd64)...\n'
+docker build --platform linux/amd64 -t yrkiiot-prophet:latest src/prophet --quiet
 
 # Transfer images
 printf '  Transferring images to %s...\n' "$SERVER_IP"
-docker save yrkiiot-api yrkiiot-service yrkiiot-frontend | ssh "root@${SERVER_IP}" 'docker load'
+docker save yrkiiot-api yrkiiot-service yrkiiot-frontend yrkiiot-prophet | ssh "root@${SERVER_IP}" 'docker load'
 
 # Sync files
 ssh "root@${SERVER_IP}" "mkdir -p ${REMOTE_DIR}/volumes/mosquitto/config"

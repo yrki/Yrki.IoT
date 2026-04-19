@@ -39,7 +39,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DatabaseConnectionString: Host=postgres;Port=5432;Database=YrkiIoT;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      MagicLink__FrontendBaseUrl: http://${DOMAIN}
+      MagicLink__FrontendBaseUrl: https://${DOMAIN}
       Encryption__MasterKey: ${ENCRYPTION_MASTER_KEY}
       Email__ConnectionString: ${EMAIL_CONNECTION_STRING}
       Email__SenderAddress: ${EMAIL_SENDER_ADDRESS}

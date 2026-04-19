@@ -133,7 +133,7 @@ print_step "Starting services on remote..."
 ssh "${REMOTE_USER}@${REMOTE_HOST}" <<DEPLOY
   set -euo pipefail
   cd ${REMOTE_DIR}
-  docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+  docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --force-recreate
   docker compose -f docker-compose.prod.yml --env-file .env.prod ps
 DEPLOY
 
